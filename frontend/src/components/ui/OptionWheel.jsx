@@ -241,8 +241,20 @@ const OptionWheel = ({
     applyTarget(targetRef.current, false);
   }, [items, fontSize, spacing, curve, tilt, blur, fade, minOpacity, side, loop, smoothing, applyTarget]);
 
+  // FIX: reset rafRef.current back to null on cleanup. Without this, React
+  // 18 StrictMode's dev-only double-mount (mount -> cleanup -> mount again)
+  // cancels the frame started by the first mount but leaves rafRef.current
+  // holding that now-stale, non-null id. The second (real) mount's
+  // startLoop() then sees a non-null rafRef and assumes a loop is already
+  // running, so it never schedules a new one — the wheel's selection logic
+  // keeps working (state updates fine), but the per-frame transform/opacity/
+  // filter styles that create the curved layout never get applied, so every
+  // item just sits at its default flow position (reads as "horizontal").
   useEffect(() => () => {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     audioRef.current?.pause();
   }, []);
 
