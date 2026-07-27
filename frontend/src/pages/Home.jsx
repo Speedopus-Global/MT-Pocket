@@ -1,6 +1,9 @@
 import { ArrowRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WhyTrust from "./TrustStripe";
+import HowItWorks from './HowitWorks';
+import FeatureSection from './FeatureSection';
+
 
 const trustItems = [
   'Verified Users',
@@ -121,6 +124,9 @@ export default function Home() {
       </div>
     </motion.section>
     <WhyTrust />
+    <HowItWorks />
+    <FeatureSection />
+    
     </>
   );
 }

@@ -2,6 +2,7 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import ThemeToggle from '../ui/ThemeToggle';
  
 export default function Layout() {
   return (
@@ -13,6 +14,10 @@ export default function Layout() {
       </main>
  
       <Footer />
+          
+      <div className="fixed bottom-4 right-4 z-[1001]">
+        <ThemeToggle />
+      </div>
     </div>
   );
 }

@@ -1,0 +1,51 @@
+/**
+ * useTheme.js — dark/light toggle
+ * -----------------------------------------------------------------------
+ * Suggested path: src/hooks/useTheme.js
+ *
+ * Works with your index.css as-is — it defines :root (light) and .dark
+ * (dark) token sets already; this just toggles the .dark class on <html>
+ * and remembers the choice.
+ *
+ * Wrap your app once:
+ *   // main.jsx
+ *   import { ThemeProvider } from './hooks/useTheme';
+ *   <ThemeProvider><App /></ThemeProvider>
+ *
+ * Use anywhere:
+ *   import { useTheme } from './hooks/useTheme';
+ *   const { theme, toggleTheme } = useTheme();
+ * ----------------------------------------------------------------------- */
+
+import { createContext, useContext, useEffect, useState } from 'react';
+
+const ThemeContext = createContext(null);
+
+function getInitialTheme() {
+  const stored = localStorage.getItem('mtp-theme');
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('mtp-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used inside <ThemeProvider>');
+  return ctx;
+}

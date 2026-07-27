@@ -126,12 +126,11 @@ export default function WhyTrust() {
     max-w-7xl
     text-center
     text-[clamp(4.5rem,9vw,8rem)]
-    font-semibold
+    font-medium
     leading-[0.95]
     tracking-[-0.035em]
 
-    bg-[radial-gradient(circle_at_center,var(--secondary)_0%,var(--primary)_45%,var(--foreground)_100%)]
-    bg-clip-text
+    bg-[linear-gradient(90deg,var(--primary)_30%,var(--primary)_50%,var(--secondary)_100%,var(--primary)_100%)]
     [-webkit-background-clip:text]
     text-transparent
     [-webkit-text-fill-color:transparent]
