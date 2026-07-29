@@ -21,9 +21,6 @@ export default function ContactSection() {
           <div className="pointer-events-none absolute inset-[10px] rounded-[32px] border border-primary/15" />
 
           <div className="relative z-10 px-8 pt-14 text-center md:px-16">
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm text-primary">
-              Contact
-            </span>
 
             <h2 className="mt-6 text-4xl font-bold md:text-6xl">
               Let's build something incredible.
@@ -37,14 +34,14 @@ export default function ContactSection() {
 
           <div className="relative mt-24 h-[650px]">
             <button
-              onClick={() => setOpen(true)}
-              className="absolute left-1/2 top-0 z-30 -translate-x-1/2 rounded-full bg-primary px-8 py-4 text-primary-foreground shadow-xl transition hover:scale-105"
+                onClick={() => setOpen(true)}
+                className="absolute left-1/2 -top-16 z-30 -translate-x-1/2 cursor-pointer rounded-full bg-primary px-8 py-4 text-primary-foreground shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
-              Contact Us
+                Contact Us
             </button>
 
             <WorldMapWrapper />
-          </div>
+            </div>
         </motion.div>
       </section>
 
