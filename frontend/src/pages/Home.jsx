@@ -6,6 +6,7 @@ import FeatureSection from './FeatureSection';
 import TrustSafetySection from './TrustSafetySection';
 import Testimonials from './Testimonials';
 import FAQSection from './Faq';
+import ContactSection from './ContactSection';
 
 
 const trustItems = [
@@ -132,6 +133,7 @@ export default function Home() {
     <TrustSafetySection />
     <Testimonials />
     <FAQSection />
+    <ContactSection />
     
     </>
   );
