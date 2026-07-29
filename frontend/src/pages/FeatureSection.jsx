@@ -95,12 +95,12 @@ function FeatureSection() {
               whileHover={{ y: -4, scale: 1.008 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="relative flex h-full w-full items-center justify-center px-5 py-2 lg:px-8"
-  >{/* ---------- FEATURE LAYOUT ---------- */}
-        <div className="relative w-full  border-t-2 border-primary bg-background">
+        >{/* ---------- FEATURE LAYOUT ---------- */}
+        <div className="relative w-full border-t border-primary bg-background">
 
          <div className="grid  grid-cols-12">
 
-    <div className="relative col-span-4 pt-24 min-h-[220px]">
+        <div className="relative col-span-4 pt-24 min-h-[220px]">
 
             <div className="absolute left-10 top-50">
 

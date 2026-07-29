@@ -312,13 +312,13 @@ const ScrollStack = ({
     : `relative w-full h-full overflow-y-auto overflow-x-visible ${className}`.trim();
 
   const childCount = Children.toArray(children).length;
-  const contentHeight = `${childCount * 130}vh`;
+  const contentHeight = `${childCount * 100}vh`;
 
   return (
     <div className={containerClassName} ref={scrollerRef} style={containerStyles}>
       <div className="scroll-stack-inner w-full" style={{ minHeight: contentHeight }}>
         {children}
-        <div className="scroll-stack-end h-full w-full" />
+        <div className="scroll-stack-end h-px w-full" />
       </div>
     </div>
   );

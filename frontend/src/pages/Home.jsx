@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import WhyTrust from "./TrustStripe";
 import HowItWorks from './HowitWorks';
 import FeatureSection from './FeatureSection';
+import TrustSafetySection from './TrustSafetySection';
+import Testimonials from './Testimonials';
+import FAQSection from './Faq';
 
 
 const trustItems = [
@@ -126,6 +129,9 @@ export default function Home() {
     <WhyTrust />
     <HowItWorks />
     <FeatureSection />
+    <TrustSafetySection />
+    <Testimonials />
+    <FAQSection />
     
     </>
   );
