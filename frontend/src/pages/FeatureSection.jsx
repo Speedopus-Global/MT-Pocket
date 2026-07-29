@@ -95,79 +95,62 @@ function FeatureSection() {
               whileHover={{ y: -4, scale: 1.008 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="relative flex h-full w-full items-center justify-center px-5 py-2 lg:px-8"
-        >{/* ---------- FEATURE LAYOUT ---------- */}
-        <div className="relative w-full border-t border-primary bg-background">
+        >
+       {/* ---------- FEATURE LAYOUT ---------- */}
+<div className="relative w-full border-t border-primary bg-background">
+  <div className="grid grid-cols-12">
 
-         <div className="grid  grid-cols-12">
-
-        <div className="relative col-span-4 pt-24 min-h-[220px]">
-
-            <div className="absolute left-10 top-50">
-
-                <feature.icon
-                size={56}
-                strokeWidth={1.8}
-                className="text-primary"
-                />
-
-            </div>
-
-            </div>
+    {/* LEFT */}
+    <div className="relative col-span-4 pt-12 md:pt-14 lg:pt-16 min-h-[160px] md:min-h-[190px] lg:min-h-[220px]">
+      <div className="absolute left-6 md:left-8 lg:left-10 top-40 md:top-44 lg:top-52">
+        <feature.icon
+          size={42}
+          strokeWidth={1.8}
+          className="text-primary md:size-11 lg:size-12"
+        />
+      </div>
+    </div>
 
     {/* RIGHT */}
-    <div className="col-span-8 flex flex-col pt-24 pb-12 pr-12">
+    <div className="col-span-8 flex flex-col pt-12 md:pt-14 lg:pt-16 pb-8 md:pb-10 lg:pb-12 pr-4 md:pr-8 lg:pr-12">
 
       {/* Title */}
-      <h3 className="max-w-4xl pt-24  text-4xl font-semibold leading-[1.15] tracking-[-0.05em] text-secondary md:text-5xl lg:text-6xl xl:text-[4.8rem]">
-
+      <h3 className="max-w-4xl pt-8 md:pt-10 text-xl font-semibold leading-tight tracking-[-0.03em] text-secondary sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-[3.5rem]">
         {feature.title}
-
       </h3>
 
       {/* Description */}
-      <div className="mt-12 max-w-3xl">
-
-        <p className="text-left text-lg leading-[1.9] text-secondary md:text-xl lg:text-2xl xl:text-[1.8rem]">
-
+      <div className="mt-5 md:mt-6 max-w-3xl">
+        <p className="text-left text-sm leading-7 text-secondary sm:text-base md:text-lg lg:text-xl xl:text-[1.35rem] xl:leading-9">
           {feature.description}
-
         </p>
-
       </div>
 
       {/* Bullet List */}
-      <div className="mt-16">
+      <div className="mt-8 md:mt-10">
 
         {feature.bullets.map((bullet, index) => (
-
           <div key={bullet}>
 
-            <div className="flex items-center gap-8 py-8">
+            <div className="flex items-start gap-4 md:gap-5 lg:gap-6 py-4 md:py-5">
 
               {/* Number */}
-              <span className="w-14 shrink-0 text-2xl font-semibold tracking-wide text-primary">
-
+              <span className="w-8 md:w-10 shrink-0 text-lg md:text-xl lg:text-2xl font-semibold tracking-wide text-primary">
                 {String(index + 1).padStart(2, "0")}
-
               </span>
 
               {/* Text */}
-              <p className="flex-1 text-xl leading-[1.8] text-secondary lg:text-[1.6rem] xl:text-[1.75rem]">
-
+              <p className="flex-1 text-sm leading-7 text-secondary sm:text-base md:text-lg lg:text-xl xl:text-[1.25rem] xl:leading-9">
                 {bullet}
-
               </p>
 
             </div>
 
             {index !== feature.bullets.length - 1 && (
-
-              <div className="ml-14 h-[2px] bg-primary" />
-
+              <div className="ml-8 md:ml-10 h-px bg-primary/30" />
             )}
 
           </div>
-
         ))}
 
       </div>
@@ -175,7 +158,6 @@ function FeatureSection() {
     </div>
 
   </div>
-
 </div>
 
 
