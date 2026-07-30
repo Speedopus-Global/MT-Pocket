@@ -227,6 +227,7 @@
   transition: width 0.3s ease;
 }
 
-.group:hover .hover-line::after {
+.group:hover .hover-line::after,
+.hover-line:hover::after {
   width: 100%;
 }
