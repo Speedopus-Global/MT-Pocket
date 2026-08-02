@@ -1,19 +1,31 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import  StyleGuide from "./pages/StyleGuide";
-import Layout from "./components/layout/layout.jsx";
-import Home from "./pages/Home.jsx";
-import WhyTrust from "./pages/TrustStripe.jsx";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Layout from './components/layout/layout.jsx';
+import Home from './pages/Home.jsx';
+import WhyTrust from './pages/TrustStripe.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import StyleGuide from './pages/StyleGuide';
+
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route index element={<WhyTrust />} />
-        </Route>
-        <Route path="/style-guide" element={<StyleGuide />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Auth pages — full-screen, no shared Layout */}
+          <Route path="/login"    element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Main app — wrapped in Layout (navbar + footer) */}
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+          </Route>
+
+          {/* Dev only */}
+          <Route path="/style-guide" element={<StyleGuide />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ArrowRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WhyTrust from "./TrustStripe";
@@ -91,13 +92,13 @@ export default function Home() {
             variants={fadeUp}
             className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
           >
-            <a
-              href="/get-started"
+            <Link
+              to="/register"
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-sm transition duration-300 hover:scale-[1.02] hover:bg-primary/90"
             >
               Get Started
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
 
             <a
               href="/how-it-works"
