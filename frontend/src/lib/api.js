@@ -57,6 +57,13 @@ export const api = {
   verifyEmail: (otp, accessToken) => 
     request('/auth/email/verify', { method: 'POST', body: { otp }, accessToken }),
 
+  // User Profile Flow
+  getProfile: (accessToken) =>
+    request('/users/profile', { accessToken }),
+
+  updateProfile: (data, accessToken) =>
+    request('/users/profile', { method: 'PUT', body: data, accessToken }),
+
   // General session / tokens
   setRole: (role, accessToken) => 
     request('/auth/role', { method: 'POST', body: { role }, accessToken }),

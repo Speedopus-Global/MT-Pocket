@@ -51,7 +51,7 @@ export default function Login() {
     try {
       const result = await api.loginPassword(identifier, password);
       completeLogin(result);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -82,7 +82,7 @@ export default function Login() {
     try {
       const result = await api.loginOtpVerify(identifier, otp);
       completeLogin(result);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {

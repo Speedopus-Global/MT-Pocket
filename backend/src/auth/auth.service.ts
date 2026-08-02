@@ -355,6 +355,9 @@ export class AuthService {
         role: user.role,
         fullName: user.fullName,
         identityVerified: user.identityVerified,
+        avatarUrl: user.avatarUrl,
+        address: user.address,
+        location: user.location,
       },
     };
   }

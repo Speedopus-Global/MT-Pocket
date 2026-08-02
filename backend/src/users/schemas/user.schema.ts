@@ -112,6 +112,35 @@ export class User {
     default: 0,
   })
   passwordResetOtpAttempts: number;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  avatarUrl: string | null;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  address: string | null;
+
+  @Prop({
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number],
+      default: undefined,
+    },
+  })
+  location: {
+    type: string;
+    coordinates: [number, number]; // [longitude, latitude]
+  } | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index({ location: '2dsphere' });

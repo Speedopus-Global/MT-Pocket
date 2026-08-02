@@ -105,7 +105,7 @@ export default function Register() {
     try {
       const result = await api.registerComplete(phone, password, fullName, role);
       completeLogin(result);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
