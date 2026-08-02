@@ -327,7 +327,7 @@ export class AuthService {
   }
 
   private async issueTokens(user: UserDocument) {
-    const payload = { sub: user._id.toString(), phone: user.phone, role: user.role };
+    const payload = { sub: user._id.toString(), phone: user.phone, role: user.role ,systemRole: user.systemRole, };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET!,
@@ -353,6 +353,7 @@ export class AuthService {
         email: user.email,
         emailVerified: user.emailVerified,
         role: user.role,
+        systemRole: user.systemRole,
         fullName: user.fullName,
         identityVerified: user.identityVerified,
         avatarUrl: user.avatarUrl,

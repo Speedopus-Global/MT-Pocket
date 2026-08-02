@@ -11,7 +11,7 @@ import {
   X, 
   ArrowLeft
 } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/image.png';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -37,7 +37,7 @@ export default function DashboardLayout() {
       <header className="md:hidden flex items-center justify-between px-6 py-4 bg-card/85 backdrop-blur-md border-b border-border/60 z-20">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full border border-primary/40 overflow-hidden bg-primary/5 flex items-center justify-center shadow-sm">
-            <img src={logo} alt="MT Pocket" className="w-6 h-6 object-contain" />
+            <img src={logo} alt="MT Pocket" className="w-6 h-6 object-contain bg-primary" />
           </div>
           <span className="font-extrabold tracking-tight text-primary text-base">MT Pocket</span>
         </Link>

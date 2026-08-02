@@ -51,7 +51,13 @@ export default function Login() {
     try {
       const result = await api.loginPassword(identifier, password);
       completeLogin(result);
-      navigate('/dashboard');
+      
+      // Redirect based on role
+      if (result.user.systemRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -81,8 +87,14 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       const result = await api.loginOtpVerify(identifier, otp);
-      completeLogin(result);
-      navigate('/dashboard');
+      
+            completeLogin(result);
+
+            if (result.user.systemRole === 'admin') {
+            navigate('/admin');
+            } else {
+            navigate('/dashboard');
+            }
     } catch (err) {
       setError(err.message);
     } finally {

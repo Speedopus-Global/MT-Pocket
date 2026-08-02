@@ -2,93 +2,126 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  User as UserIcon, 
-  Mail, 
-  Smartphone, 
-  MapPin, 
-  Loader2, 
-  Camera, 
-  Check, 
+import {
+  Mail,
+  Smartphone,
+  MapPin,
+  Loader2,
+  Camera,
   AlertCircle,
   Fingerprint,
   CheckCircle2,
-  Clock
+  Clock,
 } from 'lucide-react';
+
+// ── Reverse geocode via Nominatim (OpenStreetMap, free, no key needed) ──────
+async function reverseGeocode(lat, lng) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+    { headers: { 'Accept-Language': 'en' } }
+  );
+  if (!res.ok) throw new Error('Geocoding failed');
+  const data = await res.json();
+  const { city, town, village, state_district, state, country } = data.address || {};
+  const locality = city || town || village || state_district || '';
+  return [locality, state, country].filter(Boolean).join(', ');
+}
+
+const inputClass =
+  'w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-shadow';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 22 } },
+};
 
 export default function Profile() {
   const { user, accessToken, updateUser } = useAuth();
 
-  // Profile forms
-  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [fullName, setFullName]   = useState(user?.fullName || '');
   const [email, setEmail]         = useState(user?.email || '');
   const [address, setAddress]     = useState(user?.address || '');
-  const [latitude, setLatitude]   = useState(user?.location?.coordinates?.[1] || '28.6139'); // Default Delhi lat
-  const [longitude, setLongitude] = useState(user?.location?.coordinates?.[0] || '77.2090'); // Default Delhi lon
+  const [latitude, setLatitude]   = useState(user?.location?.coordinates?.[1] ?? '');
+  const [longitude, setLongitude] = useState(user?.location?.coordinates?.[0] ?? '');
 
-  // States for actions
-  const [isSaving, setIsSaving]   = useState(false);
-  const [error, setError]         = useState('');
-  const [success, setSuccess]     = useState('');
+  const [isSaving, setIsSaving]     = useState(false);
+  const [error, setError]           = useState('');
+  const [success, setSuccess]       = useState('');
   const [isDetecting, setIsDetecting] = useState(false);
+  const [gpsDetected, setGpsDetected] = useState(false);
 
+  const [emailStep, setEmailStep]       = useState('idle');
+  const [emailOtp, setEmailOtp]         = useState('');
+  const [emailVerifying, setEmailVerifying] = useState(false);
+
+  if (!user) return null;
+
+  // ── GPS Detection + Reverse Geocode ──────────────────────────────────
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       return;
     }
     setError('');
+    setGpsDetected(false);
     setIsDetecting(true);
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude.toFixed(6));
-        setLongitude(position.coords.longitude.toFixed(6));
-        setSuccess('Real GPS coordinates detected successfully! Remember to Save Details.');
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLatitude(lat.toFixed(6));
+        setLongitude(lng.toFixed(6));
+
+        try {
+          const placeName = await reverseGeocode(lat, lng);
+          if (placeName) setAddress(placeName);
+        } catch {
+          // Geocoding failed — coords are still set, address just won't auto-fill
+        }
+
+        setGpsDetected(true);
         setIsDetecting(false);
       },
       (err) => {
-        setError(`Failed to retrieve coordinates: ${err.message}`);
+        setError(`Could not detect location: ${err.message}`);
         setIsDetecting(false);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 
-  // Email verification flow states
-  const [emailStep, setEmailStep] = useState('idle'); // 'idle' | 'otp'
-  const [emailOtp, setEmailOtp]   = useState('');
-  const [emailVerifying, setEmailVerifying] = useState(false);
-
-  if (!user) return null;
-
-  // ── Handle Profile Details Save ─────────────────────────────────────
+  // ── Save Profile ──────────────────────────────────────────────────────
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setIsSaving(true);
     try {
-      const updated = await api.updateProfile({
-        fullName,
-        email,
-        address,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-      }, accessToken);
-
+      const updated = await api.updateProfile(
+        {
+          fullName,
+          email,
+          address,
+          ...(latitude && longitude
+            ? { latitude: parseFloat(latitude), longitude: parseFloat(longitude) }
+            : {}),
+        },
+        accessToken
+      );
       updateUser({
         fullName: updated.fullName,
         email: updated.email,
         emailVerified: updated.emailVerified,
         address: updated.address,
-        location: updated.location
+        location: updated.location,
       });
       setSuccess('Profile updated successfully!');
-      
-      // If email was modified, reset local verification UI
-      if (email !== user.email) {
-        setEmailStep('idle');
-      }
+      if (email !== user.email) setEmailStep('idle');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -96,23 +129,20 @@ export default function Profile() {
     }
   };
 
-  // ── Handle Avatar Image Choice ──────────────────────────────────────
+  // ── Avatar ────────────────────────────────────────────────────────────
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setError('');
     setSuccess('');
     setIsSaving(true);
-
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
       try {
-        const base64 = reader.result;
-        const updated = await api.updateProfile({ avatar: base64 }, accessToken);
+        const updated = await api.updateProfile({ avatar: reader.result }, accessToken);
         updateUser({ avatarUrl: updated.avatarUrl });
-        setSuccess('Profile photo updated successfully!');
+        setSuccess('Profile photo updated!');
       } catch (err) {
         setError(err.message);
       } finally {
@@ -125,12 +155,9 @@ export default function Profile() {
     };
   };
 
-  // ── Send Email OTP Code ──────────────────────────────────────────────
+  // ── Email Verification ────────────────────────────────────────────────
   const handleRequestEmailVerification = async () => {
-    if (!email) {
-      setError('Please add an email address first.');
-      return;
-    }
+    if (!email) { setError('Please add an email address first.'); return; }
     setError('');
     setEmailVerifying(true);
     try {
@@ -143,7 +170,6 @@ export default function Profile() {
     }
   };
 
-  // ── Verify Email OTP Code ────────────────────────────────────────────
   const handleVerifyEmailOtp = async (e) => {
     e.preventDefault();
     setError('');
@@ -161,355 +187,246 @@ export default function Profile() {
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.12 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 22 } }
-  };
-
   return (
-    <motion.div 
+    <motion.div
       className="flex-1 flex flex-col space-y-8 min-h-full"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      
-      {/* Title Header */}
+      {/* Header */}
       <motion.div variants={itemVariants}>
-        <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-600 to-primary/80">
+        <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-600 to-primary/80">
           Profile & Trust Centre
         </h1>
-        <p className="text-muted-foreground text-sm font-medium mt-1">
-          Manage your personal details, location configurations, and monitor your verified security badges.
+        <p className="text-muted-foreground text-sm mt-1">
+          Manage your personal details, location, and verification badges.
         </p>
       </motion.div>
 
-      {/* Full-Page Grid Split columns layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 items-start">
-        
-        {/* Left Column: Avatar halo & Trust Checklist */}
-        <div className="space-y-6 lg:sticky lg:top-8">
-          
-          {/* Avatar Panel with rotating gradient halo */}
-          <motion.div 
-            variants={itemVariants} 
-            className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm relative overflow-hidden"
+      {/* Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
+        <div className="space-y-5 lg:sticky lg:top-8">
+
+          {/* Avatar card */}
+          <motion.div
+            variants={itemVariants}
+            className="rounded-2xl border border-border bg-card p-7 text-center shadow-sm relative overflow-hidden"
           >
-            {/* Rotating Ring Container */}
-            <div className="relative w-36 h-36 mx-auto mb-6">
-              {/* Simple Premium Border */}
-              <div className="absolute inset-0 rounded-full border-2 border-primary/45 shadow-sm" />
-              
-              {/* Inner core */}
-              <div className="absolute inset-[3.5px] bg-card rounded-full overflow-hidden flex items-center justify-center group">
+            <div className="relative w-32 h-32 mx-auto mb-5">
+              <div className="absolute inset-0 rounded-full border-2 border-primary/40" />
+              <div className="absolute inset-[3px] bg-card rounded-full overflow-hidden flex items-center justify-center group">
                 {user.avatarUrl ? (
-                  <img 
-                    src={user.avatarUrl} 
-                    alt="Avatar" 
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                  />
+                  <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                   <div className="w-full h-full bg-primary/10 text-primary font-bold flex items-center justify-center text-4xl">
-                    {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                    {user.fullName?.[0]?.toUpperCase() ?? 'U'}
                   </div>
                 )}
-                {/* Upload Overlay */}
-                <label 
-                  htmlFor="avatar-upload-input" 
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer text-white text-xs gap-1 font-semibold"
+                <label
+                  htmlFor="avatar-upload-input"
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs gap-1 font-semibold"
                 >
-                  <Camera size={20} />
-                  <span>Update Photo</span>
+                  <Camera size={18} />
+                  <span>Change</span>
                 </label>
-                <input 
-                  id="avatar-upload-input" 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleAvatarChange} 
-                  className="hidden" 
-                />
+                <input id="avatar-upload-input" type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
               </div>
             </div>
 
-            <h3 className="font-extrabold text-lg text-foreground tracking-tight">{user.fullName || 'User Name'}</h3>
-            <span className="inline-block text-[10px] text-primary bg-primary/15 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1.5">
-              {user.role} Account
+            <h3 className="font-extrabold text-base text-foreground tracking-tight">{user.fullName || 'Your Name'}</h3>
+            <span className="inline-block text-[10px] text-primary bg-primary/10 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1.5 capitalize">
+              {user.role} account
             </span>
 
             {isSaving && (
-              <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
-                <Loader2 className="animate-spin text-primary" size={24} />
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+                <Loader2 className="animate-spin text-primary" size={22} />
               </div>
             )}
           </motion.div>
 
-          {/* Badges Panel */}
-          <motion.div 
-            variants={itemVariants} 
-            className="rounded-2xl border border-border bg-card p-6 shadow-sm"
-          >
-            <h3 className="font-bold text-foreground mb-4 text-xs tracking-wider uppercase">
-              Trust Checklist Badges
+          {/* Trust badges */}
+          <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="font-bold text-foreground mb-4 text-[10px] tracking-widest uppercase text-muted-foreground">
+              Trust checklist
             </h3>
-            
-            <ul className="space-y-4">
-              
-              {/* Phone Verified */}
-              <li className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0 shadow-inner">
-                    <Smartphone size={15} />
-                  </div>
-                  <span className="text-foreground font-semibold text-xs tracking-wide">Phone verification</span>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full shadow-sm">
-                  <CheckCircle2 size={12} /> Verified
-                </span>
-              </li>
-
-              {/* Email Verified */}
-              <li className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner ${
-                    user.emailVerified ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
-                  }`}>
-                    <Mail size={15} />
-                  </div>
-                  <span className="text-foreground font-semibold text-xs tracking-wide">Email verification</span>
-                </div>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm ${
-                  user.emailVerified 
-                    ? 'text-emerald-600 bg-emerald-500/10' 
-                    : 'text-amber-600 bg-amber-500/10'
-                }`}>
-                  {user.emailVerified ? (
-                    <><CheckCircle2 size={12} /> Verified</>
-                  ) : (
-                    <><AlertCircle size={12} /> Unverified</>
-                  )}
-                </span>
-              </li>
-
-              {/* Identity Verified */}
-              <li className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner ${
-                    user.identityVerified ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <Fingerprint size={15} />
-                  </div>
-                  <span className="text-foreground font-semibold text-xs tracking-wide">Identity Verification</span>
-                </div>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm ${
-                  user.identityVerified 
-                    ? 'text-emerald-600 bg-emerald-500/10' 
-                    : 'text-muted-500 bg-muted text-muted-foreground/80'
-                }`}>
-                  {user.identityVerified ? (
-                    <><CheckCircle2 size={12} /> Verified</>
-                  ) : (
-                    <><Clock size={12} /> Pending</>
-                  )}
-                </span>
-              </li>
-
+            <ul className="space-y-3.5">
+              <BadgeRow icon={Smartphone} label="Phone" verified={true} />
+              <BadgeRow icon={Mail} label="Email" verified={user.emailVerified} pendingLabel="Unverified" />
+              <BadgeRow icon={Fingerprint} label="Identity" verified={user.identityVerified} pendingLabel="Pending" pendingIcon={Clock} />
             </ul>
           </motion.div>
 
         </div>
 
-        {/* Right Column: settings edit form sheets */}
-        <div className="lg:col-span-2 space-y-6">
-          
+        {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Flash messages */}
           <AnimatePresence mode="wait">
             {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="rounded-xl bg-destructive/10 border border-destructive/30 px-5 py-3 text-sm text-destructive"
-              >
+              <motion.div key="err" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
                 {error}
               </motion.div>
             )}
             {success && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-5 py-3 text-sm text-emerald-600 font-medium"
-              >
+              <motion.div key="ok" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-600 font-medium">
                 {success}
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Edit Form Card */}
-          <motion.div 
-            variants={itemVariants} 
-            className="rounded-2xl border border-border bg-card p-8 shadow-sm flex flex-col justify-between"
-          >
-            <h3 className="font-extrabold text-foreground mb-6 text-base tracking-tight">Core Profile Settings</h3>
-            
+          {/* Profile form */}
+          <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-7 shadow-sm">
+            <h3 className="font-extrabold text-foreground mb-5 text-base tracking-tight">Core profile settings</h3>
+
             <form onSubmit={handleSaveProfile} className="space-y-5">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="fullName" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full name</label>
+                  <label htmlFor="fullName" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Full name</label>
                   <input
-                    id="fullName"
-                    type="text"
-                    required
-                    placeholder="Annanya Tiwary"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="form-input text-sm px-4 py-2.5 focus:shadow-[0_0_12px_rgba(15,122,83,0.15)] focus:border-primary"
+                    id="fullName" type="text" required placeholder="Vijay Kumar"
+                    value={fullName} onChange={(e) => setFullName(e.target.value)}
+                    className={inputClass}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="email" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="email@domain.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="form-input text-sm px-4 py-2.5 focus:shadow-[0_0_12px_rgba(15,122,83,0.15)] focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="address" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Geographical Address</label>
-                <div className="relative">
-                  <input
-                    id="address"
-                    type="text"
-                    placeholder="Delhi, India"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="form-input text-sm pl-11 pr-4 py-2.5 focus:shadow-[0_0_12px_rgba(15,122,83,0.15)] focus:border-primary"
-                  />
-                  <MapPin className="absolute left-4 top-3 text-muted-foreground" size={18} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Verified Mobile Number</label>
+                  <label htmlFor="email" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Email address</label>
                   <div className="relative">
                     <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={user.phone}
-                      className="form-input text-sm px-4 py-2.5 bg-muted/40 border-muted text-muted-foreground cursor-not-allowed select-none"
+                      id="email" type="email" placeholder="you@example.com"
+                      value={email} onChange={(e) => setEmail(e.target.value)}
+                      className={`${inputClass} ${user.emailVerified ? 'pr-24' : ''}`}
                     />
-                    <span className="absolute right-3.5 top-3 text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase inline-flex items-center gap-1">
-                      <CheckCircle2 size={12} /> Verified
-                    </span>
+                    {user.emailVerified && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full pointer-events-none">
+                        <CheckCircle2 size={10} /> Verified
+                      </span>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Device Location (GPS)</label>
+              {/* Address + GPS row */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="address" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Location
+                </label>
+                <div className="flex items-center gap-2">
+                  {/* Input with pin icon left, GPS badge right when detected */}
+                  <div className="relative flex-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={15} />
+                    <input
+                      id="address" type="text" placeholder="Vijayawada, Andhra Pradesh, India"
+                      value={address} onChange={(e) => setAddress(e.target.value)}
+                      className={`${inputClass} pl-10 ${gpsDetected ? 'pr-24' : ''}`}
+                    />
+                    <AnimatePresence>
+                      {gpsDetected && (
+                        <motion.span
+                          key="gps-badge"
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.85 }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full pointer-events-none"
+                        >
+                          <CheckCircle2 size={10} /> GPS set
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* GPS button — same height as input, always aligned */}
                   <button
                     type="button"
                     onClick={handleDetectLocation}
                     disabled={isDetecting}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 text-primary text-sm font-semibold py-2.5 hover:bg-primary/10 transition-colors disabled:opacity-65"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 text-primary text-xs font-semibold px-3 h-[42px] hover:bg-primary/10 transition-colors disabled:opacity-60 whitespace-nowrap cursor-pointer shrink-0"
                   >
-                    {isDetecting ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin" />
-                        Detecting Location...
-                      </>
-                    ) : (
-                      <>
-                        <MapPin size={15} />
-                        Detect GPS Coordinates
-                      </>
-                    )}
+                    {isDetecting
+                      ? <><Loader2 size={13} className="animate-spin" /> Detecting…</>
+                      : <><MapPin size={13} /> Use GPS</>
+                    }
                   </button>
                 </div>
               </div>
 
-              <div className="pt-3">
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-semibold px-6 py-3 hover:bg-primary/95 transition-all text-sm shadow-md shadow-primary/10 disabled:opacity-60"
-                >
-                  {isSaving && <Loader2 size={15} className="animate-spin" />}
-                  Save Details
-                </button>
+              {/* Phone (read-only) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Verified mobile</label>
+                <div className="relative">
+                  <input
+                    type="text" readOnly disabled value={user.phone}
+                    className="w-full rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground cursor-not-allowed pr-28"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 size={10} /> Verified
+                  </span>
+                </div>
               </div>
 
+              <div className="pt-1">
+                <button
+                  type="submit" disabled={isSaving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground font-semibold px-6 py-2.5 text-sm hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20 disabled:opacity-60"
+                >
+                  {isSaving && <Loader2 size={14} className="animate-spin" />}
+                  Save details
+                </button>
+              </div>
             </form>
           </motion.div>
 
           {/* Email verification card */}
           {user.email && !user.emailVerified && (
-            <motion.div 
+            <motion.div
               variants={itemVariants}
-              className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.02] p-8 shadow-sm flex flex-col justify-between"
+              className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.03] p-7 shadow-sm"
             >
-              <h3 className="font-extrabold text-foreground mb-1.5 text-base flex items-center gap-2">
-                <AlertCircle className="text-amber-600" size={20} />
-                Email Verification Required
+              <h3 className="font-extrabold text-foreground mb-1 text-base flex items-center gap-2">
+                <AlertCircle className="text-amber-600 shrink-0" size={18} />
+                Email verification required
               </h3>
               <p className="text-xs text-muted-foreground mb-5">
-                Verify ownership of the email address <strong>{user.email}</strong> to unlock your verified status trust badge.
+                Verify <strong>{user.email}</strong> to unlock your email verified trust badge.
               </p>
 
               {emailStep === 'idle' ? (
-                <div>
-                  <button
-                    onClick={handleRequestEmailVerification}
-                    disabled={emailVerifying}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 text-white font-semibold px-6 py-2.5 hover:bg-amber-700 transition-all text-xs disabled:opacity-60"
-                  >
-                    {emailVerifying && <Loader2 size={12} className="animate-spin" />}
-                    Verify email address
-                  </button>
-                </div>
+                <button
+                  onClick={handleRequestEmailVerification} disabled={emailVerifying}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white font-semibold px-5 py-2.5 text-xs hover:bg-amber-700 transition-colors disabled:opacity-60"
+                >
+                  {emailVerifying && <Loader2 size={12} className="animate-spin" />}
+                  Send verification code
+                </button>
               ) : (
-                <form onSubmit={handleVerifyEmailOtp} className="flex flex-col sm:flex-row gap-4 items-end">
+                <form onSubmit={handleVerifyEmailOtp} className="flex flex-col sm:flex-row gap-3 items-end">
                   <div className="flex flex-col gap-1.5 flex-1">
-                    <label htmlFor="email-otp-code" className="text-xs font-semibold text-foreground uppercase tracking-wider">6-digit verification code</label>
+                    <label htmlFor="email-otp" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      6-digit code
+                    </label>
                     <input
-                      id="email-otp-code"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      required
-                      placeholder="123456"
-                      value={emailOtp}
+                      id="email-otp" type="text" inputMode="numeric" maxLength={6} required
+                      placeholder="123456" value={emailOtp}
                       onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                      style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1rem' }}
-                      className="form-input py-2.5 focus:shadow-[0_0_12px_rgba(15,122,83,0.15)] focus:border-primary"
+                      className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-center text-base tracking-[0.3em] text-foreground placeholder:tracking-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                   <button
-                    type="submit"
-                    disabled={emailVerifying}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground font-semibold px-6 py-3 hover:bg-primary/95 transition-all text-xs shadow-md shadow-primary/10 disabled:opacity-60"
+                    type="submit" disabled={emailVerifying}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary text-primary-foreground font-semibold px-5 py-2.5 text-xs hover:bg-primary/90 transition-colors disabled:opacity-60 h-[42px]"
                   >
                     {emailVerifying && <Loader2 size={12} className="animate-spin" />}
-                    Confirm Code
+                    Confirm
                   </button>
                   <button
-                    type="button"
-                    onClick={() => setEmailStep('idle')}
-                    className="text-xs text-muted-foreground hover:text-foreground font-semibold py-3 px-2"
+                    type="button" onClick={() => setEmailStep('idle')}
+                    className="text-xs text-muted-foreground hover:text-foreground font-medium h-[42px] px-2"
                   >
                     Cancel
                   </button>
@@ -519,9 +436,24 @@ export default function Profile() {
           )}
 
         </div>
-
       </div>
-
     </motion.div>
+  );
+}
+
+// ── Reusable badge row ──────────────────────────────────────────────────────
+function BadgeRow({ icon: Icon, label, verified, pendingLabel = 'Unverified', pendingIcon: PendingIcon = AlertCircle }) {
+  return (
+    <li className="flex items-center justify-between">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${verified ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+          <Icon size={13} />
+        </div>
+        <span className="text-foreground font-semibold text-xs">{label}</span>
+      </div>
+      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ${verified ? 'text-emerald-600 bg-emerald-500/10' : 'text-muted-foreground bg-muted'}`}>
+        {verified ? <><CheckCircle2 size={10} /> Verified</> : <><PendingIcon size={10} /> {pendingLabel}</>}
+      </span>
+    </li>
   );
 }

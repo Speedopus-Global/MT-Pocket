@@ -8,6 +8,9 @@ import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Profile from './pages/Profile.jsx';
 import StyleGuide from './pages/StyleGuide';
+import RequireAdmin from './components/guards/RequireAdmin.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
+import Unauthorized from './pages/Unauthorized.jsx';
 
 function App() {
   return (
@@ -24,9 +27,16 @@ function App() {
             <Route path="profile" element={<Profile />} />
           </Route>
 
+          <Route path="/unauthorized" element={<Unauthorized />} />
+
           {/* Main app marketplace — wrapped in Layout (navbar + footer) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+          </Route>
+
+          {/* Admin */}
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
           {/* Dev only */}

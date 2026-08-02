@@ -140,6 +140,52 @@ export class User {
     type: string;
     coordinates: [number, number]; // [longitude, latitude]
   } | null;
+
+  // ── System Role (set manually in MongoDB — 'user' | 'admin') ──────────
+  @Prop({
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  })
+  systemRole: 'user' | 'admin';
+
+  // ── Account Lifecycle ──────────────────────────────────────────────────
+  @Prop({
+    type: String,
+    enum: ['active', 'suspended', 'banned'],
+    default: 'active',
+  })
+  accountStatus: 'active' | 'suspended' | 'banned';
+
+  @Prop({ type: String, default: null })
+  suspensionReason: string | null;
+
+  @Prop({ type: Number, default: 0 })
+  reportCount: number;
+
+  // ── Identity Document Verification ─────────────────────────────────────
+  @Prop({ type: String, default: null })
+  idDocumentUrl: string | null;
+
+  @Prop({
+    type: String,
+    enum: ['aadhaar', 'pan', 'passport', 'driving_license', null],
+    default: null,
+  })
+  idDocumentType: 'aadhaar' | 'pan' | 'passport' | 'driving_license' | null;
+
+  @Prop({
+    type: String,
+    enum: ['none', 'pending', 'approved', 'rejected'],
+    default: 'none',
+  })
+  idDocumentStatus: 'none' | 'pending' | 'approved' | 'rejected';
+
+  @Prop({ type: String, default: null })
+  idDocumentRejectionReason: string | null;
+
+  @Prop({ type: Date, default: null })
+  idDocumentSubmittedAt: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
