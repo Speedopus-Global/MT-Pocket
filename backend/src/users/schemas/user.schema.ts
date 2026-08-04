@@ -129,17 +129,13 @@ export class User {
     type: {
       type: String,
       enum: ['Point'],
-      default: 'Point',
     },
-    coordinates: {
-      type: [Number],
-      default: undefined,
-    },
+    coordinates: [Number],
   })
-  location: {
-    type: string;
-    coordinates: [number, number]; // [longitude, latitude]
-  } | null;
+  location?: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
 
   // ── System Role (set manually in MongoDB — 'user' | 'admin') ──────────
   @Prop({
