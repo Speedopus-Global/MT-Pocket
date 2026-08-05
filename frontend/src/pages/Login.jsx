@@ -216,7 +216,7 @@ export default function Login() {
                       id="forgot-identifier"
                       type="text"
                       required
-                      placeholder="+919876543210 or email@domain.com"
+                      placeholder="Enter your phone number or Email"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="form-input"
@@ -282,7 +282,7 @@ export default function Login() {
                   id="login-identifier"
                   type="text"
                   required
-                  placeholder="+919876543210 or email@domain.com"
+                  placeholder="Enter Your phone number or Email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="form-input"
@@ -331,7 +331,7 @@ export default function Login() {
                       id="otp-identifier"
                       type="text"
                       required
-                      placeholder="+919876543210 or email@domain.com"
+                      placeholder="Enter Your phone number or Email"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="form-input"

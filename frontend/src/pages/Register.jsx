@@ -185,7 +185,7 @@ export default function Register() {
                   id="reg-phone"
                   type="tel"
                   required
-                  placeholder="+91 98765 43210"
+                  placeholder="Enter your phone number"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="form-input"
@@ -252,7 +252,7 @@ export default function Register() {
                   id="reg-name"
                   type="text"
                   required
-                  placeholder="Annanya Tiwary"
+                  placeholder="Enter Your username"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="form-input"

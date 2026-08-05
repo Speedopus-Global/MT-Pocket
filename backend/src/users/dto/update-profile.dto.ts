@@ -5,8 +5,8 @@ export class UpdateProfileDto {
   @IsOptional()
   fullName?: string;
 
-  @IsEmail({}, { message: 'Enter a valid email address' })
   @IsOptional()
+  @IsEmail({}, { message: 'Enter a valid email address' })
   email?: string;
 
   @IsString()
