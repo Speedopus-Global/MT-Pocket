@@ -160,8 +160,28 @@ export class User {
   reportCount: number;
 
   // ── Identity Document Verification ─────────────────────────────────────
+  // idDocumentUrl is kept only as a raw record of the upload for audit
+  // purposes. It is a Cloudinary "authenticated" (private) asset and is
+  // NOT directly viewable — never render it as an <img src> or <a href>
+  // on the frontend. To let an admin actually view the document, generate
+  // a short-lived signed URL from idDocumentPublicId at request time
+  // (see CloudinaryService.getSignedDocumentUrl / AdminService.getDocumentViewUrl).
   @Prop({ type: String, default: null })
   idDocumentUrl: string | null;
+
+  // Cloudinary public_id — required to (re)generate a signed view URL,
+  // to overwrite/replace the asset on resubmission, and to delete it later.
+  @Prop({ type: String, default: null })
+  idDocumentPublicId: string | null;
+
+  // Cloudinary resource_type the asset was stored under (image vs raw for
+  // PDFs) — required to build a correct signed URL later.
+  @Prop({
+    type: String,
+    enum: ['image', 'raw', 'video', null],
+    default: null,
+  })
+  idDocumentResourceType: 'image' | 'raw' | 'video' | null;
 
   @Prop({
     type: String,

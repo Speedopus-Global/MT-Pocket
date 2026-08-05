@@ -27,6 +27,22 @@ async function requestMultipart(path, { method = 'POST', body, accessToken } = {
   return data;
 }
 
+// For endpoints that stream raw bytes back (e.g. private KYC documents)
+// instead of JSON — error responses are still JSON, so only fall back to
+// reading the body as a Blob once we know the request succeeded.
+async function requestBlob(path, { method = 'GET', accessToken } = {}) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    credentials: 'include',
+    headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.message || `Request failed (${res.status})`);
+  }
+  return res.blob();
+}
+
 export const api = {
   registerRequestOtp: (phone) => request('/auth/register/request-otp', { method: 'POST', body: { phone } }),
   registerVerifyOtp: (phone, otp) => request('/auth/register/verify-otp', { method: 'POST', body: { phone, otp } }),
@@ -58,6 +74,9 @@ export const api = {
   adminUnsuspendUser: (id, accessToken) => request(`/admin/users/${id}/unsuspend`, { method: 'POST', accessToken }),
   adminBanUser: (id, accessToken) => request(`/admin/users/${id}/ban`, { method: 'POST', accessToken }),
   adminGetPendingDocuments: (accessToken) => request('/admin/documents/pending', { accessToken }),
+  // Private KYC document — server streams the file bytes through the
+  // JWT-guarded admin endpoint, so this returns a Blob, not JSON.
+  adminGetDocumentBlob: (userId, accessToken) => requestBlob(`/admin/documents/${userId}/file`, { accessToken }),
   adminApproveDocument: (userId, accessToken) => request(`/admin/documents/${userId}/approve`, { method: 'POST', accessToken }),
   adminRejectDocument: (userId, reason, accessToken) => request(`/admin/documents/${userId}/reject`, { method: 'POST', body: { reason }, accessToken }),
   adminGetReports: (status = 'open', accessToken) => request(`/admin/reports?status=${status}`, { accessToken }),

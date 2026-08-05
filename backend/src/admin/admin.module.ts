@@ -5,6 +5,7 @@ import { Report, ReportSchema } from '../reports/schemas/report.schema';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: Report.name, schema: ReportSchema },
     ]),
     NotificationsModule,
+    CloudinaryModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Res, StreamableFile, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { AdminService } from './admin.service';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -49,6 +50,20 @@ export class AdminController {
   @Get('documents/pending')
   getPendingDocuments() {
     return this.adminService.getPendingDocuments();
+  }
+
+  // Streams a user's private KYC document straight from Cloudinary through
+  // our own JWT+AdminGuard-protected endpoint. The browser never sees a
+  // Cloudinary URL — access is only as long-lived as the caller's access
+  // token (15 min), so there's nothing separate to expire or configure.
+  @Get('documents/:userId/file')
+  async getDocumentFile(@Param('userId') userId: string, @Res({ passthrough: true }) res: Response) {
+    const { buffer, contentType, filename } = await this.adminService.getDocumentFile(userId);
+    res.set({
+      'Content-Type': contentType,
+      'Content-Disposition': `inline; filename="${filename}"`,
+    });
+    return new StreamableFile(buffer);
   }
 
   @Post('documents/:userId/approve')

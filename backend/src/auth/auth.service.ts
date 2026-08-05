@@ -356,6 +356,12 @@ export class AuthService {
         systemRole: user.systemRole,
         fullName: user.fullName,
         identityVerified: user.identityVerified,
+        // KYC status trio — Dashboard.jsx needs these to distinguish
+        // "never submitted" vs "under review" vs "rejected" (identityVerified
+        // alone can't tell those apart).
+        idDocumentStatus: user.idDocumentStatus,
+        idDocumentType: user.idDocumentType,
+        idDocumentRejectionReason: user.idDocumentRejectionReason,
         avatarUrl: user.avatarUrl,
         address: user.address,
         location: user.location,

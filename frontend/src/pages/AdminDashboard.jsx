@@ -305,6 +305,24 @@ function DocsTab({ accessToken }) {
     } finally { setBusy((b) => ({ ...b, [userId]: null })); }
   };
 
+  // Documents are private Cloudinary assets streamed through our own
+  // JWT-protected endpoint — the response is raw file bytes, not a URL,
+  // so fetch it as a Blob and open it as a temporary local object URL.
+  const viewDocument = async (userId) => {
+    setBusy((b) => ({ ...b, [userId]: 'viewing' }));
+    try {
+      const blob = await api.adminGetDocumentBlob(userId, accessToken);
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, '_blank', 'noopener,noreferrer');
+      // Give the new tab time to actually load the blob before revoking it.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (e) {
+      alert('Could not load this document. It may have been removed.');
+    } finally {
+      setBusy((b) => ({ ...b, [userId]: null }));
+    }
+  };
+
   if (loading) return <TabLoader />;
   if (!docs.length) return <EmptyState icon={ShieldCheck} label="No pending documents" sub="All submissions have been reviewed." />;
 
@@ -333,14 +351,14 @@ function DocsTab({ accessToken }) {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {doc.idDocumentUrl && (
-                <a
-                  href={doc.idDocumentUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-2 rounded-xl hover:bg-primary/10 transition-colors"
-                >
-                  <FileText size={13} /> View
-                </a>
-              )}
+              <button
+                onClick={() => viewDocument(doc._id)}
+                disabled={busy[doc._id] === 'viewing'}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-2 rounded-xl hover:bg-primary/10 transition-colors disabled:opacity-50"
+              >
+                {busy[doc._id] === 'viewing' ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                View
+              </button>
               <button
                 onClick={() => approve(doc._id)} disabled={!!busy[doc._id]}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 rounded-xl hover:bg-emerald-500/10 transition-colors disabled:opacity-50"

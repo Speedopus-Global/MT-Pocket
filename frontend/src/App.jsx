@@ -11,11 +11,15 @@ import StyleGuide from './pages/StyleGuide';
 import RequireAdmin from './components/guards/RequireAdmin.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import Unauthorized from './pages/Unauthorized.jsx';
+import ThemeToggle from './components/ui/ThemeToggle';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+      <div className="fixed bottom-4 right-4 z-[1001]">
+              <ThemeToggle />
+            </div>
         <Routes>
           {/* Auth pages — full-screen, no shared Layout */}
           <Route path="/login"    element={<Login />} />
