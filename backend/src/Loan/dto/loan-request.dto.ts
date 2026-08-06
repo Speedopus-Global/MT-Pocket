@@ -1,9 +1,19 @@
+import { Type } from 'class-transformer';
 import {
-  IsIn, IsInt, IsMongoId, IsNotEmpty, IsNumber, IsOptional,
-  IsString, Max, MaxLength, Min,
+  IsIn,
+  IsInt,
+  IsMongoId,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateLoanRequestDto {
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   amount: number;
@@ -16,33 +26,39 @@ export class CreateLoanRequestDto {
   @MaxLength(2000)
   description: string;
 
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(100)
-  @IsOptional()
   interestRateHint?: number;
 
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
-  @IsOptional()
   durationDays?: number;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   city?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   state?: string;
 
-  @IsNumber()
-  @Min(-90) @Max(90)
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
   latitude?: number;
 
-  @IsNumber()
-  @Min(-180) @Max(180)
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
   longitude?: number;
 }
 
@@ -50,32 +66,58 @@ export class SendOfferDto {
   @IsMongoId()
   loanRequestId: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   @MaxLength(500)
   message?: string;
 
-  @IsNumber()
-  @Min(0) @Max(100)
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   offeredRate?: number;
 }
 
 export class SearchLoanRequestsDto {
-  @IsString()
   @IsOptional()
+  @IsString()
   keyword?: string;
 
-  @IsIn(['medical', 'education', 'business', 'personal', 'other', ''])
   @IsOptional()
+  @IsIn(['medical', 'education', 'business', 'personal', 'other', ''])
   category?: string;
 
-  @IsNumber() @Min(-90) @Max(90)   @IsOptional() latitude?: number;
-  @IsNumber() @Min(-180) @Max(180) @IsOptional() longitude?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
 
-  @IsNumber() @Min(1) @IsOptional()
-  radiusKm?: number; // default 25 km
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
 
-  @IsInt() @Min(1) @IsOptional() page?: number;
-  @IsInt() @Min(1) @Max(50) @IsOptional() limit?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  radiusKm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
 }
