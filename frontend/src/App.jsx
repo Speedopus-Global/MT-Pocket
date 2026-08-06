@@ -12,6 +12,7 @@ import RequireAdmin from './components/guards/RequireAdmin.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import Unauthorized from './pages/Unauthorized.jsx';
 import ThemeToggle from './components/ui/ThemeToggle';
+import Marketplace from './pages/MarketPlace';
 
 function App() {
   return (
@@ -45,6 +46,9 @@ function App() {
 
           {/* Dev only */}
           <Route path="/style-guide" element={<StyleGuide />} />
+
+           
+         <Route path="dashboard/marketplace" element={<Marketplace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

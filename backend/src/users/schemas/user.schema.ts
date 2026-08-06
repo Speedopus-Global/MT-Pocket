@@ -1,11 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-
+import { HydratedDocument, Types } from 'mongoose';
 
 export type UserRole = 'borrower' | 'lender' | 'both' | 'unset';
 
-import { HydratedDocument } from 'mongoose';
-
 export type UserDocument = HydratedDocument<User>;
+
 @Schema({ timestamps: true })
 export class User {
   @Prop({
@@ -41,11 +40,64 @@ export class User {
   })
   fullName: string | null;
 
+  // ─────────────────────────────────────────────────────────────
+  // Identity Verification
+  // VerificationService is the source of truth for these fields.
+  // Do not update identityVerified directly elsewhere.
+  // ─────────────────────────────────────────────────────────────
+
   @Prop({
     type: Boolean,
     default: false,
   })
   identityVerified: boolean;
+
+  @Prop({
+    type: String,
+    enum: [
+      'none',
+      'pending',
+      'under_review',
+      'approved',
+      'rejected',
+      'reupload_required',
+    ],
+    default: 'none',
+    index: true,
+  })
+  verificationStatus:
+    | 'none'
+    | 'pending'
+    | 'under_review'
+    | 'approved'
+    | 'rejected'
+    | 'reupload_required';
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'VerificationDocument',
+    default: null,
+  })
+  currentVerificationId: Types.ObjectId | null;
+
+  // Denormalized from the current VerificationDocument — kept in sync by
+  // VerificationService alongside verificationStatus. Do not update
+  // directly elsewhere (same rule as identityVerified above).
+  @Prop({
+    type: String,
+    default: null,
+  })
+  idDocumentType: string | null;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  idDocumentRejectionReason: string | null;
+
+  // ─────────────────────────────────────────────────────────────
+  // Authentication
+  // ─────────────────────────────────────────────────────────────
 
   @Prop({
     type: String,
@@ -113,6 +165,10 @@ export class User {
   })
   passwordResetOtpAttempts: number;
 
+  // ─────────────────────────────────────────────────────────────
+  // Profile
+  // ─────────────────────────────────────────────────────────────
+
   @Prop({
     type: String,
     default: null,
@@ -137,15 +193,21 @@ export class User {
     coordinates: [number, number];
   };
 
-  // ── System Role (set manually in MongoDB — 'user' | 'admin') ──────────
+  // ─────────────────────────────────────────────────────────────
+  // System Role
+  // ─────────────────────────────────────────────────────────────
+
   @Prop({
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'reviewer', 'super_admin'],
     default: 'user',
   })
-  systemRole: 'user' | 'admin';
+  systemRole: 'user' | 'reviewer' | 'super_admin';
 
-  // ── Account Lifecycle ──────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Account Status
+  // ─────────────────────────────────────────────────────────────
+
   @Prop({
     type: String,
     enum: ['active', 'suspended', 'banned'],
@@ -153,56 +215,19 @@ export class User {
   })
   accountStatus: 'active' | 'suspended' | 'banned';
 
-  @Prop({ type: String, default: null })
+  @Prop({
+    type: String,
+    default: null,
+  })
   suspensionReason: string | null;
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({
+    type: Number,
+    default: 0,
+  })
   reportCount: number;
-
-  // ── Identity Document Verification ─────────────────────────────────────
-  // idDocumentUrl is kept only as a raw record of the upload for audit
-  // purposes. It is a Cloudinary "authenticated" (private) asset and is
-  // NOT directly viewable — never render it as an <img src> or <a href>
-  // on the frontend. To let an admin actually view the document, generate
-  // a short-lived signed URL from idDocumentPublicId at request time
-  // (see CloudinaryService.getSignedDocumentUrl / AdminService.getDocumentViewUrl).
-  @Prop({ type: String, default: null })
-  idDocumentUrl: string | null;
-
-  // Cloudinary public_id — required to (re)generate a signed view URL,
-  // to overwrite/replace the asset on resubmission, and to delete it later.
-  @Prop({ type: String, default: null })
-  idDocumentPublicId: string | null;
-
-  // Cloudinary resource_type the asset was stored under (image vs raw for
-  // PDFs) — required to build a correct signed URL later.
-  @Prop({
-    type: String,
-    enum: ['image', 'raw', 'video', null],
-    default: null,
-  })
-  idDocumentResourceType: 'image' | 'raw' | 'video' | null;
-
-  @Prop({
-    type: String,
-    enum: ['aadhaar', 'pan', 'passport', 'driving_license', null],
-    default: null,
-  })
-  idDocumentType: 'aadhaar' | 'pan' | 'passport' | 'driving_license' | null;
-
-  @Prop({
-    type: String,
-    enum: ['none', 'pending', 'approved', 'rejected'],
-    default: 'none',
-  })
-  idDocumentStatus: 'none' | 'pending' | 'approved' | 'rejected';
-
-  @Prop({ type: String, default: null })
-  idDocumentRejectionReason: string | null;
-
-  @Prop({ type: Date, default: null })
-  idDocumentSubmittedAt: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
 UserSchema.index({ location: '2dsphere' });

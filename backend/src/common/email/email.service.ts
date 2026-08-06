@@ -40,7 +40,7 @@ export class EmailService {
     await this.sendMail(email, subject, html);
   }
 
-  private async sendMail(to: string, subject: string, html: string): Promise<void> {
+  public async sendMail(to: string, subject: string, html: string): Promise<void> {
     const provider = process.env.EMAIL_PROVIDER || 'stub';
     const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const apiKey = process.env.RESEND_API_KEY;

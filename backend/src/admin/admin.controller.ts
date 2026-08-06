@@ -1,20 +1,25 @@
-import { Body, Controller, Get, Param, Post, Query, Res, StreamableFile, UseGuards } from '@nestjs/common';
-import type { Response } from 'express';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+
 import { AdminService } from './admin.service';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { AdminGuard } from './guards/admin.guard';
-import { Report } from '../reports/schemas/report.schema';
-
-// Pulled from the schema so this stays in sync automatically — if you
-// ever add a status value to the Report schema, this picks it up for free.
-type ReportStatus = Report['status'];
 
 @Controller('admin')
 @UseGuards(JwtAccessGuard, AdminGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  // ── Users ────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // Users
+  // ─────────────────────────────────────────────
 
   @Get('users')
   getAllUsers(
@@ -31,7 +36,10 @@ export class AdminController {
   }
 
   @Post('users/:id/suspend')
-  suspendUser(@Param('id') id: string, @Body('reason') reason: string) {
+  suspendUser(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+  ) {
     return this.adminService.suspendUser(id, reason);
   }
 
@@ -43,59 +51,5 @@ export class AdminController {
   @Post('users/:id/ban')
   banUser(@Param('id') id: string) {
     return this.adminService.banUser(id);
-  }
-
-  // ── Documents ────────────────────────────────────────────────────────
-
-  @Get('documents/pending')
-  getPendingDocuments() {
-    return this.adminService.getPendingDocuments();
-  }
-
-  // Streams a user's private KYC document straight from Cloudinary through
-  // our own JWT+AdminGuard-protected endpoint. The browser never sees a
-  // Cloudinary URL — access is only as long-lived as the caller's access
-  // token (15 min), so there's nothing separate to expire or configure.
-  @Get('documents/:userId/file')
-  async getDocumentFile(@Param('userId') userId: string, @Res({ passthrough: true }) res: Response) {
-    const { buffer, contentType, filename } = await this.adminService.getDocumentFile(userId);
-    res.set({
-      'Content-Type': contentType,
-      'Content-Disposition': `inline; filename="${filename}"`,
-    });
-    return new StreamableFile(buffer);
-  }
-
-  @Post('documents/:userId/approve')
-  approveDocument(@Param('userId') userId: string) {
-    return this.adminService.approveDocument(userId);
-  }
-
-  @Post('documents/:userId/reject')
-  rejectDocument(
-    @Param('userId') userId: string,
-    @Body('reason') reason: string,
-  ) {
-    return this.adminService.rejectDocument(userId, reason);
-  }
-
-  // ── Reports ──────────────────────────────────────────────────────────
-
-  @Get('reports')
-  getAllReports(@Query('status') status: ReportStatus = 'open') {
-    return this.adminService.getAllReports(status);
-  }
-
-  @Post('reports/:id/review')
-  reviewReport(
-    @Param('id') id: string,
-    @Body('adminNotes') adminNotes: string,
-  ) {
-    return this.adminService.reviewReport(id, adminNotes);
-  }
-
-  @Post('reports/:id/dismiss')
-  dismissReport(@Param('id') id: string) {
-    return this.adminService.dismissReport(id);
   }
 }

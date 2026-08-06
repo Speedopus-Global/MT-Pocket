@@ -7,6 +7,7 @@ import { AdminModule }         from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ReportsModule }       from './reports/report.module';
 import { LoanRequestsModule }  from './Loan/loan-requests.module';
+import { VerificationModule } from './verification/modules/verification-module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LoanRequestsModule }  from './Loan/loan-requests.module';
     NotificationsModule,
     ReportsModule,
     LoanRequestsModule,
+    VerificationModule
   ],
 })
 export class AppModule {}

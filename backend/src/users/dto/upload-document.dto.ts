@@ -4,6 +4,8 @@ export type IdDocumentType = 'aadhaar' | 'pan' | 'passport' | 'driving_license';
 
 export class UploadDocumentDto {
   @IsNotEmpty()
-  @IsIn(['aadhaar', 'pan', 'passport', 'driving_license'])
+  @IsIn(['aadhaar', 'pan', 'passport', 'driving_license'], {
+    message: 'documentType must be one of: aadhaar, pan, passport, driving_license',
+  })
   documentType: IdDocumentType;
 }
