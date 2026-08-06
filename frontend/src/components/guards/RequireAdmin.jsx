@@ -18,7 +18,7 @@ export default function RequireAdmin() {
 
   if (isLoading) return null;
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/unauthorized" replace />;
 
   if (user.systemRole !== 'admin') {
     return <Navigate to="/unauthorized" replace />;
