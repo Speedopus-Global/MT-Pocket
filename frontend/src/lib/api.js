@@ -63,13 +63,8 @@ export const api = {
   // ── Users (profile) ──────────────────────────────────────────────────────
   getProfile: (accessToken) => request('/users/profile', { accessToken }),
   updateProfile: (data, accessToken) => request('/users/profile', { method: 'PUT', body: data, accessToken }),
-  // Legacy document upload via user controller (still supported)
-  uploadDocument: ({ file, documentType }, accessToken) => {
-    const form = new FormData();
-    form.append('file', file);
-    form.append('documentType', documentType);
-    return requestMultipart('/users/document', { method: 'POST', body: form, accessToken });
-  },
+  // NOTE: legacy `/users/document` upload removed — UserController has no such
+  // route. Use uploadVerificationDocument() below (POST /verification/document).
 
   // ── Verification (user-facing) ────────────────────────────────────────────
   // POST /verification/document — new versioned KYC upload
@@ -107,11 +102,9 @@ export const api = {
   adminVerifAudit: (docId, accessToken) =>
     request(`/admin/verification/${docId}/audit`, { accessToken }),
 
-  // ── Admin — legacy document endpoints (still wired up in AdminController) ──
-  adminGetPendingDocuments: (accessToken) => request('/admin/documents/pending', { accessToken }),
-  adminGetDocumentBlob: (userId, accessToken) => requestBlob(`/admin/documents/${userId}/file`, { accessToken }),
-  adminApproveDocument: (userId, accessToken) => request(`/admin/documents/${userId}/approve`, { method: 'POST', accessToken }),
-  adminRejectDocument: (userId, reason, accessToken) => request(`/admin/documents/${userId}/reject`, { method: 'POST', body: { reason }, accessToken }),
+  // NOTE: legacy `/admin/documents/*` endpoints removed — AdminController's
+  // Documents section is gone. Use the adminVerif* functions above
+  // (GET/POST /admin/verification/...) for KYC document moderation instead.
 
   // ── Admin — users ────────────────────────────────────────────────────────
   adminGetUsers: ({ page = 1, limit = 20, search = '' } = {}, accessToken) =>
@@ -121,10 +114,15 @@ export const api = {
   adminUnsuspendUser: (id, accessToken) => request(`/admin/users/${id}/unsuspend`, { method: 'POST', accessToken }),
   adminBanUser: (id, accessToken) => request(`/admin/users/${id}/ban`, { method: 'POST', accessToken }),
 
-  // ── Admin — reports ──────────────────────────────────────────────────────
-  adminGetReports: (status = 'open', accessToken) => request(`/admin/reports?status=${status}`, { accessToken }),
+  // ── Admin — reports (AdminReportsController — new) ────────────────────────
+  // GET /admin/reports?status=open&severity=critical&page=1&limit=20
+  adminGetReports: ({ status = 'open', severity, page = 1, limit = 20 } = {}, accessToken) => {
+    const q = new URLSearchParams({ status, page: String(page), limit: String(limit) });
+    if (severity) q.set('severity', severity);
+    return request(`/admin/reports?${q.toString()}`, { accessToken });
+  },
   adminReviewReport: (id, adminNotes, accessToken) => request(`/admin/reports/${id}/review`, { method: 'POST', body: { adminNotes }, accessToken }),
-  adminDismissReport: (id, accessToken) => request(`/admin/reports/${id}/dismiss`, { method: 'POST', accessToken }),
+  adminDismissReport: (id, note, accessToken) => request(`/admin/reports/${id}/dismiss`, { method: 'POST', body: { note }, accessToken }),
 
   // ── Notifications (user — adminOnly=false) ────────────────────────────────
   getNotifications: (accessToken) => request('/notifications', { accessToken }),
@@ -137,6 +135,12 @@ export const api = {
   getAdminUnreadCount: (accessToken) => request('/notifications/unread-count?adminOnly=true', { accessToken }),
   markAdminAllNotificationsRead: (accessToken) => request('/notifications/read-all?adminOnly=true', { method: 'PUT', accessToken }),
 
+  // ── Blocks ───────────────────────────────────────────────────────────────
+  blockUser: (userId, accessToken) => request(`/blocks/${userId}`, { method: 'POST', accessToken }),
+  unblockUser: (userId, accessToken) => request(`/blocks/${userId}`, { method: 'DELETE', accessToken }),
+  getMyBlockedUsers: (accessToken) => request('/blocks/mine', { accessToken }),
+  getMyBlockedUserIds: (accessToken) => request('/blocks/mine/ids', { accessToken }),
+
   // ── Reports (user-filed) ──────────────────────────────────────────────────
   fileReport: ({ reportedUserId, reason, details, reportContext }, accessToken) =>
     request('/reports', { method: 'POST', body: { reportedUserId, reason, details, reportContext }, accessToken }),
@@ -144,11 +148,11 @@ export const api = {
 
   // ── Loan Requests — public (no auth required) ────────────────────────────
   // GET /loan-requests/search?keyword=&category=&page=&limit=&latitude=&longitude=&radiusKm=
-  searchLoanRequests: (params = {}) => {
-    const q = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
-    return request(`/loan-requests/search?${q.toString()}`);
-  },
+ searchLoanRequests: (params = {}, accessToken) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
+  return request(`/loan-requests/search?${q.toString()}`, { accessToken });
+},
   // GET /loan-requests/:id
   getLoanRequest: (id) => request(`/loan-requests/${id}`),
 

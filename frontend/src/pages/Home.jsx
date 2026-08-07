@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation} from 'react-router-dom';
+import { useEffect } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WhyTrust from "./TrustStripe";
@@ -17,10 +18,13 @@ const trustItems = [
   'Local Lending'
 ];
 
+
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
   visible: { opacity: 1, y: 0 }
 };
+
+ 
 
 function TrustBadge({ label }) {
   return (
@@ -34,7 +38,16 @@ function TrustBadge({ label }) {
   );
 }
 
+
 export default function Home() {
+  const location = useLocation();
+  useEffect(() => {
+    if (!location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.hash]);
+
+
   return (
     <>
     <motion.section
@@ -100,12 +113,12 @@ export default function Home() {
               <ArrowRight className="h-4 w-4" />
             </Link>
 
-            <a
-              href="/how-it-works"
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-border bg-card px-7 text-sm font-semibold text-foreground transition duration-300 hover:border-primary hover:text-primary"
-            >
-              Explore How It Works
-            </a>
+            <Link
+                to="marketplace"
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-border bg-card px-7 text-sm font-semibold text-foreground transition duration-300 hover:border-primary hover:text-primary"
+              >
+                Explore Marketplace
+              </Link>
           </motion.div>
 
           <motion.ul
@@ -129,12 +142,23 @@ export default function Home() {
       </div>
     </motion.section>
     <WhyTrust />
-    <HowItWorks />
-    <FeatureSection />
-    <TrustSafetySection />
-    <Testimonials />
-    <FAQSection />
-    <ContactSection />
+
+      <div id="how-it-works">
+        <HowItWorks />
+      </div>
+
+      <div id="what-we-offer">
+        <FeatureSection />
+      </div>
+
+      <TrustSafetySection />
+      <Testimonials />
+
+      <div id="faq">
+        <FAQSection />
+      </div>
+
+      <ContactSection />
     
     </>
   );

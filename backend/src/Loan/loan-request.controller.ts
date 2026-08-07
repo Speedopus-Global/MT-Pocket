@@ -3,21 +3,28 @@ import type { Request } from 'express';
 import { LoanRequestsService } from './loan-requests.service';
 import { CreateLoanRequestDto, SearchLoanRequestsDto, SendOfferDto } from './dto/loan-request.dto';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
+import { OptionalJwtAccessGuard } from '../auth/guards/optional-jwt-access.guard';
 
 @Controller('loan-requests')
 export class LoanRequestsController {
   constructor(private readonly loanService: LoanRequestsService) {}
 
   // ── Public: search / browse ──────────────────────────────────────────────
-  // No auth required — anyone can browse (they can't see personal details)
+  // Still no login required — OptionalJwtAccessGuard just populates req.user
+  // when a valid token IS present, so we can exclude blocked users from the
+  // results server-side instead of relying on the frontend to hide them.
+  @UseGuards(OptionalJwtAccessGuard)
   @Get('search')
-  search(@Query() query: SearchLoanRequestsDto) {
-    return this.loanService.search(query);
+  search(@Req() req: Request, @Query() query: SearchLoanRequestsDto) {
+    const requesterId = (req.user as any)?.sub;
+    return this.loanService.search(query, requesterId);
   }
 
+  @UseGuards(OptionalJwtAccessGuard)
   @Get(':id')
-  getOne(@Param('id') id: string) {
-    return this.loanService.getById(id);
+  getOne(@Req() req: Request, @Param('id') id: string) {
+    const requesterId = (req.user as any)?.sub;
+    return this.loanService.getById(id, requesterId);
   }
 
   // ── Borrower: manage own requests ────────────────────────────────────────

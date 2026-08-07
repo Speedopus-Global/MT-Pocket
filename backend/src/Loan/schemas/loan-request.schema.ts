@@ -79,3 +79,11 @@ export class LoanRequest {
 export const LoanRequestSchema = SchemaFactory.createForClass(LoanRequest);
 LoanRequestSchema.index({ location: '2dsphere' });
 LoanRequestSchema.index({ status: 1, category: 1, createdAt: -1 });
+
+// Needed for `search()`'s $text query on `keyword`. `description` is
+// weighted highest since that's usually what a keyword search is after;
+// city/state let "Patna" or "Bihar" match too.
+LoanRequestSchema.index(
+  { description: 'text', city: 'text', state: 'text' },
+  { weights: { description: 5, city: 2, state: 1 }, name: 'loan_request_text_idx' },
+);

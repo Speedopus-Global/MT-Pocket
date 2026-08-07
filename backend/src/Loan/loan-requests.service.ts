@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { LoanRequest, LoanRequestDocument } from './schemas/loan-request.schema';
 import { CreateLoanRequestDto, SearchLoanRequestsDto, SendOfferDto } from './dto/loan-request.dto';
+import { BlocksService } from '../Block/Block.service';
 
 const DEFAULT_RADIUS_KM = 25;
 
@@ -10,8 +11,8 @@ const DEFAULT_RADIUS_KM = 25;
 export class LoanRequestsService {
   constructor(
     @InjectModel(LoanRequest.name) private loanModel: Model<LoanRequestDocument>,
+    private readonly blocksService: BlocksService,
   ) {}
-
   // ── Borrower: create a request ────────────────────────────────────────────
   async create(borrowerId: string, dto: CreateLoanRequestDto) {
     const doc: Partial<LoanRequest> = {
@@ -79,6 +80,13 @@ export class LoanRequestsService {
       throw new BadRequestException('You cannot send an offer on your own request');
     }
 
+    // Block check — either direction. A blocked borrower shouldn't be
+    // reachable by that lender, and a lender who blocked a borrower
+    // shouldn't have that borrower's offers reach them either.
+    const blocked = await this.blocksService.isBlockedEitherWay(lenderId, req.borrowerId.toString());
+    if (blocked) {
+      throw new ForbiddenException('You cannot send an offer to this user');
+    }
     const alreadyOffered = req.offers.some((o) => o.lenderId.toString() === lenderId);
     if (alreadyOffered) throw new BadRequestException('You have already sent an offer on this request');
 
@@ -93,7 +101,11 @@ export class LoanRequestsService {
   }
 
   // ── Search: keyword + category + radius (2.6) ────────────────────────────
-  async search(dto: SearchLoanRequestsDto) {
+  // requesterId is optional — search() is a public route. When present
+  // (the caller sent a valid access token), we exclude borrowers who are
+  // blocked either way, so a logged-in-but-blocked relationship can't see
+  // each other's listings even by hitting the API directly.
+  async search(dto: SearchLoanRequestsDto, requesterId?: string) {
     const page    = dto.page    ?? 1;
     const limit   = Math.min(dto.limit ?? 20, 50);
     const radiusM = (dto.radiusKm ?? DEFAULT_RADIUS_KM) * 1000;
@@ -101,6 +113,13 @@ export class LoanRequestsService {
     const filter: Record<string, any> = { status: 'open' };
 
     if (dto.category) filter.category = dto.category;
+
+    if (requesterId) {
+      const blockedIds = await this.blocksService.getBlockedEitherWayUserIds(requesterId);
+      if (blockedIds.length) {
+        filter.borrowerId = { $nin: blockedIds.map((id) => new Types.ObjectId(id)) };
+      }
+    }
 
     if (dto.keyword) {
       filter.$text = { $search: dto.keyword };
@@ -132,12 +151,23 @@ export class LoanRequestsService {
   }
 
   // ── Get single request (public) ───────────────────────────────────────────
-  async getById(requestId: string) {
+  async getById(requestId: string, requesterId?: string) {
     const req = await this.loanModel
       .findById(requestId)
       .populate('borrowerId', 'fullName identityVerified avatarUrl city state')
       .lean();
     if (!req) throw new NotFoundException('Loan request not found');
+
+    if (requesterId) {
+      const blocked = await this.blocksService.isBlockedEitherWay(
+        requesterId,
+        (req.borrowerId as any)._id.toString(),
+      );
+      // Same 404 as "doesn't exist" — don't leak that a block relationship
+      // exists by returning a different error for this case.
+      if (blocked) throw new NotFoundException('Loan request not found');
+    }
+
     return req;
   }
 }

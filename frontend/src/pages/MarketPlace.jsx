@@ -4,28 +4,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import {
-  Search, Loader2, Tag, MapPin, Clock, Percent, Handshake,
-  X, ArrowLeft, Coins, ChevronLeft, ChevronRight, Inbox,
+  Search, Loader2, MapPin, Clock, Percent, Handshake,
+  X, ArrowLeft, Coins, ChevronLeft, ChevronRight, Inbox, ShieldAlert,
+  BadgeCheck,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
-  { value: '',           label: 'All',       emoji: '✨' },
-  { value: 'medical',    label: 'Medical',   emoji: '🏥' },
-  { value: 'education',  label: 'Education', emoji: '📚' },
-  { value: 'business',   label: 'Business',  emoji: '💼' },
-  { value: 'personal',   label: 'Personal',  emoji: '🏠' },
-  { value: 'other',      label: 'Other',     emoji: '💡' },
+  { value: '',           label: 'All' },
+  { value: 'medical',    label: 'Medical' },
+  { value: 'education',  label: 'Education' },
+  { value: 'business',   label: 'Business' },
+  { value: 'personal',   label: 'Personal' },
+  { value: 'other',      label: 'Other' },
 ];
 
 const PAGE_SIZE = 12;
 
 const gridVariants = {
   hidden:  { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.04 } },
 };
 const cardVariants = {
-  hidden:  { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26 } },
+  hidden:  { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } },
 };
 
 export default function Marketplace() {
@@ -39,6 +40,18 @@ export default function Marketplace() {
   const [total, setTotal]       = useState(0);
   const [loading, setLoading]   = useState(true);
   const [offerLoan, setOfferLoan] = useState(null); // loan object or null
+  const [blockedIds, setBlockedIds] = useState([]); // borrower ids this user has blocked
+  const [safetyLoan, setSafetyLoan] = useState(null); // loan being reported/blocked from
+
+  // Fetch this user's block list once, so we can hide blocked borrowers'
+  // requests client-side. (See loan-requests.service.PATCH.md for why this
+  // isn't also enforced server-side yet — search() is a public route.)
+  useEffect(() => {
+    if (!accessToken) { setBlockedIds([]); return; }
+    api.getMyBlockedUserIds(accessToken).then(setBlockedIds).catch(() => {});
+  }, [accessToken]);
+
+  const visibleResults = results.filter((loan) => !blockedIds.includes(loan.borrowerId?._id));
 
   const load = useCallback(async (p = page, kw = keyword, cat = category) => {
     setLoading(true);
@@ -59,8 +72,9 @@ export default function Marketplace() {
     }
   }, [page, keyword, category]);
 
+  // Single mount/category effect — this already fires on first render,
+  // so a separate `[]` mount effect was firing a duplicate initial search.
   useEffect(() => { load(1, keyword, category); setPage(1); }, [category]); // eslint-disable-line
-  useEffect(() => { load(1); }, []); // eslint-disable-line
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -73,26 +87,26 @@ export default function Marketplace() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="min-h-screen bg-[#FDF6ED]/20">
+    <div className="min-h-screen bg-[#FAF8F4]">
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link
               to={user ? '/dashboard' : '/'}
-              className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors shrink-0"
             >
               <ArrowLeft size={16} />
             </Link>
             <div className="min-w-0">
-              <h1 className="text-lg font-extrabold tracking-tight text-foreground truncate">Marketplace</h1>
+              <h1 className="text-lg font-semibold tracking-tight text-foreground truncate">Marketplace</h1>
               <p className="text-[11px] text-muted-foreground">Open loan requests from verified borrowers</p>
             </div>
           </div>
           {!user && (
             <Link
               to="/login"
-              className="shrink-0 text-sm font-bold text-primary-foreground bg-primary px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors"
+              className="shrink-0 text-sm font-semibold text-primary-foreground bg-primary px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
             >
               Log in to lend
             </Link>
@@ -110,29 +124,29 @@ export default function Marketplace() {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Search description, city…"
-              className="w-full rounded-xl border border-input bg-background pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
             />
           </div>
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 hover:bg-primary/90 transition-colors shrink-0"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 hover:bg-primary/90 transition-colors shrink-0"
           >
             Search
           </button>
         </form>
 
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap border-b border-border pb-5">
           {LOAN_CATEGORIES.map((cat) => (
             <button
               key={cat.value}
               onClick={() => setCategory(cat.value)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                 category === cat.value
                   ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                  : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
               }`}
             >
-              <span>{cat.emoji}</span> {cat.label}
+              {cat.label}
             </button>
           ))}
         </div>
@@ -140,11 +154,11 @@ export default function Marketplace() {
         {/* ── RESULTS ────────────────────────────────────────────────────── */}
         {loading ? (
           <div className="flex items-center justify-center py-24 text-muted-foreground">
-            <Loader2 size={24} className="animate-spin" />
+            <Loader2 size={22} className="animate-spin" />
           </div>
-        ) : results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground rounded-2xl border border-dashed border-border">
-            <Inbox size={30} strokeWidth={1.4} />
+        ) : visibleResults.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground rounded-xl border border-dashed border-border">
+            <Inbox size={28} strokeWidth={1.3} />
             <div className="text-center">
               <p className="text-sm font-semibold text-foreground">No loan requests found</p>
               <p className="text-xs mt-0.5">Try a different keyword or category.</p>
@@ -161,12 +175,14 @@ export default function Marketplace() {
               animate="visible"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
             >
-              {results.map((loan) => (
+              {visibleResults.map((loan) => (
                 <LoanCard
                   key={loan._id}
                   loan={loan}
                   canOffer={isLender}
+                  isOwnRequest={user && loan.borrowerId?._id === user.id}
                   onOffer={() => setOfferLoan(loan)}
+                  onSafety={() => setSafetyLoan(loan)}
                 />
               ))}
             </motion.div>
@@ -177,7 +193,7 @@ export default function Marketplace() {
                 <button
                   disabled={page === 1}
                   onClick={() => goPage(page - 1)}
-                  className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 transition-colors"
+                  className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 disabled:opacity-40 transition-colors"
                 >
                   <ChevronLeft size={15} />
                 </button>
@@ -185,7 +201,7 @@ export default function Marketplace() {
                 <button
                   disabled={page >= pages}
                   onClick={() => goPage(page + 1)}
-                  className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 transition-colors"
+                  className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 disabled:opacity-40 transition-colors"
                 >
                   <ChevronRight size={15} />
                 </button>
@@ -200,19 +216,20 @@ export default function Marketplace() {
         {offerLoan && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl overflow-hidden"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <Handshake size={18} className="text-primary" />
-                  <h3 className="font-bold text-foreground">Send Offer</h3>
+                  <Handshake size={17} className="text-primary" />
+                  <h3 className="font-semibold text-foreground">Send offer</h3>
                 </div>
                 <button
                   onClick={() => setOfferLoan(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -228,58 +245,166 @@ export default function Marketplace() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── SAFETY MODAL (report / block) ─────────────────────────────────── */}
+      <AnimatePresence>
+        {safetyLoan && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert size={17} className="text-destructive" />
+                  <h3 className="font-semibold text-foreground">Report or block</h3>
+                </div>
+                <button
+                  onClick={() => setSafetyLoan(null)}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-6">
+                <SafetyForm
+                  loan={safetyLoan}
+                  accessToken={accessToken}
+                  onDone={(blockedId) => {
+                    setSafetyLoan(null);
+                    if (blockedId) setBlockedIds((ids) => [...ids, blockedId]);
+                  }}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Avatar ───────────────────────────────────────────────────────────────
+function initials(name = '') {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('') || '?';
+}
+
+function Avatar({ src, name, size = 36 }) {
+  const [failed, setFailed] = useState(false);
+  const dim = { width: size, height: size };
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        style={dim}
+        onError={() => setFailed(true)}
+        className="rounded-full object-cover border border-border shrink-0"
+      />
+    );
+  }
+  return (
+    <div
+      style={dim}
+      className="rounded-full bg-muted text-foreground/70 border border-border flex items-center justify-center text-xs font-semibold shrink-0"
+    >
+      {initials(name)}
     </div>
   );
 }
 
 // ── Loan card ────────────────────────────────────────────────────────────
-function LoanCard({ loan, canOffer, onOffer }) {
+function LoanCard({ loan, canOffer, isOwnRequest, onOffer, onSafety }) {
+  const borrower = loan.borrowerId || {};
+
   return (
     <motion.div
       variants={cardVariants}
-      className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30"
+      className="rounded-xl border border-border bg-card flex flex-col justify-between transition-colors duration-200 hover:border-foreground/25"
     >
-      <div>
+      {/* Borrower row */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/70">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Avatar src={borrower.avatarUrl} name={borrower.fullName} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-semibold text-foreground truncate">
+                {borrower.fullName || 'Borrower'}
+              </p>
+              {borrower.identityVerified && (
+                <BadgeCheck size={13} className="text-primary shrink-0" />
+              )}
+            </div>
+            {(borrower.city || borrower.state) && (
+              <p className="text-[11px] text-muted-foreground truncate">
+                {[borrower.city, borrower.state].filter(Boolean).join(', ')}
+              </p>
+            )}
+          </div>
+        </div>
+        {!isOwnRequest && (
+          <button
+            onClick={onSafety}
+            title="Report or block"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors shrink-0"
+          >
+            <ShieldAlert size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Amount + category */}
+      <div className="px-5 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Coins size={17} />
-            </div>
-            <p className="text-lg font-extrabold text-foreground">₹{Number(loan.amount).toLocaleString()}</p>
+            <Coins size={15} className="text-muted-foreground" />
+            <p className="text-xl font-semibold text-foreground tabular-nums">
+              ₹{Number(loan.amount).toLocaleString('en-IN')}
+            </p>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-            <Tag size={9} /> {loan.category}
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border border-border px-2 py-1 rounded-md">
+            {loan.category}
           </span>
         </div>
 
         <p className="text-sm text-muted-foreground mt-3 leading-relaxed line-clamp-3">
           {loan.description}
         </p>
-
-        <div className="flex flex-wrap gap-3 mt-4 text-[11px] text-muted-foreground">
-          {(loan.city || loan.state) && (
-            <span className="inline-flex items-center gap-1">
-              <MapPin size={11} /> {[loan.city, loan.state].filter(Boolean).join(', ')}
-            </span>
-          )}
-          {loan.durationDays && (
-            <span className="inline-flex items-center gap-1">
-              <Clock size={11} /> {loan.durationDays}d
-            </span>
-          )}
-          {loan.interestRateHint != null && (
-            <span className="inline-flex items-center gap-1">
-              <Percent size={11} /> {loan.interestRateHint}%
-            </span>
-          )}
-        </div>
       </div>
 
-      <div className="mt-5 pt-4 border-t border-border/60">
+      {/* Meta row */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-5 mt-4 text-[11px] text-muted-foreground">
+        {(loan.city || loan.state) && (
+          <span className="inline-flex items-center gap-1">
+            <MapPin size={11} /> {[loan.city, loan.state].filter(Boolean).join(', ')}
+          </span>
+        )}
+        {loan.durationDays && (
+          <span className="inline-flex items-center gap-1">
+            <Clock size={11} /> {loan.durationDays} days
+          </span>
+        )}
+        {loan.interestRateHint != null && (
+          <span className="inline-flex items-center gap-1">
+            <Percent size={11} /> {loan.interestRateHint}%
+          </span>
+        )}
+      </div>
+
+      <div className="mt-5 px-5 pb-5 pt-4 border-t border-border/70">
         {canOffer ? (
           <button
             onClick={onOffer}
-            className="w-full inline-flex items-center justify-center gap-2 text-sm font-bold bg-primary text-primary-foreground px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold bg-primary text-primary-foreground px-4 py-2.5 rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Handshake size={15} /> Send offer
           </button>
@@ -321,8 +446,8 @@ function OfferForm({ loan, accessToken, onDone }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      <div className="rounded-xl bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-        Offering on a <strong className="text-foreground">₹{Number(loan.amount).toLocaleString()}</strong> {loan.category} request.
+      <div className="rounded-lg bg-muted/40 border border-border px-3 py-2.5 text-xs text-muted-foreground">
+        Offering on a <strong className="text-foreground">₹{Number(loan.amount).toLocaleString('en-IN')}</strong> {loan.category} request.
       </div>
       <div>
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
@@ -333,7 +458,7 @@ function OfferForm({ loan, accessToken, onDone }) {
           value={offeredRate}
           onChange={(e) => setOfferedRate(e.target.value)}
           placeholder="e.g. 10"
-          className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
         />
       </div>
       <div>
@@ -346,22 +471,190 @@ function OfferForm({ loan, accessToken, onDone }) {
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Introduce yourself, propose terms…"
           maxLength={1000}
-          className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
         />
       </div>
       {error && (
-        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-xl px-3 py-2">
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2">
           {error}
         </div>
       )}
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex items-center justify-center gap-2 text-sm font-bold bg-primary text-primary-foreground px-4 py-3 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-primary text-primary-foreground px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
         {submitting ? <Loader2 size={14} className="animate-spin" /> : <Handshake size={14} />}
         {submitting ? 'Sending…' : 'Send offer'}
       </button>
     </form>
+  );
+}
+
+// ── Safety form (report / block a borrower) ────────────────────────────────
+const REPORT_REASONS = [
+  { value: 'fake_identity',     label: 'Fake identity' },
+  { value: 'fraud_attempt',     label: 'Fraud attempt' },
+  { value: 'harassment',        label: 'Harassment' },
+  { value: 'impersonation',     label: 'Impersonation' },
+  { value: 'spam',              label: 'Spam' },
+  { value: 'abusive_behaviour', label: 'Abusive behaviour' },
+  { value: 'other',             label: 'Other' },
+];
+
+function SafetyForm({ loan, accessToken, onDone }) {
+  const [mode, setMode]           = useState('report'); // 'report' | 'block'
+  const [reason, setReason]       = useState(REPORT_REASONS[0].value);
+  const [details, setDetails]     = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]         = useState('');
+  const [done, setDone]           = useState(false);
+
+  const borrowerId   = loan.borrowerId?._id;
+  const borrowerName = loan.borrowerId?.fullName || 'this user';
+
+  const submitReport = async (e) => {
+    e.preventDefault();
+    if (reason === 'other' && !details.trim()) {
+      setError('Please add a few details for "Other"');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.fileReport(
+        { reportedUserId: borrowerId, reason, details: details.trim() || undefined, reportContext: 'marketplace' },
+        accessToken,
+      );
+      setDone(true);
+    } catch (err) {
+      setError(err.message || 'Could not submit report — please try again');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitBlock = async () => {
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.blockUser(borrowerId, accessToken);
+      onDone(borrowerId); // tells Marketplace to hide this borrower's cards immediately
+    } catch (err) {
+      setError(err.message || 'Could not block user — please try again');
+      setSubmitting(false);
+    }
+  };
+
+  if (!accessToken) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Please log in to report or block a user.
+      </p>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-4 text-center">
+        <ShieldAlert size={26} className="text-emerald-600" />
+        <p className="text-sm font-semibold text-foreground">Report submitted</p>
+        <p className="text-xs text-muted-foreground">Our team will review it shortly.</p>
+        <button
+          onClick={() => onDone()}
+          className="mt-2 text-xs font-semibold text-primary hover:underline"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-1 p-1 rounded-lg bg-muted/40 border border-border w-fit">
+        {['report', 'block'].map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={`px-4 py-1.5 rounded-md text-xs font-semibold capitalize transition-colors ${
+              mode === m ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'report' ? (
+        <form onSubmit={submitReport} className="flex flex-col gap-4">
+          <div className="rounded-lg bg-muted/40 border border-border px-3 py-2.5 text-xs text-muted-foreground">
+            Reporting <strong className="text-foreground">{borrowerName}</strong> to MT Pocket's trust & safety team.
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              Reason
+            </label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+            >
+              {REPORT_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              Details {reason === 'other' && '(required)'}
+            </label>
+            <textarea
+              rows={3}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="What happened?"
+              maxLength={1000}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+            />
+          </div>
+          {error && (
+            <div className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-destructive text-destructive-foreground px-4 py-3 rounded-lg hover:bg-destructive/90 transition-colors disabled:opacity-50"
+          >
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <ShieldAlert size={14} />}
+            {submitting ? 'Submitting…' : 'Submit report'}
+          </button>
+        </form>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg bg-muted/40 border border-border px-3 py-2.5 text-xs text-muted-foreground">
+            Blocking <strong className="text-foreground">{borrowerName}</strong> hides their requests from your
+            marketplace and stops them from receiving offers from you. You can unblock them later from settings.
+          </div>
+          {error && (
+            <div className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={submitBlock}
+            disabled={submitting}
+            className="inline-flex items-center justify-center gap-2 text-sm font-semibold bg-destructive text-destructive-foreground px-4 py-3 rounded-lg hover:bg-destructive/90 transition-colors disabled:opacity-50"
+          >
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <ShieldAlert size={14} />}
+            {submitting ? 'Blocking…' : `Block ${borrowerName}`}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

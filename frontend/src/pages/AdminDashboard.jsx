@@ -65,13 +65,14 @@ export default function AdminDashboard() {
   // Load admin notification count (adminOnly=true)
   useEffect(() => {
     if (!accessToken) return;
+    // NotificationsService.unreadCount() returns a bare number, not { count }.
     api.getAdminUnreadCount(accessToken)
-      .then((res) => setUnread(res.count ?? 0))
+      .then((count) => setUnread(count ?? 0))
       .catch(() => {});
     // Poll every 30 s
     const timer = setInterval(() => {
       api.getAdminUnreadCount(accessToken)
-        .then((res) => setUnread(res.count ?? 0))
+        .then((count) => setUnread(count ?? 0))
         .catch(() => {});
     }, 30_000);
     return () => clearInterval(timer);
@@ -326,8 +327,8 @@ function VerifQueueTab({ accessToken }) {
     setLoading(true);
     try {
       const res = await api.adminVerifQueue({ status, page: 1, limit: 50 }, accessToken);
-      // API returns { results, total, page, limit, pages }
-      setDocs(res.results ?? res);
+      // VerificationService.getPendingQueue() returns { docs, total, page, limit, pages }
+      setDocs(res.docs ?? []);
     } catch { setDocs([]); }
     finally { setLoading(false); }
   };
@@ -598,7 +599,9 @@ function VerifQueueTab({ accessToken }) {
                             <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
                             <div>
                               <span className="font-semibold text-foreground capitalize">{event.action?.replace(/_/g, ' ')}</span>
-                              {event.adminId && <span className="text-muted-foreground"> · by admin</span>}
+                              {event.performedByRole && event.performedByRole !== 'user' && (
+                                <span className="text-muted-foreground"> · by {event.performedByRole.replace('_', ' ')}</span>
+                              )}
                               {event.reason && <span className="text-muted-foreground italic"> "{event.reason}"</span>}
                               <p className="text-[10px] text-muted-foreground">{event.timestamp ? new Date(event.timestamp).toLocaleString() : '—'}</p>
                             </div>
@@ -670,8 +673,11 @@ function UsersTab({ accessToken }) {
     if (!reportReason.trim()) return;
     setBusy((b) => ({ ...b, [id]: 'reporting' }));
     try {
+      // 'admin_review' is not a valid ReportReason — the schema only accepts
+      // fake_identity/harassment/fraud_attempt/spam/impersonation/abusive_behaviour/other.
+      // 'other' always requires details, which this form already collects.
       await api.fileReport(
-        { reportedUserId: id, reason: 'admin_review', details: reportReason, reportContext: 'admin_action' },
+        { reportedUserId: id, reason: 'other', details: reportReason, reportContext: 'admin_action' },
         accessToken,
       );
       setReportId(null); setReportReason('');
@@ -872,8 +878,12 @@ function ReportsTab({ accessToken }) {
 
   const load = async (s = status) => {
     setLoading(true);
-    try { setReports(await api.adminGetReports(s, accessToken)); }
-    finally { setLoading(false); }
+    try {
+      // api.adminGetReports now takes an options object, and
+      // AdminReportsController returns { reports, total, page, limit, pages }.
+      const res = await api.adminGetReports({ status: s }, accessToken);
+      setReports(res.reports ?? []);
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -888,7 +898,10 @@ function ReportsTab({ accessToken }) {
 
   const dismiss = async (id) => {
     setBusy((b) => ({ ...b, [id]: 'dismissing' }));
-    try { await api.adminDismissReport(id, accessToken); load(); }
+    // adminDismissReport is (id, note, accessToken) — the missing note arg
+    // was shifting accessToken into the note slot (no auth token sent,
+    // and the JWT ended up in the dismiss note).
+    try { await api.adminDismissReport(id, notes[id] || undefined, accessToken); load(); }
     finally { setBusy((b) => ({ ...b, [id]: null })); }
   };
 

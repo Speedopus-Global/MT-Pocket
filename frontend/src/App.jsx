@@ -30,6 +30,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="profile" element={<Profile />} />
+            
           </Route>
 
           <Route path="/unauthorized" element={<Unauthorized />} />
@@ -37,6 +38,7 @@ function App() {
           {/* Main app marketplace — wrapped in Layout (navbar + footer) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+            <Route path="marketplace" element={<Marketplace />} />
           </Route>
 
           {/* Admin */}
@@ -48,7 +50,7 @@ function App() {
           <Route path="/style-guide" element={<StyleGuide />} />
 
            
-         <Route path="dashboard/marketplace" element={<Marketplace />} />
+         
         </Routes>
       </BrowserRouter>
     </AuthProvider>

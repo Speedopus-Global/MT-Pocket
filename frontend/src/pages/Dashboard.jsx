@@ -93,8 +93,9 @@ export default function Dashboard() {
   // Fetch unread count on mount
   useEffect(() => {
     if (!accessToken) return;
+    // NotificationsService.unreadCount() returns a bare number, not { count }.
     api.getUnreadCount(accessToken)
-      .then((res) => setUnread(res.count ?? 0))
+      .then((count) => setUnread(count ?? 0))
       .catch(() => {});
   }, [accessToken]);
 

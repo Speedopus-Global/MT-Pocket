@@ -7,6 +7,7 @@ import { ReportsController } from './report.controller';
 
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AdminReportsController } from './admin-reports.controller';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ]),
     NotificationsModule, // <-- REQUIRED
   ],
-  controllers: [ReportsController],
+  controllers: [ReportsController,AdminReportsController],
   providers: [ReportsService],
   exports: [ReportsService],
 })
