@@ -13,7 +13,9 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import Unauthorized from './pages/Unauthorized.jsx';
 import ThemeToggle from './components/ui/ThemeToggle';
 import Marketplace from './pages/MarketPlace';
-
+import AboutUs from './pages/AboutUs';
+import TermsConditions from './pages/TermsConditions';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 function App() {
   return (
     <AuthProvider>
@@ -48,6 +50,9 @@ function App() {
 
           {/* Dev only */}
           <Route path="/style-guide" element={<StyleGuide />} />
+          <Route path="About" element={<AboutUs />} />
+          <Route path="Privacy" element={<PrivacyPolicy />} />
+          <Route path="Terms" element={<TermsConditions />} />
 
            
          

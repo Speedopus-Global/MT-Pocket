@@ -61,7 +61,7 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold mb-5">Company</h3>
             <div className="space-y-3 flex flex-col items-start">
-              <Link to="/about" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+              <Link to="/About" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">About</span>
               </Link>
               <Link to="/contact" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
@@ -73,10 +73,10 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold mb-5">Legal</h3>
             <div className="space-y-3 flex flex-col items-start">
-              <Link to="/terms" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+              <Link to="/Terms" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">Terms &amp; Conditions</span>
               </Link>
-              <Link to="/privacy" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+              <Link to="/Privacy" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">Privacy Policy</span>
               </Link>
               <a href="mailto:support@mtpocket.com" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
