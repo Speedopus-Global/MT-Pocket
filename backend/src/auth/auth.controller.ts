@@ -133,7 +133,8 @@ export class AuthController {
   @UseGuards(JwtAccessGuard)
   @Get('me')
   me(@Req() req: Request) {
-    return req.user;
+    const { sub } = req.user as { sub: string };
+    return this.authService.getFullUser(sub);
   }
 
   @UseGuards(JwtAccessGuard)

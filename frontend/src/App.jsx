@@ -13,6 +13,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import Unauthorized from './pages/Unauthorized.jsx';
 import ThemeToggle from './components/ui/ThemeToggle';
 import Marketplace from './pages/MarketPlace';
+import UserProfile from './pages/UserProfile';
 import AboutUs from './pages/AboutUs';
 import TermsConditions from './pages/TermsConditions';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -40,8 +41,10 @@ function App() {
           {/* Main app marketplace — wrapped in Layout (navbar + footer) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
-            <Route path="marketplace" element={<Marketplace />} />
+           
           </Route>
+           <Route path="marketplace" element={<Marketplace />} />
+            <Route path="users/:id" element={<UserProfile />} />
 
           {/* Admin */}
           <Route element={<RequireAdmin />}>

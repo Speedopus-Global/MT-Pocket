@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Put, Req, UseGuards, Logger,
+  Body, Controller, Get, Param, Put, Req, UseGuards, Logger,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { UsersService } from './user.service';
@@ -7,8 +7,13 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
+// NOTE: profile viewing (GET /:id/public) is intentionally behind
+// JwtAccessGuard, not OptionalJwtAccessGuard. Loan-request browsing stays
+// public per the roadmap ("no login required to browse"), but *viewing a
+// specific user's profile* and every safety action (offer/block/report)
+// require an account — enforced here, not just hidden in the frontend UI,
+// since hiding a button doesn't stop someone from calling the API directly.
 @Controller('users')
-@UseGuards(JwtAccessGuard)
 export class UserController {
   private readonly logger = new Logger(UserController.name);
 
@@ -18,6 +23,7 @@ export class UserController {
   ) {}
 
   // ── GET /users/profile ───────────────────────────────────────────────────
+  @UseGuards(JwtAccessGuard)
   @Get('profile')
   async getProfile(@Req() req: Request) {
     const userId = (req.user as any).sub;
@@ -26,7 +32,16 @@ export class UserController {
     return this.usersService.findPublicProfileById(userId);
   }
 
+  // ── GET /users/:id/public — someone else's profile, login required ───────
+  @UseGuards(JwtAccessGuard)
+  @Get(':id/public')
+  async getPublicProfile(@Param('id') id: string, @Req() req: Request) {
+    const viewerId = (req.user as any).sub;
+    return this.usersService.findPublicById(id, viewerId);
+  }
+
   // ── PUT /users/profile ───────────────────────────────────────────────────
+  @UseGuards(JwtAccessGuard)
   @Put('profile')
   async updateProfile(@Req() req: Request, @Body() dto: UpdateProfileDto) {
     const userId = (req.user as any).sub;
@@ -34,6 +49,8 @@ export class UserController {
 
     if (dto.fullName !== undefined) updateData.fullName = dto.fullName;
     if (dto.address !== undefined) updateData.address = dto.address;
+    if (dto.city !== undefined) updateData.city = dto.city;
+    if (dto.state !== undefined) updateData.state = dto.state;
 
     // ── EMAIL: only touch if the value is actually changing ──────────────
     // Root cause fix for the "always asks for email" bug: previously the

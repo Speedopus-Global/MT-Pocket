@@ -10,6 +10,12 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
 
+// Roles that should land on /admin after login — keep this in sync with
+// RequireAdmin.jsx's check, since a mismatch here means "logged in fine,
+// redirected to the wrong place" (silent, easy to miss) rather than an
+// outright access error.
+const ADMIN_SYSTEM_ROLES = ['reviewer', 'super_admin'];
+
 export default function Login() {
   const navigate = useNavigate();
   const { completeLogin } = useAuth();
@@ -43,6 +49,10 @@ export default function Login() {
     setNewPassword('');
   };
 
+  const redirectAfterLogin = (user) => {
+    navigate(ADMIN_SYSTEM_ROLES.includes(user.systemRole) ? '/admin' : '/dashboard');
+  };
+
   // ── Password Login ──────────────────────────────────────────────────
   async function handlePasswordLogin(e) {
     e.preventDefault();
@@ -51,13 +61,7 @@ export default function Login() {
     try {
       const result = await api.loginPassword(identifier, password);
       completeLogin(result);
-      
-      // Redirect based on role
-      if (result.user.systemRole === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      redirectAfterLogin(result.user);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -87,14 +91,8 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       const result = await api.loginOtpVerify(identifier, otp);
-      
-            completeLogin(result);
-
-            if (result.user.systemRole === 'admin') {
-            navigate('/admin');
-            } else {
-            navigate('/dashboard');
-            }
+      completeLogin(result);
+      redirectAfterLogin(result.user);
     } catch (err) {
       setError(err.message);
     } finally {

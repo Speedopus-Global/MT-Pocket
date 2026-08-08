@@ -347,26 +347,47 @@ export class AuthService {
       accessToken,
       refreshToken,
       refreshTokenMaxAgeMs: REFRESH_TOKEN_TTL_MS,
-      user: {
-        id: user._id.toString(),
-        phone: user.phone,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        role: user.role,
-        systemRole: user.systemRole,
-        fullName: user.fullName,
-        identityVerified: user.identityVerified,
-        // KYC status trio — verificationStatus/idDocumentType/
-        // idDocumentRejectionReason are denormalized onto User by
-        // VerificationService; Dashboard.jsx/AdminDashboard.jsx read
-        // these under the idDocumentStatus name.
-        idDocumentStatus: user.verificationStatus,
-        idDocumentType: user.idDocumentType,
-        idDocumentRejectionReason: user.idDocumentRejectionReason,
-        avatarUrl: user.avatarUrl,
-        address: user.address,
-        location: user.location,
-      },
+      user: this.toPublicUser(user),
     };
+  }
+
+  // Single source of truth for the "user" shape sent to the frontend —
+  // used by issueTokens() (login/register/refresh) AND getFullUser()
+  // (/auth/me), so the two endpoints can never drift out of sync with
+  // each other the way a second hand-copied field list would.
+  private toPublicUser(user: UserDocument) {
+    return {
+      id: user._id.toString(),
+      phone: user.phone,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      role: user.role,
+      systemRole: user.systemRole,
+      fullName: user.fullName,
+      identityVerified: user.identityVerified,
+      // KYC status trio — verificationStatus/idDocumentType/
+      // idDocumentRejectionReason are denormalized onto User by
+      // VerificationService; Dashboard.jsx/AdminDashboard.jsx read
+      // these under the idDocumentStatus name.
+      idDocumentStatus: user.verificationStatus,
+      idDocumentType: user.idDocumentType,
+      idDocumentRejectionReason: user.idDocumentRejectionReason,
+      avatarUrl: user.avatarUrl,
+      address: user.address,
+      location: user.location,
+    };
+  }
+
+  // Backs GET /auth/me — returns the SAME shape as login/register/refresh's
+  // `user` object, unlike req.user (which is just the JWT strategy's
+  // { sub, phone, role, systemRole, accountStatus } — no fullName,
+  // avatarUrl, KYC status, etc). Use this if the frontend ever needs to
+  // re-sync the full profile without a token refresh.
+  async getFullUser(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.toPublicUser(user);
   }
 }

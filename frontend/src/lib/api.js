@@ -63,9 +63,9 @@ export const api = {
   // ── Users (profile) ──────────────────────────────────────────────────────
   getProfile: (accessToken) => request('/users/profile', { accessToken }),
   updateProfile: (data, accessToken) => request('/users/profile', { method: 'PUT', body: data, accessToken }),
-  // NOTE: legacy `/users/document` upload removed — UserController has no such
-  // route. Use uploadVerificationDocument() below (POST /verification/document).
-
+  // GET /users/:id/public — anyone's profile, works logged-out too
+  getPublicProfile: (id, accessToken) => request(`/users/${id}/public`, { accessToken }),
+ 
   // ── Verification (user-facing) ────────────────────────────────────────────
   // POST /verification/document — new versioned KYC upload
   uploadVerificationDocument: ({ file, documentType }, accessToken) => {
@@ -102,10 +102,7 @@ export const api = {
   adminVerifAudit: (docId, accessToken) =>
     request(`/admin/verification/${docId}/audit`, { accessToken }),
 
-  // NOTE: legacy `/admin/documents/*` endpoints removed — AdminController's
-  // Documents section is gone. Use the adminVerif* functions above
-  // (GET/POST /admin/verification/...) for KYC document moderation instead.
-
+ 
   // ── Admin — users ────────────────────────────────────────────────────────
   adminGetUsers: ({ page = 1, limit = 20, search = '' } = {}, accessToken) =>
     request(`/admin/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`, { accessToken }),
@@ -148,11 +145,11 @@ export const api = {
 
   // ── Loan Requests — public (no auth required) ────────────────────────────
   // GET /loan-requests/search?keyword=&category=&page=&limit=&latitude=&longitude=&radiusKm=
- searchLoanRequests: (params = {}, accessToken) => {
-  const q = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
-  return request(`/loan-requests/search?${q.toString()}`, { accessToken });
-},
+  searchLoanRequests: (params = {}) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') q.set(k, String(v)); });
+    return request(`/loan-requests/search?${q.toString()}`);
+  },
   // GET /loan-requests/:id
   getLoanRequest: (id) => request(`/loan-requests/${id}`),
 

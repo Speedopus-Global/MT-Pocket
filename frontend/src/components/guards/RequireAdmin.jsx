@@ -20,9 +20,8 @@ export default function RequireAdmin() {
 
   if (!user) return <Navigate to="/unauthorized" replace />;
 
-  if (user.systemRole !== 'admin') {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
+if (!['reviewer', 'super_admin'].includes(user.systemRole)) {
+  return <Navigate to="/unauthorized" replace />;
+}
   return <Outlet />;
 }

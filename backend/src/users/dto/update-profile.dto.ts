@@ -35,6 +35,21 @@ export class UpdateProfileDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   address?: string;
 
+  // Public-safe location shown on profile/loan cards. Kept separate from
+  // `address` (full string, private) and `latitude`/`longitude` (exact GPS,
+  // private) per the roadmap's PII-minimization rule.
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  state?: string;
+
   @IsOptional()
   @IsNumber()
   @Min(-90)

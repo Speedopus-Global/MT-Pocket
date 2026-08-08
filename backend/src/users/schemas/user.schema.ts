@@ -181,6 +181,21 @@ export class User {
   })
   address: string | null;
 
+  // Public-safe location — shown on profile/loan cards instead of `address`
+  // (full string) or `location` (exact GPS). Set alongside address/location
+  // in updateProfile, same pattern LoanRequest already uses.
+  @Prop({
+    type: String,
+    default: null,
+  })
+  city: string | null;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  state: string | null;
+
   @Prop({
     type: {
       type: String,

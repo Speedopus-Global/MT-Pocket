@@ -429,7 +429,7 @@ export default function Dashboard() {
             </div>
             <div className="mt-8 pt-4 border-t border-border/60">
               <Link
-                to="/"
+                to="/marketplace"
                 className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-emerald-600 transition-colors cursor-pointer"
               >
                 Browse marketplace <ArrowUpRight size={18} />

@@ -61,9 +61,9 @@ export default function DashboardLayout() {
       >
         {/* Sidebar Header */}
         <div className="p-6 border-b border-border/55 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-primary/70 bg-primary/5 flex items-center justify-center shadow-md shadow-primary/5 transition-transform duration-300 hover:scale-105">
-            <img src={logo} alt="MT Pocket" className="w-7 h-7 object-contain" />
-          </div>
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/20 transition-transform duration-300 hover:scale-105">
+          <img src={logo} alt="MT Pocket" className="w-7 h-7 object-contain" />
+        </div>
           <div>
             <h1 className="font-extrabold tracking-tight text-primary text-lg leading-none">MT Pocket</h1>
           </div>
@@ -158,7 +158,7 @@ export default function DashboardLayout() {
         {/* Sidebar Footer Operations */}
         <div className="p-4 border-t border-border/55 mt-auto space-y-1.5">
           <Link 
-            to="marketplace" 
+            to="/marketplace" 
             className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
           >
             <ArrowLeft size={18} />

@@ -6,16 +6,18 @@ import { User, UserSchema } from './schemas/user.schema';
 import { UsersService } from './user.service';
 import { UserController } from './user.controller';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { BlocksModule } from '../Block/block.module'; // UsersService now depends on BlocksService for findPublicById()
+
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     // memory storage — we forward the buffer to Cloudinary, never write to disk
     MulterModule.register({ storage: memoryStorage() }),
     CloudinaryModule,
+    BlocksModule,
   ],
   controllers: [UserController],
   providers:   [UsersService],
   exports:     [UsersService],
-  
 })
 export class UsersModule {}
