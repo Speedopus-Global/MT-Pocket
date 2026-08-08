@@ -164,9 +164,15 @@ export const api = {
     request(`/loan-requests/${id}/cancel`, { method: 'PATCH', accessToken }),
   getMyLoanRequests: (accessToken) =>
     request('/loan-requests/mine/list', { accessToken }),
+  // PATCH /loan-requests/:id/offers/:offerId/accept — borrower accepts an offer
+  acceptOffer: (loanRequestId, offerId, accessToken) =>
+    request(`/loan-requests/${loanRequestId}/offers/${offerId}/accept`, { method: 'PATCH', accessToken }),
 
   // ── Loan Requests — lender (auth required) ───────────────────────────────
   // POST /loan-requests/offer  { loanRequestId, message?, offeredRate? }
   sendOffer: ({ loanRequestId, message, offeredRate }, accessToken) =>
     request('/loan-requests/offer', { method: 'POST', body: { loanRequestId, message, offeredRate }, accessToken }),
+  // GET /loan-requests/mine/offers-sent — every offer this lender has sent
+  getMyOffersSent: (accessToken) =>
+    request('/loan-requests/mine/offers-sent', { accessToken }),
 };

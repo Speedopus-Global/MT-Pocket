@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,11 +42,11 @@ const itemVariants = {
 export default function Profile() {
   const { user, accessToken, updateUser } = useAuth();
 
-  const [fullName, setFullName]   = useState(user?.fullName || '');
-  const [email, setEmail]         = useState(user?.email || '');
-  const [address, setAddress]     = useState(user?.address || '');
-  const [latitude, setLatitude]   = useState(user?.location?.coordinates?.[1] ?? '');
-  const [longitude, setLongitude] = useState(user?.location?.coordinates?.[0] ?? '');
+  const [fullName, setFullName]   = useState('');
+  const [email, setEmail]         = useState('');
+  const [address, setAddress]     = useState('');
+  const [latitude, setLatitude]   = useState('');
+  const [longitude, setLongitude] = useState('');
 
   const [isSaving, setIsSaving]     = useState(false);
   const [error, setError]           = useState('');
@@ -57,6 +57,21 @@ export default function Profile() {
   const [emailStep, setEmailStep]       = useState('idle');
   const [emailOtp, setEmailOtp]         = useState('');
   const [emailVerifying, setEmailVerifying] = useState(false);
+
+// Hydrate the form from `user` the first time it becomes available.
+  // Only fires once (hasHydrated flag) so it doesn't stomp on whatever
+  // the person is mid-typing if `user` object identity changes later
+  // for an unrelated reason (e.g. Dashboard calling updateUser()).
+  const hasHydrated = useRef(false);
+  useEffect(() => {
+    if (!user || hasHydrated.current) return;
+    setFullName(user.fullName || '');
+    setEmail(user.email || '');
+    setAddress(user.address || '');
+    setLatitude(user.location?.coordinates?.[1] ?? '');
+    setLongitude(user.location?.coordinates?.[0] ?? '');
+    hasHydrated.current = true;
+  }, [user]);
 
   if (!user) return null;
 

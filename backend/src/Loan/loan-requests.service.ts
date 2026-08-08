@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { LoanRequest, LoanRequestDocument } from './schemas/loan-request.schema';
 import { CreateLoanRequestDto, SearchLoanRequestsDto, SendOfferDto } from './dto/loan-request.dto';
 import { BlocksService } from '../Block/Block.service';
+import { NotificationsService } from '../notifications/notifications.service'; // adjust to your actual path
 
 const DEFAULT_RADIUS_KM = 25;
 
@@ -12,6 +13,7 @@ export class LoanRequestsService {
   constructor(
     @InjectModel(LoanRequest.name) private loanModel: Model<LoanRequestDocument>,
     private readonly blocksService: BlocksService,
+    private readonly notificationsService: NotificationsService,
   ) {}
   // ── Borrower: create a request ────────────────────────────────────────────
   async create(borrowerId: string, dto: CreateLoanRequestDto) {
@@ -94,10 +96,88 @@ export class LoanRequestsService {
       lenderId:    new Types.ObjectId(lenderId),
       message:     dto.message     ?? null,
       offeredRate: dto.offeredRate ?? null,
+      status:      'pending',
       createdAt:   new Date(),
-    });
+    } as any);
 
-    return req.save();
+    const saved = await req.save();
+
+    // Notify the borrower — this is what was missing before: an offer
+    // could be sent with no signal anywhere that it had happened.
+    await this.notificationsService.create(
+      req.borrowerId.toString(),
+      'offer_received',
+      `You received a new offer on your ₹${req.amount.toLocaleString('en-IN')} ${req.category} request.`,
+      { relatedId: req._id.toString(), relatedModel: 'LoanRequest' },
+    );
+
+    return saved;
+  }
+
+  // ── Borrower: accept an offer on one of their own requests ───────────────
+  // Accepting one offer rejects every other still-pending offer on the
+  // same request and moves the request to in_progress, so it drops out
+  // of the open marketplace search automatically.
+  async acceptOffer(requestId: string, borrowerId: string, offerId: string) {
+    const req = await this.loanModel.findById(requestId);
+    if (!req) throw new NotFoundException('Loan request not found');
+    if (req.borrowerId.toString() !== borrowerId) throw new ForbiddenException('Not your request');
+    if (req.status !== 'open') throw new BadRequestException('This request is no longer open');
+
+    const offer = req.offers.find((o: any) => o._id.toString() === offerId);
+    if (!offer) throw new NotFoundException('Offer not found');
+    if (offer.status !== 'pending') throw new BadRequestException('This offer is no longer pending');
+
+    req.offers.forEach((o: any) => {
+      if (o._id.toString() === offerId) {
+        o.status = 'accepted';
+      } else if (o.status === 'pending') {
+        o.status = 'rejected';
+      }
+    });
+    req.status = 'in_progress';
+
+    const saved = await req.save();
+
+    await this.notificationsService.create(
+      offer.lenderId.toString(),
+      'offer_accepted',
+      `Your offer on a ₹${req.amount.toLocaleString('en-IN')} ${req.category} request was accepted.`,
+      { relatedId: req._id.toString(), relatedModel: 'LoanRequest' },
+    );
+
+    return saved;
+  }
+
+  // ── Lender: every offer they've ever sent, with parent request context ───
+  async getMyOffers(lenderId: string) {
+    const lenderObjId = new Types.ObjectId(lenderId);
+    const requests = await this.loanModel
+      .find({ 'offers.lenderId': lenderObjId })
+      .populate('borrowerId', 'fullName avatarUrl')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Flatten to one row per offer this lender made, carrying the parent
+    // request's context along so the frontend doesn't need a second call
+    // per row.
+    return requests.flatMap((req: any) =>
+      req.offers
+        .filter((o: any) => o.lenderId.toString() === lenderId)
+        .map((o: any) => ({
+          offerId:           o._id,
+          status:            o.status,
+          message:           o.message,
+          offeredRate:       o.offeredRate,
+          createdAt:         o.createdAt,
+          loanRequestId:     req._id,
+          loanRequestStatus: req.status,
+          amount:            req.amount,
+          category:          req.category,
+          description:       req.description,
+          borrower:          req.borrowerId,
+        })),
+    );
   }
 
   // ── Search: keyword + category + radius (2.6) ────────────────────────────

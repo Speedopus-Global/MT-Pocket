@@ -4,9 +4,14 @@ import { LoanRequest, LoanRequestSchema } from './schemas/loan-request.schema';
 import { LoanRequestsService } from './loan-requests.service';
 import { LoanRequestsController } from './loan-request.controller';
 import { BlocksModule } from 'src/Block/block.module';
+import { NotificationsModule } from '../notifications/notifications.module'; // adjust to your actual path
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: LoanRequest.name, schema: LoanRequestSchema }]),BlocksModule],
+  imports: [
+    MongooseModule.forFeature([{ name: LoanRequest.name, schema: LoanRequestSchema }]),
+    BlocksModule,
+    NotificationsModule,
+  ],
   controllers: [LoanRequestsController],
   providers:   [LoanRequestsService],
   exports:     [LoanRequestsService],

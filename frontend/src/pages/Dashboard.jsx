@@ -37,6 +37,8 @@ const NOTIF_META = {
   account_unsuspended:    { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
   account_banned:         { color: 'text-destructive', bg: 'bg-destructive/10', icon: AlertTriangle },
   report_filed:           { color: 'text-amber-500',   bg: 'bg-amber-500/10',   icon: AlertTriangle },
+  offer_received:         { color: 'text-primary',     bg: 'bg-primary/10',     icon: Handshake },
+  offer_accepted:         { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
 };
 const defaultMeta = { color: 'text-muted-foreground', bg: 'bg-muted', icon: Bell };
 
@@ -77,9 +79,17 @@ export default function Dashboard() {
   const [myLoans, setMyLoans]             = useState([]);
   const [myLoansLoading, setMyLoansLoading] = useState(false);
 
-  if (!user) return null;
-  const isLender   = user.role === 'lender'   || user.role === 'both';
-  const isBorrower = user.role === 'borrower' || user.role === 'both';
+  // ── Offers (sent — lender / received — borrower) ───────────────────────────
+  const [offersTab, setOffersTab]         = useState('primary'); // 'primary' | 'accepted'
+  const [sentOffers, setSentOffers]       = useState([]);
+  const [sentOffersLoading, setSentOffersLoading] = useState(false);
+
+  // NOTE: these two must stay above the `if (!user) return null` guard
+  // below, along with every hook — see Rules of Hooks. They're plain
+  // consts (not hooks) so it's safe for them to run on the render where
+  // `user` is still null; `?.` just makes them false until it loads.
+  const isLender   = user?.role === 'lender'   || user?.role === 'both';
+  const isBorrower = user?.role === 'borrower' || user?.role === 'both';
 
   // Fetch KYC status on mount
   useEffect(() => {
@@ -126,7 +136,8 @@ export default function Dashboard() {
       .catch(() => {});
   }, [isLender]);
 
-  // Fetch my loan requests for borrowers
+  // Fetch my loan requests for borrowers (this doubles as "offers received"
+  // source data — getMyLoanRequests returns the full doc, offers included)
   useEffect(() => {
     if (!isBorrower || !accessToken) return;
     setMyLoansLoading(true);
@@ -135,6 +146,16 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setMyLoansLoading(false));
   }, [isBorrower, accessToken]);
+
+  // Fetch offers sent, for lenders
+  useEffect(() => {
+    if (!isLender || !accessToken) return;
+    setSentOffersLoading(true);
+    api.getMyOffersSent(accessToken)
+      .then(setSentOffers)
+      .catch(() => {})
+      .finally(() => setSentOffersLoading(false));
+  }, [isLender, accessToken]);
 
   const markAllRead = async () => {
     await api.markAllNotificationsRead(accessToken).catch(() => {});
@@ -152,6 +173,26 @@ export default function Dashboard() {
     setMyLoans((prev) => [loan, ...prev]);
     setLoanFormOpen(false);
   };
+
+  // Borrower: flatten every offer across all of my loan requests into one
+  // list, carrying the parent request along so each row has context.
+  const receivedOffers = myLoans.flatMap((loan) =>
+    (loan.offers || []).map((o) => ({ ...o, loanRequest: loan }))
+  );
+
+  const acceptOffer = async (loanRequestId, offerId) => {
+    try {
+      const updated = await api.acceptOffer(loanRequestId, offerId, accessToken);
+      setMyLoans((prev) => prev.map((l) => (l._id === updated._id ? updated : l)));
+    } catch (err) {
+      // Surfaced inline would need its own error state; for now this
+      // matches the "swallow + let the row just not update" pattern
+      // used elsewhere — replace with a toast if you have one wired up.
+      console.error('Failed to accept offer:', err.message);
+    }
+  };
+
+  if (!user) return null;
 
   return (
     <motion.div
@@ -437,6 +478,109 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+      </motion.div>
+
+      {/* ── OFFERS SECTION (sent — lender / received — borrower) ───────────── */}
+      <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
+          <div className="flex items-center gap-2.5">
+            <Handshake className="text-primary h-6 w-6" />
+            <h2 className="font-bold text-lg text-foreground tracking-tight">Offers</h2>
+          </div>
+          <div className="flex rounded-xl border border-border p-1 bg-muted/30">
+            <button
+              onClick={() => setOffersTab('primary')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                offersTab === 'primary' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {isLender && !isBorrower ? 'Offers Sent' : isBorrower && !isLender ? 'Offers Received' : 'Sent / Received'}
+            </button>
+            <button
+              onClick={() => setOffersTab('accepted')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                offersTab === 'accepted' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Offers Accepted
+            </button>
+          </div>
+        </div>
+
+        {/* Users with role="both" see both lists stacked, each labelled;
+            single-role users just see their one relevant list. */}
+        <div className="space-y-6">
+          {isLender && (
+            <div>
+              {isBorrower && (
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  As a lender — {offersTab === 'accepted' ? 'accepted offers' : 'offers you sent'}
+                </p>
+              )}
+              <OffersList
+                loading={sentOffersLoading}
+                items={sentOffers.filter((o) =>
+                  offersTab === 'accepted' ? o.status === 'accepted' : o.status !== 'accepted'
+                )}
+                emptyLabel={offersTab === 'accepted' ? 'No accepted offers yet' : "You haven't sent any offers yet"}
+                renderRow={(o) => (
+                  <div key={o.offerId} className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        ₹{o.amount.toLocaleString()} · <span className="capitalize">{o.category}</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        to {o.borrower?.fullName || 'Borrower'}
+                        {o.offeredRate != null && ` · offered ${o.offeredRate}%`}
+                      </p>
+                    </div>
+                    <OfferStatusBadge status={o.status} />
+                  </div>
+                )}
+              />
+            </div>
+          )}
+
+          {isBorrower && (
+            <div>
+              {isLender && (
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  As a borrower — {offersTab === 'accepted' ? 'accepted offers' : 'offers received'}
+                </p>
+              )}
+              <OffersList
+                loading={myLoansLoading}
+                items={receivedOffers.filter((o) =>
+                  offersTab === 'accepted' ? o.status === 'accepted' : o.status !== 'accepted'
+                )}
+                emptyLabel={offersTab === 'accepted' ? 'No accepted offers yet' : 'No offers received yet'}
+                renderRow={(o) => (
+                  <div key={o._id} className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        ₹{o.loanRequest.amount.toLocaleString()} · <span className="capitalize">{o.loanRequest.category}</span>
+                      </p>
+                      {o.offeredRate != null && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Offered rate: {o.offeredRate}%</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <OfferStatusBadge status={o.status} />
+                      {o.status === 'pending' && (
+                        <button
+                          onClick={() => acceptOffer(o.loanRequest._id, o._id)}
+                          className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                        >
+                          Accept
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* ── LOAN REQUEST MODAL ────────────────────────────────────────────── */}
@@ -829,6 +973,34 @@ function LoanStatusBadge({ status }) {
   return (
     <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${map[status] || 'bg-muted text-muted-foreground'}`}>
       {status?.replace('_', ' ')}
+    </span>
+  );
+}
+
+// ── Offers list + status badge ──────────────────────────────────────────────
+function OffersList({ loading, items, renderRow, emptyLabel }) {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 size={18} className="animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return <p className="text-xs text-muted-foreground text-center py-8">{emptyLabel}</p>;
+  }
+  return <div className="space-y-2">{items.map(renderRow)}</div>;
+}
+
+function OfferStatusBadge({ status }) {
+  const map = {
+    pending:  'text-amber-600 bg-amber-500/10',
+    accepted: 'text-emerald-600 bg-emerald-500/10',
+    rejected: 'text-destructive bg-destructive/10',
+  };
+  return (
+    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${map[status] || 'bg-muted text-muted-foreground'}`}>
+      {status}
     </span>
   );
 }

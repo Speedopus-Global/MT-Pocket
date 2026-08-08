@@ -20,6 +20,25 @@ export class LoanRequestsController {
     return this.loanService.search(query, requesterId);
   }
 
+  // ── Borrower: manage own requests ────────────────────────────────────────
+  // NOTE: these "mine/..." routes must stay ABOVE the ':id' route below —
+  // Nest matches routes in declaration order, and while 'mine/list' and
+  // 'mine/offers-sent' are two-segment paths that don't collide with a
+  // single-segment ':id' param, keeping all static routes above dynamic
+  // ones is the safer habit so this never bites you as routes grow.
+  @UseGuards(JwtAccessGuard)
+  @Get('mine/list')
+  myRequests(@Req() req: Request) {
+    return this.loanService.getMyRequests((req.user as any).sub);
+  }
+
+  // ── Lender: my sent offers ───────────────────────────────────────────────
+  @UseGuards(JwtAccessGuard)
+  @Get('mine/offers-sent')
+  myOffersSent(@Req() req: Request) {
+    return this.loanService.getMyOffers((req.user as any).sub);
+  }
+
   @UseGuards(OptionalJwtAccessGuard)
   @Get(':id')
   getOne(@Req() req: Request, @Param('id') id: string) {
@@ -27,7 +46,6 @@ export class LoanRequestsController {
     return this.loanService.getById(id, requesterId);
   }
 
-  // ── Borrower: manage own requests ────────────────────────────────────────
   @UseGuards(JwtAccessGuard)
   @Post()
   create(@Req() req: Request, @Body() dto: CreateLoanRequestDto) {
@@ -58,10 +76,16 @@ export class LoanRequestsController {
     return this.loanService.changeStatus(id, (req.user as any).sub, 'cancelled');
   }
 
+  // ── Borrower: accept an offer on one of their own requests ───────────────
   @UseGuards(JwtAccessGuard)
-  @Get('mine/list')
-  myRequests(@Req() req: Request) {
-    return this.loanService.getMyRequests((req.user as any).sub);
+  @Patch(':id/offers/:offerId/accept')
+  acceptOffer(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Param('offerId') offerId: string,
+  ) {
+    const borrowerId = (req.user as any).sub;
+    return this.loanService.acceptOffer(id, borrowerId, offerId);
   }
 
   // ── Lender: send offer ───────────────────────────────────────────────────

@@ -5,6 +5,7 @@ export type LoanRequestDocument = HydratedDocument<LoanRequest>;
 
 export type LoanCategory = 'medical' | 'education' | 'business' | 'personal' | 'other';
 export type LoanRequestStatus = 'open' | 'in_progress' | 'closed' | 'cancelled';
+export type OfferStatus = 'pending' | 'accepted' | 'rejected';
 
 @Schema({ timestamps: true })
 export class LoanRequest {
@@ -63,15 +64,18 @@ export class LoanRequest {
         lenderId:    { type: Types.ObjectId, ref: 'User', required: true },
         message:     { type: String, default: null },
         offeredRate: { type: Number, default: null },
+        status:      { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
         createdAt:   { type: Date, default: Date.now },
       },
     ],
     default: [],
   })
   offers: {
+    _id:         Types.ObjectId;
     lenderId:    Types.ObjectId;
     message:     string | null;
     offeredRate: number | null;
+    status:      OfferStatus;
     createdAt:   Date;
   }[];
 }

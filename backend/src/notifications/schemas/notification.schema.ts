@@ -14,6 +14,8 @@ export type NotificationType =
   | 'account_unsuspended'
   | 'account_banned'
   | 'report_filed'
+  | 'offer_received'       // borrower: a lender sent an offer on your request
+  | 'offer_accepted'       // lender: borrower accepted your offer
   // ── Admin-facing ───────────────────────────────────────────────────
   | 'admin_doc_submitted'       // new doc in admin queue
   | 'admin_doc_resubmitted'     // user resubmitted after rejection
@@ -24,7 +26,7 @@ export type NotificationType =
 const ALL_TYPES: NotificationType[] = [
   'doc_submitted', 'doc_under_review', 'doc_approved', 'doc_rejected',
   'doc_reupload_required', 'account_suspended', 'account_unsuspended',
-  'account_banned', 'report_filed',
+  'account_banned', 'report_filed', 'offer_received', 'offer_accepted',
   'admin_doc_submitted', 'admin_doc_resubmitted', 'admin_report_filed',
   'admin_duplicate_detected', 'admin_quality_flagged',
 ];
@@ -51,7 +53,7 @@ export class Notification {
   @Prop({ type: Types.ObjectId, default: null })
   relatedId: Types.ObjectId | null;
 
-  // The collection the relatedId points to ('VerificationDocument', 'Report', etc.)
+  // The collection the relatedId points to ('VerificationDocument', 'Report', 'LoanRequest', etc.)
   @Prop({ type: String, default: null })
   relatedModel: string | null;
 }
