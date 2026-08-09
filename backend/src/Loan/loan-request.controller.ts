@@ -88,6 +88,18 @@ export class LoanRequestsController {
     return this.loanService.acceptOffer(id, borrowerId, offerId);
   }
 
+  // ── Borrower: reject an offer on one of their own requests ───────────────
+  @UseGuards(JwtAccessGuard)
+  @Patch(':id/offers/:offerId/reject')
+  rejectOffer(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Param('offerId') offerId: string,
+  ) {
+    const borrowerId = (req.user as any).sub;
+    return this.loanService.rejectOffer(id, borrowerId, offerId);
+  }
+
   // ── Lender: send offer ───────────────────────────────────────────────────
   @UseGuards(JwtAccessGuard)
   @Post('offer')

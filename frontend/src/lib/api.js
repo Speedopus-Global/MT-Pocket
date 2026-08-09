@@ -167,6 +167,11 @@ export const api = {
   // PATCH /loan-requests/:id/offers/:offerId/accept — borrower accepts an offer
   acceptOffer: (loanRequestId, offerId, accessToken) =>
     request(`/loan-requests/${loanRequestId}/offers/${offerId}/accept`, { method: 'PATCH', accessToken }),
+  rejectOffer: (loanRequestId, offerId, accessToken) =>
+  request(`/loan-requests/${loanRequestId}/offers/${offerId}/reject`, {
+    method: 'PATCH',
+    accessToken,
+  }),
 
   // ── Loan Requests — lender (auth required) ───────────────────────────────
   // POST /loan-requests/offer  { loanRequestId, message?, offeredRate? }

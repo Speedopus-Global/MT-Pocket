@@ -16,6 +16,7 @@ export type NotificationType =
   | 'report_filed'
   | 'offer_received'       // borrower: a lender sent an offer on your request
   | 'offer_accepted'       // lender: borrower accepted your offer
+  | 'offer_rejected'       // lender: borrower declined your offer
   // ── Admin-facing ───────────────────────────────────────────────────
   | 'admin_doc_submitted'       // new doc in admin queue
   | 'admin_doc_resubmitted'     // user resubmitted after rejection
@@ -27,6 +28,7 @@ const ALL_TYPES: NotificationType[] = [
   'doc_submitted', 'doc_under_review', 'doc_approved', 'doc_rejected',
   'doc_reupload_required', 'account_suspended', 'account_unsuspended',
   'account_banned', 'report_filed', 'offer_received', 'offer_accepted',
+  'offer_rejected',
   'admin_doc_submitted', 'admin_doc_resubmitted', 'admin_report_filed',
   'admin_duplicate_detected', 'admin_quality_flagged',
 ];

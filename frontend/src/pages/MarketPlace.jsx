@@ -7,6 +7,7 @@ import LoginPromptModal from '../components/ui/LoginPromptModal';
 import {
   Search, Loader2, Tag, MapPin, Clock, Percent, Handshake,
   X, ArrowLeft, Coins, ChevronLeft, ChevronRight, Inbox, ShieldAlert, ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
@@ -46,6 +47,13 @@ export default function Marketplace() {
   const [safetyLoan, setSafetyLoan] = useState(null); // loan being reported/blocked from
   const [loginPrompt, setLoginPrompt] = useState(null); // message string or null
 
+  // Loan request IDs this lender has already sent an offer on — drives the
+  // "Offer sent" state on cards. Seeded from every offer they've ever sent
+  // (not just this session) so it's correct even after a page refresh or
+  // when paging through results that were fetched before this mount.
+  const [sentOfferIds, setSentOfferIds] = useState(new Set());
+  const [sentOfferIdsLoading, setSentOfferIdsLoading] = useState(false);
+
   // Gated entry points — guests get a login/register prompt instead of the
   // real action. Loan-card browsing itself stays public (no gating here);
   // only viewing a specific person's profile, offering, blocking, and
@@ -71,6 +79,18 @@ export default function Marketplace() {
     if (!accessToken) { setBlockedIds([]); return; }
     api.getMyBlockedUserIds(accessToken).then(setBlockedIds).catch(() => {});
   }, [accessToken]);
+
+  // Seed sentOfferIds from every offer this lender has ever sent, so cards
+  // show "Offer sent" correctly even on a fresh page load — not just for
+  // offers sent in the current browser session.
+  useEffect(() => {
+    if (!isLender || !accessToken) { setSentOfferIds(new Set()); return; }
+    setSentOfferIdsLoading(true);
+    api.getMyOffersSent(accessToken)
+      .then((offers) => setSentOfferIds(new Set(offers.map((o) => o.loanRequestId))))
+      .catch(() => {})
+      .finally(() => setSentOfferIdsLoading(false));
+  }, [isLender, accessToken]);
 
   const visibleResults = results.filter((loan) => !blockedIds.includes(loan.borrowerId?._id));
 
@@ -104,6 +124,13 @@ export default function Marketplace() {
   };
 
   const goPage = (p) => { setPage(p); load(p); };
+
+  // Called by OfferForm right after a successful send — flips the card to
+  // "Offer sent" immediately, without waiting for a refetch of anything.
+  const onOfferSent = (loanRequestId) => {
+    setSentOfferIds((prev) => new Set(prev).add(loanRequestId));
+    setOfferLoan(null);
+  };
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -203,6 +230,8 @@ export default function Marketplace() {
                   isLoggedIn={isLoggedIn}
                   isLender={isLender}
                   isOwnRequest={user && loan.borrowerId?._id === user.id}
+                  hasSentOffer={sentOfferIds.has(loan._id)}
+                  sentOfferIdsLoading={sentOfferIdsLoading}
                   onOffer={() => requestOffer(loan)}
                   onSafety={() => requestSafety(loan)}
                   onProfile={() => requestProfile(loan.borrowerId?._id)}
@@ -260,7 +289,7 @@ export default function Marketplace() {
                 <OfferForm
                   loan={offerLoan}
                   accessToken={accessToken}
-                  onDone={() => setOfferLoan(null)}
+                  onSent={onOfferSent}
                 />
               </div>
             </motion.div>
@@ -315,7 +344,7 @@ export default function Marketplace() {
 }
 
 // ── Loan card ────────────────────────────────────────────────────────────
-function LoanCard({ loan, isLoggedIn, isLender, isOwnRequest, onOffer, onSafety, onProfile }) {
+function LoanCard({ loan, isLoggedIn, isLender, isOwnRequest, hasSentOffer, sentOfferIdsLoading, onOffer, onSafety, onProfile }) {
   return (
     <motion.div
       variants={cardVariants}
@@ -405,12 +434,19 @@ function LoanCard({ loan, isLoggedIn, isLender, isOwnRequest, onOffer, onSafety,
             <Handshake size={15} /> Log in to send an offer
           </button>
         ) : isLender ? (
-          <button
-            onClick={onOffer}
-            className="w-full inline-flex items-center justify-center gap-2 text-sm font-bold bg-primary text-primary-foreground px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
-          >
-            <Handshake size={15} /> Send offer
-          </button>
+          hasSentOffer ? (
+            <div className="w-full inline-flex items-center justify-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 rounded-xl">
+              <CheckCircle2 size={15} /> Offer sent
+            </div>
+          ) : (
+            <button
+              onClick={onOffer}
+              disabled={sentOfferIdsLoading}
+              className="w-full inline-flex items-center justify-center gap-2 text-sm font-bold bg-primary text-primary-foreground px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
+            >
+              <Handshake size={15} /> Send offer
+            </button>
+          )
         ) : (
           <p className="text-[11px] text-muted-foreground text-center">Only lenders can send offers</p>
         )}
@@ -420,7 +456,7 @@ function LoanCard({ loan, isLoggedIn, isLender, isOwnRequest, onOffer, onSafety,
 }
 
 // ── Offer form ───────────────────────────────────────────────────────────
-function OfferForm({ loan, accessToken, onDone }) {
+function OfferForm({ loan, accessToken, onSent }) {
   const [message, setMessage]           = useState('');
   const [offeredRate, setOfferedRate]   = useState('');
   const [submitting, setSubmitting]     = useState(false);
@@ -439,7 +475,7 @@ function OfferForm({ loan, accessToken, onDone }) {
         },
         accessToken,
       );
-      onDone();
+      onSent(loan._id);
     } catch (err) {
       setError(err.message || 'Could not send offer — please try again');
     } finally {

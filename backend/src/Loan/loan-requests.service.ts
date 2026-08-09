@@ -15,6 +15,7 @@ export class LoanRequestsService {
     private readonly blocksService: BlocksService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
   // ── Borrower: create a request ────────────────────────────────────────────
   async create(borrowerId: string, dto: CreateLoanRequestDto) {
     const doc: Partial<LoanRequest> = {
@@ -114,10 +115,11 @@ export class LoanRequestsService {
     return saved;
   }
 
-  // ── Borrower: accept an offer on one of their own requests ───────────────
-  // Accepting one offer rejects every other still-pending offer on the
-  // same request and moves the request to in_progress, so it drops out
-  // of the open marketplace search automatically.
+  // ── Borrower: accept a single offer ───────────────────────────────────────
+  // IMPORTANT: only the target offer changes here. Other pending offers on
+  // the same request are left alone — rejection is a separate, manual
+  // action the borrower takes per-offer via rejectOffer() below. Do not
+  // reintroduce a "reject everything else" loop here.
   async acceptOffer(requestId: string, borrowerId: string, offerId: string) {
     const req = await this.loanModel.findById(requestId);
     if (!req) throw new NotFoundException('Loan request not found');
@@ -128,13 +130,7 @@ export class LoanRequestsService {
     if (!offer) throw new NotFoundException('Offer not found');
     if (offer.status !== 'pending') throw new BadRequestException('This offer is no longer pending');
 
-    req.offers.forEach((o: any) => {
-      if (o._id.toString() === offerId) {
-        o.status = 'accepted';
-      } else if (o.status === 'pending') {
-        o.status = 'rejected';
-      }
-    });
+    offer.status = 'accepted';
     req.status = 'in_progress';
 
     const saved = await req.save();
@@ -143,6 +139,34 @@ export class LoanRequestsService {
       offer.lenderId.toString(),
       'offer_accepted',
       `Your offer on a ₹${req.amount.toLocaleString('en-IN')} ${req.category} request was accepted.`,
+      { relatedId: req._id.toString(), relatedModel: 'LoanRequest' },
+    );
+
+    return saved;
+  }
+
+  // ── Borrower: manually reject a single pending offer ──────────────────────
+  // Independent of the parent request's status — a borrower can keep
+  // declining leftover pending offers even after another offer on the
+  // same request has already been accepted and the request moved to
+  // in_progress.
+  async rejectOffer(requestId: string, borrowerId: string, offerId: string) {
+    const req = await this.loanModel.findById(requestId);
+    if (!req) throw new NotFoundException('Loan request not found');
+    if (req.borrowerId.toString() !== borrowerId) throw new ForbiddenException('Not your request');
+
+    const offer = req.offers.find((o: any) => o._id.toString() === offerId);
+    if (!offer) throw new NotFoundException('Offer not found');
+    if (offer.status !== 'pending') throw new BadRequestException('This offer is no longer pending');
+
+    offer.status = 'rejected';
+
+    const saved = await req.save();
+
+    await this.notificationsService.create(
+      offer.lenderId.toString(),
+      'offer_rejected',
+      `Your offer on a ₹${req.amount.toLocaleString('en-IN')} ${req.category} request was declined.`,
       { relatedId: req._id.toString(), relatedModel: 'LoanRequest' },
     );
 

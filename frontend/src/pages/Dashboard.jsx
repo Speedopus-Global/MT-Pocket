@@ -26,6 +26,14 @@ const LOAN_CATEGORIES = [
   { value: 'other',     label: 'Other',     emoji: '💡' },
 ];
 
+// The three offer tabs shown for both the "sent" (lender) and "received"
+// (borrower) lists. Every offer sits in exactly one of these at any time.
+const OFFER_TABS = [
+  { value: 'pending',  label: 'Pending' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
 // Notification type → icon + colour helpers
 const NOTIF_META = {
   doc_submitted:          { color: 'text-primary',     bg: 'bg-primary/10',     icon: FileText },
@@ -39,6 +47,7 @@ const NOTIF_META = {
   report_filed:           { color: 'text-amber-500',   bg: 'bg-amber-500/10',   icon: AlertTriangle },
   offer_received:         { color: 'text-primary',     bg: 'bg-primary/10',     icon: Handshake },
   offer_accepted:         { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
+  offer_rejected:         { color: 'text-destructive', bg: 'bg-destructive/10', icon: X },
 };
 const defaultMeta = { color: 'text-muted-foreground', bg: 'bg-muted', icon: Bell };
 
@@ -55,6 +64,21 @@ const modalVariants = {
   visible: { opacity: 1, scale: 1,    y: 0,  transition: { type: 'spring', stiffness: 380, damping: 26 } },
   exit:    { opacity: 0, scale: 0.95, y: 10, transition: { duration: 0.15 } },
 };
+const rowVariants = {
+  hidden:  { opacity: 0, y: 6 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.18 } },
+  exit:    { opacity: 0, x: -8, transition: { duration: 0.15 } },
+};
+
+// A loan's `offers[].lenderId` comes back as a bare ObjectId string unless
+// the backend query populates it (see getMyRequests). Handle both shapes
+// so this component works whether or not that populate has been added yet.
+function lenderIdOf(offer) {
+  return typeof offer.lenderId === 'object' ? offer.lenderId?._id : offer.lenderId;
+}
+function lenderNameOf(offer) {
+  return typeof offer.lenderId === 'object' ? offer.lenderId?.fullName : null;
+}
 
 export default function Dashboard() {
   const { user, accessToken, updateUser } = useAuth();
@@ -80,7 +104,10 @@ export default function Dashboard() {
   const [myLoansLoading, setMyLoansLoading] = useState(false);
 
   // ── Offers (sent — lender / received — borrower) ───────────────────────────
-  const [offersTab, setOffersTab]         = useState('primary'); // 'primary' | 'accepted'
+  // Three-way split: pending / accepted / rejected. Every offer lives in
+  // exactly one bucket based on its own `status` field — nothing here is
+  // inferred, it's a straight filter on what the backend returns.
+  const [offersTab, setOffersTab]         = useState('pending');
   const [sentOffers, setSentOffers]       = useState([]);
   const [sentOffersLoading, setSentOffersLoading] = useState(false);
 
@@ -180,15 +207,25 @@ export default function Dashboard() {
     (loan.offers || []).map((o) => ({ ...o, loanRequest: loan }))
   );
 
+  // Accept and reject are two independent, manual, per-offer actions the
+  // borrower takes. Accepting one offer does NOT touch any other offer —
+  // every other pending offer on the same request stays pending until the
+  // borrower explicitly rejects it (or accepts it instead).
   const acceptOffer = async (loanRequestId, offerId) => {
     try {
       const updated = await api.acceptOffer(loanRequestId, offerId, accessToken);
       setMyLoans((prev) => prev.map((l) => (l._id === updated._id ? updated : l)));
     } catch (err) {
-      // Surfaced inline would need its own error state; for now this
-      // matches the "swallow + let the row just not update" pattern
-      // used elsewhere — replace with a toast if you have one wired up.
       console.error('Failed to accept offer:', err.message);
+    }
+  };
+
+  const rejectOffer = async (loanRequestId, offerId) => {
+    try {
+      const updated = await api.rejectOffer(loanRequestId, offerId, accessToken);
+      setMyLoans((prev) => prev.map((l) => (l._id === updated._id ? updated : l)));
+    } catch (err) {
+      console.error('Failed to reject offer:', err.message);
     }
   };
 
@@ -248,7 +285,7 @@ export default function Dashboard() {
                     <p className="text-sm font-bold text-foreground">Notifications</p>
                   </div>
                   {unread > 0 && (
-                    <button onClick={markAllRead} className="text-[11px] text-primary hover:underline font-semibold cursor-pointer">
+                    <button onClick={markAllRead} className="text-xs text-primary hover:underline font-semibold cursor-pointer">
                       Mark all read
                     </button>
                   )}
@@ -482,101 +519,161 @@ export default function Dashboard() {
 
       {/* ── OFFERS SECTION (sent — lender / received — borrower) ───────────── */}
       <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4 mb-6">
           <div className="flex items-center gap-2.5">
             <Handshake className="text-primary h-6 w-6" />
-            <h2 className="font-bold text-lg text-foreground tracking-tight">Offers</h2>
+            <h2 className="font-bold text-xl text-foreground tracking-tight">Offers</h2>
           </div>
-          <div className="flex rounded-xl border border-border p-1 bg-muted/30">
-            <button
-              onClick={() => setOffersTab('primary')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                offersTab === 'primary' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {isLender && !isBorrower ? 'Offers Sent' : isBorrower && !isLender ? 'Offers Received' : 'Sent / Received'}
-            </button>
-            <button
-              onClick={() => setOffersTab('accepted')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                offersTab === 'accepted' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Offers Accepted
-            </button>
+
+          {/* Sliding 3-way toggle: Pending / Accepted / Rejected */}
+          <div className="relative flex rounded-xl border border-border p-1 bg-muted/30 self-start">
+            {OFFER_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setOffersTab(tab.value)}
+                className={`relative z-10 px-4 py-2 text-sm font-bold rounded-lg transition-colors cursor-pointer ${
+                  offersTab === tab.value ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+                {offersTab === tab.value && (
+                  <motion.span
+                    layoutId="offers-tab-pill"
+                    className="absolute inset-0 -z-10 rounded-lg bg-primary"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Users with role="both" see both lists stacked, each labelled;
-            single-role users just see their one relevant list. */}
-        <div className="space-y-6">
+            single-role users just see their one relevant list. Each list
+            is filtered to whichever status tab is currently selected. */}
+        <div className="space-y-8">
           {isLender && (
             <div>
               {isBorrower && (
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                  As a lender — {offersTab === 'accepted' ? 'accepted offers' : 'offers you sent'}
+                <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  As a lender — {offersTab} offers you sent
                 </p>
               )}
               <OffersList
                 loading={sentOffersLoading}
-                items={sentOffers.filter((o) =>
-                  offersTab === 'accepted' ? o.status === 'accepted' : o.status !== 'accepted'
-                )}
-                emptyLabel={offersTab === 'accepted' ? 'No accepted offers yet' : "You haven't sent any offers yet"}
+                items={sentOffers.filter((o) => o.status === offersTab)}
+                emptyLabel={
+                  offersTab === 'pending'  ? "You haven't sent any offers yet" :
+                  offersTab === 'accepted' ? 'No accepted offers yet' :
+                                              'No rejected offers'
+                }
                 renderRow={(o) => (
-                  <div key={o.offerId} className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3">
+                  <motion.div
+                    key={o.offerId}
+                    layout
+                    variants={rowVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="flex items-center justify-between px-1 py-4"
+                  >
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        ₹{o.amount.toLocaleString()} · <span className="capitalize">{o.category}</span>
+                      <p className="text-base font-bold text-foreground truncate">
+                        ₹{o.amount.toLocaleString()} · <span className="capitalize font-semibold text-muted-foreground">{o.category}</span>
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        to {o.borrower?.fullName || 'Borrower'}
+                      <p className="text-sm text-muted-foreground mt-1 truncate">
+                        to{' '}
+                        {o.borrower?._id ? (
+                          <Link to={`/users/${o.borrower._id}`} className="text-primary hover:underline font-semibold cursor-pointer">
+                            {o.borrower.fullName || 'Borrower'}
+                          </Link>
+                        ) : (
+                          o.borrower?.fullName || 'Borrower'
+                        )}
                         {o.offeredRate != null && ` · offered ${o.offeredRate}%`}
                       </p>
                     </div>
                     <OfferStatusBadge status={o.status} />
-                  </div>
+                  </motion.div>
                 )}
               />
             </div>
           )}
 
+          {isLender && isBorrower && <div className="border-t border-border" />}
+
           {isBorrower && (
             <div>
               {isLender && (
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                  As a borrower — {offersTab === 'accepted' ? 'accepted offers' : 'offers received'}
+                <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  As a borrower — {offersTab} offers received
                 </p>
               )}
               <OffersList
                 loading={myLoansLoading}
-                items={receivedOffers.filter((o) =>
-                  offersTab === 'accepted' ? o.status === 'accepted' : o.status !== 'accepted'
-                )}
-                emptyLabel={offersTab === 'accepted' ? 'No accepted offers yet' : 'No offers received yet'}
-                renderRow={(o) => (
-                  <div key={o._id} className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        ₹{o.loanRequest.amount.toLocaleString()} · <span className="capitalize">{o.loanRequest.category}</span>
-                      </p>
-                      {o.offeredRate != null && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Offered rate: {o.offeredRate}%</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <OfferStatusBadge status={o.status} />
-                      {o.status === 'pending' && (
-                        <button
-                          onClick={() => acceptOffer(o.loanRequest._id, o._id)}
-                          className="text-xs font-bold text-primary hover:underline cursor-pointer"
-                        >
-                          Accept
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+                items={receivedOffers.filter((o) => o.status === offersTab)}
+                emptyLabel={
+                  offersTab === 'pending'  ? 'No offers received yet' :
+                  offersTab === 'accepted' ? 'No accepted offers yet' :
+                                              'No rejected offers'
+                }
+                renderRow={(o) => {
+                  const lId = lenderIdOf(o);
+                  const lName = lenderNameOf(o);
+                  return (
+                    <motion.div
+                      key={o._id}
+                      layout
+                      variants={rowVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="flex items-center justify-between px-1 py-4 gap-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-base font-bold text-foreground truncate">
+                          ₹{o.loanRequest.amount.toLocaleString()} · <span className="capitalize font-semibold text-muted-foreground">{o.loanRequest.category}</span>
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {lId && (
+                            <Link to={`/users/${lId}`} className="text-sm font-semibold text-primary hover:underline cursor-pointer">
+                              {lName || 'View lender'}
+                            </Link>
+                          )}
+                          {o.offeredRate != null && (
+                            <span className="text-sm text-muted-foreground">· offered {o.offeredRate}%</span>
+                          )}
+                          {o.message && (
+                            <span className="text-sm text-muted-foreground truncate">· "{o.message}"</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {o.status === 'pending' ? (
+                          <>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => acceptOffer(o.loanRequest._id, o._id)}
+                              className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                            >
+                              <CheckCircle2 size={14} /> Accept
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => rejectOffer(o.loanRequest._id, o._id)}
+                              className="inline-flex items-center gap-1.5 text-sm font-bold text-destructive bg-destructive/10 hover:bg-destructive/20 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                            >
+                              <X size={14} /> Reject
+                            </motion.button>
+                          </>
+                        ) : (
+                          <OfferStatusBadge status={o.status} />
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                }}
               />
             </div>
           )}
@@ -981,15 +1078,19 @@ function LoanStatusBadge({ status }) {
 function OffersList({ loading, items, renderRow, emptyLabel }) {
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 size={18} className="animate-spin text-muted-foreground" />
+      <div className="flex justify-center py-10">
+        <Loader2 size={20} className="animate-spin text-muted-foreground" />
       </div>
     );
   }
   if (items.length === 0) {
-    return <p className="text-xs text-muted-foreground text-center py-8">{emptyLabel}</p>;
+    return <p className="text-sm text-muted-foreground text-center py-10">{emptyLabel}</p>;
   }
-  return <div className="space-y-2">{items.map(renderRow)}</div>;
+  return (
+    <AnimatePresence initial={false}>
+      <div className="divide-y divide-border">{items.map(renderRow)}</div>
+    </AnimatePresence>
+  );
 }
 
 function OfferStatusBadge({ status }) {
@@ -999,7 +1100,7 @@ function OfferStatusBadge({ status }) {
     rejected: 'text-destructive bg-destructive/10',
   };
   return (
-    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${map[status] || 'bg-muted text-muted-foreground'}`}>
+    <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${map[status] || 'bg-muted text-muted-foreground'}`}>
       {status}
     </span>
   );
