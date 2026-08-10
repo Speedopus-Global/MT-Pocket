@@ -173,6 +173,30 @@ export class LoanRequestsService {
     return saved;
   }
 
+  // ── Lender: withdraw a pending offer ──────────────────────────────────────
+  async withdrawOffer(requestId: string, lenderId: string, offerId: string) {
+    const req = await this.loanModel.findById(requestId);
+    if (!req) throw new NotFoundException('Loan request not found');
+
+    const offer = req.offers.find((o: any) => o._id.toString() === offerId);
+    if (!offer) throw new NotFoundException('Offer not found');
+    if (offer.lenderId.toString() !== lenderId) throw new ForbiddenException('Not your offer');
+    if (offer.status !== 'pending') throw new BadRequestException('Only pending offers can be withdrawn');
+
+    offer.status = 'withdrawn';
+
+    const saved = await req.save();
+
+    await this.notificationsService.create(
+      req.borrowerId.toString(),
+      'offer_rejected',
+      `An offer of ₹${req.amount.toLocaleString('en-IN')} on your ${req.category} request was withdrawn by the lender.`,
+      { relatedId: req._id.toString(), relatedModel: 'LoanRequest' },
+    );
+
+    return saved;
+  }
+
   // ── Lender: every offer they've ever sent, with parent request context ───
   async getMyOffers(lenderId: string) {
     const lenderObjId = new Types.ObjectId(lenderId);

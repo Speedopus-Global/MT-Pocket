@@ -180,4 +180,6 @@ export const api = {
   // GET /loan-requests/mine/offers-sent — every offer this lender has sent
   getMyOffersSent: (accessToken) =>
     request('/loan-requests/mine/offers-sent', { accessToken }),
+  withdrawOffer: (loanRequestId, offerId, accessToken) =>
+    request(`/loan-requests/${loanRequestId}/offers/${offerId}/withdraw`, { method: 'PATCH', accessToken }),
 };

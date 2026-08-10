@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
   User as UserIcon, 
+  Settings as SettingsIcon,
   MessageSquare, 
   LogOut, 
   Menu, 
@@ -26,7 +27,8 @@ export default function DashboardLayout() {
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/dashboard/profile', label: 'Profile & Trust', icon: UserIcon },
+    { to: '/dashboard/profile', label: 'Profile', icon: UserIcon },
+    { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
     { to: '/dashboard/messages', label: 'Messages', icon: MessageSquare, badge: 'Soon' },
   ];
 

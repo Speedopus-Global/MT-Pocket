@@ -100,6 +100,18 @@ export class LoanRequestsController {
     return this.loanService.rejectOffer(id, borrowerId, offerId);
   }
 
+  // ── Lender: withdraw offer ───────────────────────────────────────────────
+  @UseGuards(JwtAccessGuard)
+  @Patch(':id/offers/:offerId/withdraw')
+  withdrawOffer(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Param('offerId') offerId: string,
+  ) {
+    const lenderId = (req.user as any).sub;
+    return this.loanService.withdrawOffer(id, lenderId, offerId);
+  }
+
   // ── Lender: send offer ───────────────────────────────────────────────────
   @UseGuards(JwtAccessGuard)
   @Post('offer')
