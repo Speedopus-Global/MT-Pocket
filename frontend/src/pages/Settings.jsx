@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   UploadCloud,
   ChevronRight,
+  ChevronLeft,
   X,
   FileText,
   XCircle,
@@ -45,7 +46,7 @@ const inputClass =
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
 const itemVariants = {
   hidden: { opacity: 0, y: 14 },
@@ -56,9 +57,18 @@ const modalVariants = {
   visible: { opacity: 1, scale: 1,    y: 0,  transition: { type: 'spring', stiffness: 380, damping: 26 } },
   exit:    { opacity: 0, scale: 0.95, y: 10, transition: { duration: 0.15 } },
 };
+const pageVariants = {
+  initial: (dir) => ({ opacity: 0, x: dir === 'in' ? 24 : -24 }),
+  animate: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  exit:    (dir) => ({ opacity: 0, x: dir === 'in' ? -24 : 24, transition: { duration: 0.15 } }),
+};
 
 export default function Settings() {
   const { user, accessToken, updateUser } = useAuth();
+
+  // Which settings screen is active. 'general' is the default account screen;
+  // 'kyc' is a dedicated sub-page, entered only via the Identity Verification row.
+  const [page, setPage] = useState('general');
 
   const [fullName, setFullName]   = useState('');
   const [email, setEmail]         = useState('');
@@ -257,7 +267,6 @@ export default function Settings() {
   const isApproved = status === 'approved' || user.identityVerified;
   const isPending = !isApproved && status === 'pending';
   const isRejected = !isApproved && status === 'rejected';
-  const needsAction = !isApproved && !isPending;
 
   const badgeLabel = isApproved ? 'Verified' : isPending ? 'Under Review' : isRejected ? 'Rejected' : 'Not Started';
   const badgeColor = isApproved
@@ -273,27 +282,126 @@ export default function Settings() {
     : 'border-border bg-muted/20';
 
   return (
-    <motion.div
-      className="flex-1 flex flex-col space-y-8 min-h-full"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="flex-1 flex flex-col min-h-full">
+      <AnimatePresence mode="wait" custom={page === 'kyc' ? 'in' : 'out'}>
+        {page === 'general' ? (
+          <motion.div
+            key="general"
+            custom="in"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="flex-1 flex flex-col space-y-8"
+          >
+            <GeneralSettingsPage
+              user={user}
+              fullName={fullName} setFullName={setFullName}
+              email={email} setEmail={setEmail}
+              address={address} setAddress={setAddress}
+              isSaving={isSaving} error={error} success={success}
+              isDetecting={isDetecting} gpsDetected={gpsDetected}
+              handleDetectLocation={handleDetectLocation}
+              handleSaveProfile={handleSaveProfile}
+              handleAvatarChange={handleAvatarChange}
+              emailStep={emailStep} emailOtp={emailOtp} setEmailOtp={setEmailOtp}
+              emailVerifying={emailVerifying}
+              handleRequestEmailVerification={handleRequestEmailVerification}
+              handleVerifyEmailOtp={handleVerifyEmailOtp}
+              setEmailStep={setEmailStep}
+              isApproved={isApproved} isPending={isPending}
+              badgeLabel={badgeLabel} badgeColor={badgeColor}
+              onOpenKyc={() => setPage('kyc')}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="kyc"
+            custom="out"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="flex-1 flex flex-col space-y-8"
+          >
+            <IdentityVerificationPage
+              onBack={() => setPage('general')}
+              status={status}
+              isApproved={isApproved} isPending={isPending} isRejected={isRejected}
+              badgeLabel={badgeLabel} badgeColor={badgeColor} borderClass={borderClass}
+              kycStatus={kycStatus} user={user}
+              kycHistory={kycHistory} kycHistoryLoading={kycHistoryLoading}
+              onOpenUpload={() => setKycModalOpen(true)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* KYC Upload Modal — reachable only from the Identity Verification page */}
+      <AnimatePresence>
+        {kycModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Fingerprint size={20} className="text-primary" />
+                  <h3 className="font-extrabold text-foreground text-lg">Upload Identity Document</h3>
+                </div>
+                <button
+                  onClick={() => setKycModalOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-6">
+                <IdentityUploadForm
+                  accessToken={accessToken}
+                  onSubmitted={onKycSubmitted}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* General account settings — the default screen. No KYC document     */
+/* detail lives here; Identity Verification is just a status row that */
+/* hands off to its own page.                                         */
+/* ------------------------------------------------------------------ */
+function GeneralSettingsPage({
+  user, fullName, setFullName, email, setEmail, address, setAddress,
+  isSaving, error, success, isDetecting, gpsDetected,
+  handleDetectLocation, handleSaveProfile, handleAvatarChange,
+  emailStep, emailOtp, setEmailOtp, emailVerifying,
+  handleRequestEmailVerification, handleVerifyEmailOtp, setEmailStep,
+  isApproved, isPending, badgeLabel, badgeColor, onOpenKyc,
+}) {
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-8">
       {/* Header */}
       <motion.div variants={itemVariants} className="flex flex-col gap-1.5">
         <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-600 to-primary/80">
-          Account Settings & Security
+          Account Settings
         </h1>
         <p className="text-muted-foreground text-sm font-medium">
-          Manage your personal details, verify your identity documents, and complete your trust profile.
+          Manage your personal details and account security.
         </p>
       </motion.div>
 
-      {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Side: Avatar and Trust Badges Checklist */}
         <div className="space-y-6 lg:sticky lg:top-8">
-          {/* Avatar card */}
           <motion.div
             variants={itemVariants}
             className="rounded-2xl border border-border bg-card p-8 text-center shadow-md relative overflow-hidden"
@@ -341,28 +449,28 @@ export default function Settings() {
             )}
           </motion.div>
 
-          {/* Trust badges checklist */}
+          {/* Trust badges checklist — Identity row now links out to its own page */}
           <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-6 shadow-md">
             <h3 className="font-extrabold text-muted-foreground text-xs tracking-wider uppercase mb-5">
               Trust Checklist Badges
             </h3>
-            <ul className="space-y-4">
+            <ul className="space-y-1">
               <BadgeRow icon={Smartphone} label="Phone Number" verified={true} />
               <BadgeRow icon={Mail} label="Email Address" verified={user.emailVerified} pendingLabel="Unverified" />
-              <BadgeRow
+              <BadgeRowLink
                 icon={Fingerprint}
                 label="Identity Verification"
-                verified={user.identityVerified || isApproved}
-                pendingLabel={isPending ? "Pending Review" : "Not Started"}
-                pendingIcon={isPending ? Clock : AlertCircle}
+                verified={isApproved}
+                badgeLabel={badgeLabel}
+                badgeColor={badgeColor}
+                onClick={onOpenKyc}
               />
             </ul>
           </motion.div>
         </div>
 
-        {/* Right Side: Identity KYC verification, core details form & email OTP verification */}
+        {/* Right Side: core details form & email OTP verification only */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Flash notifications */}
           <AnimatePresence mode="wait">
             {error && (
               <motion.div
@@ -390,157 +498,11 @@ export default function Settings() {
             )}
           </AnimatePresence>
 
-          {/* KYC Status Banner & Verification trigger */}
-          <motion.div
-            variants={itemVariants}
-            className={`rounded-2xl border p-6 shadow-md flex flex-col justify-between md:flex-row md:items-center gap-6 ${borderClass}`}
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3">
-                <Fingerprint size={28} className="text-primary" />
-                <div>
-                  <h3 className="font-extrabold text-lg text-foreground tracking-tight">Identity KYC Verification</h3>
-                  <span className={`inline-block text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full uppercase mt-1 ${badgeColor}`}>
-                    {badgeLabel}
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                {isApproved
-                  ? 'Identity document verified successfully. You have unlocked the Verified trust badge and green verification logo.'
-                  : isPending
-                  ? 'Your identity documents have been submitted and are awaiting administrator review. This normally takes up to 24 hours.'
-                  : isRejected
-                  ? 'Your previous verification was rejected. Please review the reason below and submit a new document.'
-                  : 'Submit a government-issued photo ID (Aadhaar, PAN, Passport, or DL) to verify your credentials.'}
-              </p>
-              {isApproved && (
-                <p className="text-xs text-emerald-600 font-semibold mt-2">
-                  ✓ Your account is verified. You can update your verification document at any time by uploading a new file.
-                </p>
-              )}
-              {isPending && (
-                <p className="text-xs text-amber-600 font-semibold mt-2 animate-pulse">
-                  ⚠ You currently have a document under review, but you can still upload an updated file if needed.
-                </p>
-              )}
-              {isRejected && (kycStatus?.rejectionReason || user.idDocumentRejectionReason) && (
-                <div className="mt-3 p-3 rounded-lg bg-destructive/5 border border-destructive/10 text-xs text-destructive flex items-start gap-2">
-                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                  <span>Rejection Reason: {kycStatus?.rejectionReason || user.idDocumentRejectionReason}</span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setKycModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/95 transition-all shadow-md shadow-primary/20 shrink-0 cursor-pointer"
-            >
-              <UploadCloud size={16} />
-              <span>{isApproved ? 'Update ID Document' : isPending ? 'Update / Resubmit ID' : isRejected ? 'Resubmit Verification' : 'Verify ID Now'}</span>
-            </button>
-          </motion.div>
-
-          {/* Uploaded Verification Records & History */}
-          <motion.div
-            variants={itemVariants}
-            className="rounded-2xl border border-border bg-card p-6 shadow-md"
-          >
-            <h3 className="font-extrabold text-xl text-foreground tracking-tight mb-2">Uploaded Document Records</h3>
-            <p className="text-sm text-muted-foreground mb-4">A complete archive of all submitted KYC credentials and their current status.</p>
-            
-            <Separator className="mb-5" />
-
-            {kycHistoryLoading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="animate-spin text-primary" size={24} />
-              </div>
-            ) : kycHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-semibold">No document submissions found.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {kycHistory.map((doc) => {
-                  const docLabel = DOCUMENT_OPTIONS.find(o => o.value === doc.documentType)?.label || doc.documentType;
-                  
-                  // Status Badge Colors & Labels
-                  const hStatus = doc.status;
-                  const hBadgeLabel = hStatus === 'approved' ? 'Approved' 
-                    : hStatus === 'pending' ? 'Pending Approval'
-                    : hStatus === 'under_review' ? 'Under Review'
-                    : hStatus === 'rejected' ? 'Rejected'
-                    : hStatus === 'reupload_required' ? 'Reupload Required'
-                    : hStatus === 'archived' ? 'Archived Record'
-                    : hStatus;
-
-                  const hBadgeColor = hStatus === 'approved' ? 'text-emerald-600 bg-emerald-500/10' 
-                    : hStatus === 'rejected' || hStatus === 'reupload_required' ? 'text-destructive bg-destructive/10'
-                    : hStatus === 'pending' || hStatus === 'under_review' ? 'text-amber-600 bg-amber-500/10'
-                    : 'text-muted-foreground bg-muted';
-
-                  const formatSize = (bytes) => {
-                    if (!bytes) return '';
-                    const kb = bytes / 1024;
-                    if (kb < 1024) return `${kb.toFixed(1)} KB`;
-                    return `${(kb / 1024).toFixed(2)} MB`;
-                  };
-
-                  return (
-                    <div 
-                      key={doc._id}
-                      className="rounded-xl border border-border/80 bg-background/30 p-4 hover:bg-background/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-base text-foreground capitalize">
-                            {docLabel}
-                          </span>
-                          <span className="text-xs font-bold text-muted-foreground/80 bg-muted px-2 py-0.5 rounded-md">
-                            Version {doc.version}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate mt-1 max-w-xs sm:max-w-sm md:max-w-md">
-                          File: <span className="font-semibold text-foreground/80">{doc.originalFilename || 'document_file'}</span>
-                          {doc.fileSize && ` (${formatSize(doc.fileSize)})`}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          Uploaded on {new Date(doc.uploadedAt).toLocaleString()}
-                        </p>
-
-                        {/* Rejection / Reupload note inside document item */}
-                        {(doc.rejectionReason || doc.reuploadReason) && (
-                          <div className="mt-2.5 p-2.5 rounded bg-destructive/5 border border-destructive/10 text-xs text-destructive flex items-start gap-1.5">
-                            <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                            <span>
-                              Reason: {doc.rejectionReason || doc.reuploadReason}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="shrink-0 self-start sm:self-center">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${hBadgeColor}`}>
-                          {hStatus === 'approved' && <CheckCircle2 size={11} />}
-                          {hStatus === 'rejected' && <XCircle size={11} />}
-                          {(hStatus === 'pending' || hStatus === 'under_review') && <Clock size={11} />}
-                          {hStatus === 'archived' && <FileText size={11} />}
-                          <span>{hBadgeLabel}</span>
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-
           {/* Core Profile Edit Settings Form */}
           <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-8 shadow-md">
             <h3 className="font-extrabold text-xl text-foreground tracking-tight mb-2">Core Profile Details</h3>
             <p className="text-sm text-muted-foreground mb-6">Modify your registration details, GPS location and email addresses.</p>
-            
+
             <Separator className="mb-6" />
 
             <form onSubmit={handleSaveProfile} className="space-y-6">
@@ -721,48 +683,189 @@ export default function Settings() {
           )}
         </div>
       </div>
-
-      {/* KYC Upload Modal */}
-      <AnimatePresence>
-        {kycModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
-            <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Fingerprint size={20} className="text-primary" />
-                  <h3 className="font-extrabold text-foreground text-lg">Upload Identity Document</h3>
-                </div>
-                <button
-                  onClick={() => setKycModalOpen(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="p-6">
-                <IdentityUploadForm
-                  accessToken={accessToken}
-                  onSubmitted={onKycSubmitted}
-                />
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
 
-// Reusable badge checklist row component
+/* ------------------------------------------------------------------ */
+/* Dedicated Identity Verification (KYC) page. Everything document-   */
+/* related lives here and only here — status, upload trigger, and the */
+/* full submission history.                                           */
+/* ------------------------------------------------------------------ */
+function IdentityVerificationPage({
+  onBack, status, isApproved, isPending, isRejected,
+  badgeLabel, badgeColor, borderClass, kycStatus, user,
+  kycHistory, kycHistoryLoading, onOpenUpload,
+}) {
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6 max-w-3xl">
+      {/* Sub-page header with breadcrumb-style back navigation */}
+      <motion.div variants={itemVariants} className="flex flex-col gap-4">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors w-fit cursor-pointer group"
+        >
+          <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+          Back to Settings
+        </button>
+
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+            <ShieldCheck size={26} className="text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Identity Verification</h1>
+              <span className={`inline-block text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full uppercase ${badgeColor}`}>
+                {badgeLabel}
+              </span>
+            </div>
+            <p className="text-muted-foreground text-sm font-medium mt-1">
+              Verify a government ID to unlock the Verified badge and build buyer trust.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Status hero banner */}
+      <motion.div
+        variants={itemVariants}
+        className={`rounded-2xl border p-6 shadow-md flex flex-col justify-between md:flex-row md:items-center gap-6 ${borderClass}`}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {isApproved
+              ? 'Identity document verified successfully. You have unlocked the Verified trust badge and green verification logo.'
+              : isPending
+              ? 'Your identity documents have been submitted and are awaiting administrator review. This normally takes up to 24 hours.'
+              : isRejected
+              ? 'Your previous verification was rejected. Please review the reason below and submit a new document.'
+              : 'Submit a government-issued photo ID (Aadhaar, PAN, Passport, or DL) to verify your credentials.'}
+          </p>
+          {isApproved && (
+            <p className="text-xs text-emerald-600 font-semibold mt-2">
+              ✓ Your account is verified. You can update your verification document at any time by uploading a new file.
+            </p>
+          )}
+          {isPending && (
+            <p className="text-xs text-amber-600 font-semibold mt-2">
+              ⚠ You currently have a document under review, but you can still upload an updated file if needed.
+            </p>
+          )}
+          {isRejected && (kycStatus?.rejectionReason || user.idDocumentRejectionReason) && (
+            <div className="mt-3 p-3 rounded-lg bg-destructive/5 border border-destructive/10 text-xs text-destructive flex items-start gap-2">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <span>Rejection Reason: {kycStatus?.rejectionReason || user.idDocumentRejectionReason}</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onOpenUpload}
+          className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/95 transition-all shadow-md shadow-primary/20 shrink-0 cursor-pointer"
+        >
+          <UploadCloud size={16} />
+          <span>{isApproved ? 'Update ID Document' : isPending ? 'Update / Resubmit ID' : isRejected ? 'Resubmit Verification' : 'Verify ID Now'}</span>
+        </button>
+      </motion.div>
+
+      {/* Uploaded Verification Records & History */}
+      <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-6 shadow-md">
+        <h3 className="font-extrabold text-xl text-foreground tracking-tight mb-2">Uploaded Document Records</h3>
+        <p className="text-sm text-muted-foreground mb-4">A complete archive of all submitted KYC credentials and their current status.</p>
+
+        <Separator className="mb-5" />
+
+        {kycHistoryLoading ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="animate-spin text-primary" size={24} />
+          </div>
+        ) : kycHistory.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <FileText size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-semibold">No document submissions found.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {kycHistory.map((doc) => {
+              const docLabel = DOCUMENT_OPTIONS.find(o => o.value === doc.documentType)?.label || doc.documentType;
+
+              const hStatus = doc.status;
+              const hBadgeLabel = hStatus === 'approved' ? 'Approved'
+                : hStatus === 'pending' ? 'Pending Approval'
+                : hStatus === 'under_review' ? 'Under Review'
+                : hStatus === 'rejected' ? 'Rejected'
+                : hStatus === 'reupload_required' ? 'Reupload Required'
+                : hStatus === 'archived' ? 'Archived Record'
+                : hStatus;
+
+              const hBadgeColor = hStatus === 'approved' ? 'text-emerald-600 bg-emerald-500/10'
+                : hStatus === 'rejected' || hStatus === 'reupload_required' ? 'text-destructive bg-destructive/10'
+                : hStatus === 'pending' || hStatus === 'under_review' ? 'text-amber-600 bg-amber-500/10'
+                : 'text-muted-foreground bg-muted';
+
+              const formatSize = (bytes) => {
+                if (!bytes) return '';
+                const kb = bytes / 1024;
+                if (kb < 1024) return `${kb.toFixed(1)} KB`;
+                return `${(kb / 1024).toFixed(2)} MB`;
+              };
+
+              return (
+                <div
+                  key={doc._id}
+                  className="rounded-xl border border-border/80 bg-background/30 p-4 hover:bg-background/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-base text-foreground capitalize">
+                        {docLabel}
+                      </span>
+                      <span className="text-xs font-bold text-muted-foreground/80 bg-muted px-2 py-0.5 rounded-md">
+                        Version {doc.version}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-1 max-w-xs sm:max-w-sm md:max-w-md">
+                      File: <span className="font-semibold text-foreground/80">{doc.originalFilename || 'document_file'}</span>
+                      {doc.fileSize && ` (${formatSize(doc.fileSize)})`}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                      Uploaded on {new Date(doc.uploadedAt).toLocaleString()}
+                    </p>
+
+                    {(doc.rejectionReason || doc.reuploadReason) && (
+                      <div className="mt-2.5 p-2.5 rounded bg-destructive/5 border border-destructive/10 text-xs text-destructive flex items-start gap-1.5">
+                        <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                        <span>
+                          Reason: {doc.rejectionReason || doc.reuploadReason}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 self-start sm:self-center">
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${hBadgeColor}`}>
+                      {hStatus === 'approved' && <CheckCircle2 size={11} />}
+                      {hStatus === 'rejected' && <XCircle size={11} />}
+                      {(hStatus === 'pending' || hStatus === 'under_review') && <Clock size={11} />}
+                      {hStatus === 'archived' && <FileText size={11} />}
+                      <span>{hBadgeLabel}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Static badge row (phone / email) — no navigation
 function BadgeRow({ icon: Icon, label, verified, pendingLabel = 'Unverified', pendingIcon: PendingIcon = AlertCircle }) {
   return (
-    <li className="flex items-center justify-between py-2 border-b border-border/30 last:border-b-0">
+    <li className="flex items-center justify-between py-2.5 border-b border-border/30 last:border-b-0">
       <div className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${verified ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
           <Icon size={16} />
@@ -772,6 +875,31 @@ function BadgeRow({ icon: Icon, label, verified, pendingLabel = 'Unverified', pe
       <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${verified ? 'text-emerald-600 bg-emerald-500/10' : 'text-muted-foreground bg-muted'}`}>
         {verified ? <><CheckCircle2 size={11} /> Verified</> : <><PendingIcon size={11} /> {pendingLabel}</>}
       </span>
+    </li>
+  );
+}
+
+// Clickable row that hands off to the dedicated Identity Verification page
+function BadgeRowLink({ icon: Icon, label, verified, badgeLabel, badgeColor, onClick }) {
+  return (
+    <li>
+      <button
+        onClick={onClick}
+        className="w-full flex items-center justify-between py-2.5 -mx-2 px-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${verified ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+            <Icon size={16} />
+          </div>
+          <span className="text-foreground font-semibold text-sm">{label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${badgeColor}`}>
+            {verified && <CheckCircle2 size={11} />} {badgeLabel}
+          </span>
+          <ChevronRight size={15} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+        </div>
+      </button>
     </li>
   );
 }
