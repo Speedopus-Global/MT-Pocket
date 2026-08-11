@@ -4,18 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { MessageCircle, Loader2 } from 'lucide-react';
 
-// Drop this next to each offer row wherever offers are listed:
-//
-//   Borrower's own request page (their request's offer list):
-//     <MessageButton loanRequestId={request._id} lenderId={offer.lenderId} />
-//
-//   Lender's "My offers sent" page (api.getMyOffersSent()):
-//     <MessageButton loanRequestId={offer.loanRequestId} lenderId={user.id} />
-//     (the lender IS the lenderId here — getOrCreateConversation() allows
-//     the named lender to open their own thread, same as the borrower)
-//
-// Works for both sides because chat.service.ts's getOrCreateConversation()
-// accepts either the request's borrower or the named lender as the caller.
+
 export default function MessageButton({ loanRequestId, lenderId, className = '' }) {
   const { accessToken } = useAuth();
   const navigate = useNavigate();
