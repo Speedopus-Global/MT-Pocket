@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
+import MessageButton from '../components/ui/MessageButton';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -31,7 +32,6 @@ import {
   Briefcase,
   User as UserIcon,
   Lightbulb,
-  MessageSquare,
   MapPin,
   CalendarDays,
   Shield,
@@ -75,6 +75,7 @@ const NOTIF_META = {
   offer_received:         { color: 'text-primary',     bg: 'bg-primary/10',     icon: Handshake },
   offer_accepted:         { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
   offer_rejected:         { color: 'text-destructive', bg: 'bg-destructive/10', icon: X },
+  new_message:            { color: 'text-primary',     bg: 'bg-primary/10',     icon: Bell },
 };
 const defaultMeta = { color: 'text-muted-foreground', bg: 'bg-muted', icon: Bell };
 
@@ -118,8 +119,10 @@ export default function Dashboard() {
   // Selected tab: pending / accepted / rejected
   const [offersTab, setOffersTab]         = useState('pending');
 
-  // Modal profile preview states
-  const [previewUserId, setPreviewUserId] = useState(null);
+  // Modal profile preview state — carries loanRequestId + lenderId
+  // alongside the previewed userId, since MessageButton (used inside the
+  // modal) needs the actual offer relationship, not just "who is this".
+  const [previewContext, setPreviewContext] = useState(null);
 
   const isLender   = user?.role === 'lender'   || user?.role === 'both';
   const isBorrower = user?.role === 'borrower' || user?.role === 'both';
@@ -389,7 +392,11 @@ export default function Dashboard() {
                           <p className="text-muted-foreground">
                             Borrower:{' '}
                             <button
-                              onClick={() => setPreviewUserId(o.borrower?._id)}
+                              onClick={() => setPreviewContext({
+                                userId: o.borrower?._id,
+                                loanRequestId: o.loanRequestId,
+                                lenderId: user.id, // we're the lender in this thread
+                              })}
                               className="text-primary hover:underline font-bold cursor-pointer"
                             >
                               {o.borrower?.fullName || 'View Profile'}
@@ -409,6 +416,9 @@ export default function Dashboard() {
                       {/* Footer */}
                       <div>
                         <Separator className="my-3.5" />
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <MessageButton loanRequestId={o.loanRequestId} lenderId={user.id} />
+                        </div>
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span>Sent {new Date(o.createdAt).toLocaleDateString()}</span>
                           <span className="capitalize text-foreground font-bold">{o.status}</span>
@@ -478,7 +488,11 @@ export default function Dashboard() {
                             Lender:{' '}
                             {lId ? (
                               <button
-                                onClick={() => setPreviewUserId(lId)}
+                                onClick={() => setPreviewContext({
+                                  userId: lId,
+                                  loanRequestId: o.loanRequest._id,
+                                  lenderId: lId,
+                                })}
                                 className="text-primary hover:underline font-bold cursor-pointer"
                               >
                                 {lName || 'View Profile'}
@@ -501,6 +515,9 @@ export default function Dashboard() {
                       {/* Footer Actions */}
                       <div>
                         <Separator className="my-3.5" />
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          {lId && <MessageButton loanRequestId={o.loanRequest._id} lenderId={lId} />}
+                        </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">
                             Received {new Date(o.createdAt).toLocaleDateString()}
@@ -554,10 +571,10 @@ export default function Dashboard() {
 
       {/* USER PROFILE DETAILS MODAL (INSTEAD OF NAVIGATION) */}
       <AnimatePresence>
-        {previewUserId && (
+        {previewContext && (
           <ProfilePreviewModal
-            userId={previewUserId}
-            onClose={() => setPreviewUserId(null)}
+            context={previewContext}
+            onClose={() => setPreviewContext(null)}
             accessToken={accessToken}
           />
         )}
@@ -586,7 +603,12 @@ function OffersGrid({ loading, items, renderCard, emptyLabel }) {
 }
 
 // Profile Preview Modal
-function ProfilePreviewModal({ userId, onClose, accessToken }) {
+// context = { userId, loanRequestId, lenderId } — loanRequestId/lenderId
+// are what the Message button below needs to open the right chat thread;
+// userId is who the profile itself belongs to.
+function ProfilePreviewModal({ context, onClose, accessToken }) {
+  const { userId, loanRequestId, lenderId } = context;
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -598,9 +620,6 @@ function ProfilePreviewModal({ userId, onClose, accessToken }) {
   const [reportDetails, setReportDetails] = useState('');
   const [submittingSafety, setSubmittingSafety] = useState(false);
   const [safetyMessage, setSafetyMessage] = useState('');
-
-  // Messages tooltip/modal state
-  const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -760,35 +779,11 @@ function ProfilePreviewModal({ userId, onClose, accessToken }) {
 
               <Separator />
 
-              {/* Actions row: Message option, Block & Report */}
+              {/* Actions row: Message, Block & Report */}
               <div className="flex items-center justify-between gap-3">
-                {/* Message Option (Soon tooltip) */}
-                <div className="relative">
-                  <button
-                    onMouseEnter={() => setShowTooltip(true)}
-                    onMouseLeave={() => setShowTooltip(false)}
-                    onClick={() => {
-                      setShowTooltip(true);
-                      setTimeout(() => setShowTooltip(false), 2000);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted text-muted-foreground transition-all cursor-pointer"
-                  >
-                    <MessageSquare size={16} />
-                    <span>Message</span>
-                  </button>
-                  <AnimatePresence>
-                    {showTooltip && (
-                      <motion.span
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white bg-foreground rounded-lg shadow-md whitespace-nowrap z-50 font-semibold"
-                      >
-                        Chat messaging coming soon!
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {/* Message — opens/creates the chat thread tied to this
+                    offer relationship, then navigates to /dashboard/messages */}
+                <MessageButton loanRequestId={loanRequestId} lenderId={lenderId} className="flex-1 justify-center" />
 
                 {/* Safety options trigger */}
                 <button

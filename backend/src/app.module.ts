@@ -9,6 +9,7 @@ import { ReportsModule }       from './reports/report.module';
 import { LoanRequestsModule }  from './Loan/loan-requests.module';
 import { VerificationModule } from './verification/modules/verification-module';
 import  {BlocksModule} from './Block/block.module';
+import { ChatModule } from './chat/chat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -20,7 +21,8 @@ import  {BlocksModule} from './Block/block.module';
     ReportsModule,
     LoanRequestsModule,
     VerificationModule,
-    BlocksModule
+    BlocksModule,
+    ChatModule
   ],
 })
 export class AppModule {}

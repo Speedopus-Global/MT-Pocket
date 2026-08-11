@@ -25,11 +25,13 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
+  // Messages is live now — chat is built (Chat.jsx + backend). Dropped the
+  // 'Soon' badge that was here as a placeholder.
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/dashboard/profile', label: 'Profile', icon: UserIcon },
     { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
-    { to: '/dashboard/messages', label: 'Messages', icon: MessageSquare, badge: 'Soon' },
+    { to: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   ];
 
   return (

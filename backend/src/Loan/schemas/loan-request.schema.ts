@@ -78,6 +78,38 @@ export class LoanRequest {
     status:      OfferStatus;
     createdAt:   Date;
   }[];
+
+  // ── Status timeline ─────────────────────────────────────────────────────
+  // NEW — `status` above only ever holds the CURRENT state; every write to
+  // it overwrites the previous value with no record of when or why it
+  // changed. This array is the append-only log that lets the frontend
+  // render an actual timeline (posted → offer accepted → in progress →
+  // closed), and lets support/admin see what happened to a request without
+  // cross-referencing offer timestamps by hand.
+  //
+  // Written by LoanRequestsService at every transition — never edited or
+  // removed after the fact, same append-only spirit as DocumentAudit.
+  @Prop({
+    type: [
+      {
+        status:    { type: String, enum: ['open', 'in_progress', 'closed', 'cancelled'], required: true },
+        changedAt: { type: Date, required: true, default: Date.now },
+        // Who caused the transition — the borrower for create/close/cancel,
+        // the borrower again for accept (since accepting an offer is what
+        // flips the parent request to in_progress). Null only if a future
+        // system-initiated transition needs one (e.g. an auto-expiry job).
+        changedBy: { type: Types.ObjectId, ref: 'User', default: null },
+        note:      { type: String, default: null },
+      },
+    ],
+    default: [],
+  })
+  statusHistory: {
+    status:    LoanRequestStatus;
+    changedAt: Date;
+    changedBy: Types.ObjectId | null;
+    note:      string | null;
+  }[];
 }
 
 export const LoanRequestSchema = SchemaFactory.createForClass(LoanRequest);

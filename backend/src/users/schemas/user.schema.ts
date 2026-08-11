@@ -209,6 +209,21 @@ export class User {
   };
 
   // ─────────────────────────────────────────────────────────────
+  // Chat presence
+  // Written by ChatService.touchLastActive() on socket disconnect — used
+  // for "last seen HH:mm" when a user isn't currently online. "Online now"
+  // itself is NOT stored here — that's ChatGateway's in-memory
+  // onlineUsers map, since it only matters for the lifetime of a
+  // connection and shouldn't survive a server restart.
+  // ─────────────────────────────────────────────────────────────
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  lastActiveAt: Date | null;
+
+  // ─────────────────────────────────────────────────────────────
   // System Role
   // ─────────────────────────────────────────────────────────────
 

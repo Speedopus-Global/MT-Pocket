@@ -18,6 +18,7 @@ import UserProfile from './pages/UserProfile';
 import AboutUs from './pages/AboutUs';
 import TermsConditions from './pages/TermsConditions';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Chat from './pages/Chat';
 function App() {
   return (
     <AuthProvider>
@@ -35,6 +36,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="messages" element={<Chat />} />
           </Route>
 
           <Route path="/unauthorized" element={<Unauthorized />} />

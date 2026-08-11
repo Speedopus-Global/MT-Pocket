@@ -182,4 +182,21 @@ export const api = {
     request('/loan-requests/mine/offers-sent', { accessToken }),
   withdrawOffer: (loanRequestId, offerId, accessToken) =>
     request(`/loan-requests/${loanRequestId}/offers/${offerId}/withdraw`, { method: 'PATCH', accessToken }),
+
+  // ── Chat ─────────────────────────────────────────────────────────────
+  // GET /chat/conversations — all threads for the logged-in user
+  getChatConversations: (accessToken) => request('/chat/conversations', { accessToken }),
+  // GET /chat/conversations/for-offer/:loanRequestId/:lenderId — get-or-create
+  getOrCreateChatConversation: (loanRequestId, lenderId, accessToken) =>
+    request(`/chat/conversations/for-offer/${loanRequestId}/${lenderId}`, { accessToken }),
+  // GET /chat/conversations/:id/messages?before=&limit=
+  getChatMessages: (conversationId, { before, limit = 30 } = {}, accessToken) => {
+    const q = new URLSearchParams({ limit: String(limit) });
+    if (before) q.set('before', before);
+    return request(`/chat/conversations/${conversationId}/messages?${q.toString()}`, { accessToken });
+  },
+  // POST /chat/conversations/:id/read — REST fallback, socket also does this live
+  markChatRead: (conversationId, accessToken) =>
+    request(`/chat/conversations/${conversationId}/read`, { method: 'POST', accessToken }),
 };
+ 

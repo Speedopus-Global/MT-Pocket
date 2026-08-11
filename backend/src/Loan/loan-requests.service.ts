@@ -27,6 +27,15 @@ export class LoanRequestsService {
       durationDays:      dto.durationDays     ?? null,
       city:              dto.city             ?? null,
       state:             dto.state            ?? null,
+      // First entry in the timeline — every request starts here.
+      statusHistory: [
+        {
+          status:    'open',
+          changedAt: new Date(),
+          changedBy: new Types.ObjectId(borrowerId),
+          note:      null,
+        },
+      ] as any,
     };
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -54,6 +63,8 @@ export class LoanRequestsService {
       req.location = { type: 'Point', coordinates: [dto.longitude!, dto.latitude!] };
     }
 
+    // Editing content doesn't change status, so no statusHistory entry here —
+    // the timeline only logs state transitions, not content edits.
     return req.save();
   }
 
@@ -63,6 +74,12 @@ export class LoanRequestsService {
     if (!req) throw new NotFoundException('Loan request not found');
     if (req.borrowerId.toString() !== borrowerId) throw new ForbiddenException('Not your request');
     req.status = status;
+    req.statusHistory.push({
+      status,
+      changedAt: new Date(),
+      changedBy: new Types.ObjectId(borrowerId),
+      note: null,
+    } as any);
     return req.save();
   }
 
@@ -132,6 +149,12 @@ export class LoanRequestsService {
 
     offer.status = 'accepted';
     req.status = 'in_progress';
+    req.statusHistory.push({
+      status: 'in_progress',
+      changedAt: new Date(),
+      changedBy: new Types.ObjectId(borrowerId),
+      note: `Offer ${offerId} accepted`,
+    } as any);
 
     const saved = await req.save();
 
@@ -149,7 +172,9 @@ export class LoanRequestsService {
   // Independent of the parent request's status — a borrower can keep
   // declining leftover pending offers even after another offer on the
   // same request has already been accepted and the request moved to
-  // in_progress.
+  // in_progress. Rejecting an offer never changes the PARENT request's
+  // status, so no statusHistory entry belongs here — that log only tracks
+  // the request's own lifecycle, not individual offer outcomes.
   async rejectOffer(requestId: string, borrowerId: string, offerId: string) {
     const req = await this.loanModel.findById(requestId);
     if (!req) throw new NotFoundException('Loan request not found');
@@ -174,6 +199,8 @@ export class LoanRequestsService {
   }
 
   // ── Lender: withdraw a pending offer ──────────────────────────────────────
+  // Same as rejectOffer above — this changes the OFFER's status, not the
+  // parent request's, so it doesn't touch statusHistory either.
   async withdrawOffer(requestId: string, lenderId: string, offerId: string) {
     const req = await this.loanModel.findById(requestId);
     if (!req) throw new NotFoundException('Loan request not found');

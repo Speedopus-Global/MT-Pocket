@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { connectChatSocket, disconnectChatSocket } from '../lib/socket';
 
 const AuthContext = createContext(null);
 
@@ -8,8 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On first load, try to silently exchange the refresh cookie (if any)
-  // for a new access token, so a page refresh doesn't force a re-login.
+  // 1. Initial Load Refresh
   useEffect(() => {
     api
       .refresh()
@@ -22,6 +22,20 @@ export function AuthProvider({ children }) {
       })
       .finally(() => setIsLoading(false));
   }, []);
+
+  // 2. Socket Connection Management
+  useEffect(() => {
+    // Only connect if we have a valid access token
+    if (accessToken) {
+      connectChatSocket(accessToken);
+    }
+
+    // The cleanup function runs when the component unmounts 
+    // OR right before the effect runs again because accessToken changed
+    return () => {
+      disconnectChatSocket();
+    };
+  }, [accessToken]); // Dependency array: Re-run this effect when accessToken changes
 
   const completeLogin = ({ accessToken, user }) => {
     setAccessToken(accessToken);
