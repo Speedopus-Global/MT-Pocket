@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import MessageButton from '../components/ui/MessageButton';
+import NotificationDrawer from '../components/notifications/NotificationDrawer';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -17,13 +18,8 @@ import {
   Info,
   AlertTriangle,
   Loader2,
-  Bell,
   X,
-  CheckCircle2,
-  Clock,
-  RefreshCw,
   ChevronRight,
-  FileText,
   TrendingUp,
   Banknote,
   Tag,
@@ -62,23 +58,6 @@ const OFFER_TABS = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
-const NOTIF_META = {
-  doc_submitted:          { color: 'text-primary',     bg: 'bg-primary/10',     icon: FileText },
-  doc_under_review:       { color: 'text-amber-500',   bg: 'bg-amber-500/10',   icon: Clock },
-  doc_approved:           { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
-  doc_rejected:           { color: 'text-destructive', bg: 'bg-destructive/10', icon: X },
-  doc_reupload_required:  { color: 'text-amber-500',   bg: 'bg-amber-500/10',   icon: RefreshCw },
-  account_suspended:      { color: 'text-destructive', bg: 'bg-destructive/10', icon: AlertTriangle },
-  account_unsuspended:    { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
-  account_banned:         { color: 'text-destructive', bg: 'bg-destructive/10', icon: AlertTriangle },
-  report_filed:           { color: 'text-amber-500',   bg: 'bg-amber-500/10',   icon: AlertTriangle },
-  offer_received:         { color: 'text-primary',     bg: 'bg-primary/10',     icon: Handshake },
-  offer_accepted:         { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
-  offer_rejected:         { color: 'text-destructive', bg: 'bg-destructive/10', icon: X },
-  new_message:            { color: 'text-primary',     bg: 'bg-primary/10',     icon: Bell },
-};
-const defaultMeta = { color: 'text-muted-foreground', bg: 'bg-muted', icon: Bell };
-
 const containerVariants = {
   hidden:  { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -103,13 +82,6 @@ function lenderNameOf(offer) {
 export default function Dashboard() {
   const { user, accessToken } = useAuth();
 
-  // Notifications
-  const [notifOpen, setNotifOpen]         = useState(false);
-  const [notifs, setNotifs]               = useState([]);
-  const [unread, setUnread]               = useState(0);
-  const [notifLoading, setNotifLoading]   = useState(false);
-  const notifRef = useRef(null);
-
   // Offers state lists
   const [myLoans, setMyLoans]             = useState([]);
   const [myLoansLoading, setMyLoansLoading] = useState(false);
@@ -126,33 +98,6 @@ export default function Dashboard() {
 
   const isLender   = user?.role === 'lender'   || user?.role === 'both';
   const isBorrower = user?.role === 'borrower' || user?.role === 'both';
-
-  // Unread count
-  useEffect(() => {
-    if (!accessToken) return;
-    api.getUnreadCount(accessToken)
-      .then((count) => setUnread(count ?? 0))
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Notifications loader
-  useEffect(() => {
-    if (!notifOpen || !accessToken) return;
-    setNotifLoading(true);
-    api.getNotifications(accessToken)
-      .then(setNotifs)
-      .catch(() => {})
-      .finally(() => setNotifLoading(false));
-  }, [notifOpen, accessToken]);
-
-  // Outside click close notifications
-  useEffect(() => {
-    const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
   // Fetch borrower requests (has nested offers received)
   const fetchBorrowerLoans = () => {
@@ -178,12 +123,6 @@ export default function Dashboard() {
     fetchBorrowerLoans();
     fetchLenderOffers();
   }, [isBorrower, isLender, accessToken]);
-
-  const markAllRead = async () => {
-    await api.markAllNotificationsRead(accessToken).catch(() => {});
-    setUnread(0);
-    setNotifs((n) => n.map((x) => ({ ...x, read: true })));
-  };
 
   // Received offers flat mapped
   const receivedOffers = myLoans.flatMap((loan) =>
@@ -237,72 +176,7 @@ export default function Dashboard() {
         </div>
 
         {/* Notifications */}
-        <div className="relative shrink-0" ref={notifRef}>
-          <button
-            onClick={() => setNotifOpen((v) => !v)}
-            className="relative p-3 rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
-            aria-label="Notifications"
-          >
-            <Bell size={20} />
-            {unread > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
-                {unread > 99 ? '99+' : unread}
-              </span>
-            )}
-          </button>
-
-          <AnimatePresence>
-            {notifOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 top-14 w-80 rounded-2xl border border-border bg-card shadow-xl overflow-hidden z-50"
-              >
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <Bell size={14} className="text-primary" />
-                    <p className="text-sm font-bold text-foreground">Notifications</p>
-                  </div>
-                  {unread > 0 && (
-                    <button onClick={markAllRead} className="text-xs text-primary hover:underline font-semibold cursor-pointer">
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-80 overflow-y-auto divide-y divide-border">
-                  {notifLoading ? (
-                    <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-muted-foreground" /></div>
-                  ) : notifs.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-10">No notifications yet</p>
-                  ) : notifs.map((n) => {
-                    const meta = NOTIF_META[n.type] || defaultMeta;
-                    const Icon = meta.icon;
-                    return (
-                      <div
-                        key={n._id}
-                        className={`flex items-start gap-3 px-4 py-3 transition-colors ${n.read ? 'opacity-60' : 'bg-primary/[0.02]'}`}
-                      >
-                        <div className={`w-7 h-7 rounded-full ${meta.bg} ${meta.color} flex items-center justify-center shrink-0 mt-0.5`}>
-                          <Icon size={13} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs leading-snug ${n.read ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
-                            {n.message}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            {new Date(n.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <NotificationDrawer accessToken={accessToken} />
       </motion.div>
 
       {/* OFFERS MONOLITHIC CARD VIEW */}
