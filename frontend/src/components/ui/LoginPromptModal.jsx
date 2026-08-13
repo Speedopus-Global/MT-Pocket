@@ -1,50 +1,91 @@
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, UserPlus, X, ShieldCheck } from 'lucide-react';
+import { LogIn, UserPlus, X, Lock, ArrowRight } from 'lucide-react';
 
-// Shared across MarketPlace.jsx and UserProfile.jsx (and anywhere else that
-// needs to gate an action behind login) — one prompt, one place to style it.
 export default function LoginPromptModal({ open, onClose, message }) {
+  // Close on Escape key press for keyboard accessibility
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    if (open) window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Subtle backdrop overlay with minimal blur */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] transition-all cursor-pointer"
+            aria-hidden="true"
+          />
+
+          {/* Premium Shadcn Dialog/Popover Card */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full max-w-[380px] rounded-2xl border border-border/80 bg-card/95 p-6 shadow-2xl backdrop-blur-md transition-all cursor-default"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-primary" />
-                <h3 className="font-bold text-foreground">Log in required</h3>
+            {/* Top Close Button */}
+            <button
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="absolute right-4 top-4 rounded-full p-1.5 text-muted-foreground/70 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Header / Brand Icon */}
+            <div className="flex flex-col items-start gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-inner">
+                <Lock size={20} className="stroke-[2.25]" />
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <X size={16} />
-              </button>
+
+              <div className="space-y-1">
+                <h3
+                  id="modal-title"
+                  className="text-lg font-semibold tracking-tight text-foreground"
+                >
+                  Authentication required
+                </h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {message || 'Sign in or set up a new account to unlock full access.'}
+                </p>
+              </div>
             </div>
-            <div className="p-6 flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                {message || 'Please log in or create an account to continue.'}
-              </p>
-              <div className="flex flex-col gap-2">
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center gap-2 text-sm font-bold bg-primary text-primary-foreground px-4 py-3 rounded-xl hover:bg-primary/90 transition-colors"
-                >
-                  <LogIn size={14} /> Log in
-                </Link>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center gap-2 text-sm font-bold border border-border text-foreground px-4 py-3 rounded-xl hover:bg-muted transition-colors"
-                >
-                  <UserPlus size={14} /> Create an account
-                </Link>
-              </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex flex-col gap-2.5">
+              <Link
+                to="/login"
+                onClick={onClose}
+                className="group inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer active:scale-[0.99]"
+              >
+                <LogIn size={15} />
+                <span>Log in</span>
+                <ArrowRight size={14} className="ml-auto opacity-60 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+
+              <Link
+                to="/register"
+                onClick={onClose}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-input bg-background/50 px-4 text-sm font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer active:scale-[0.99]"
+              >
+                <UserPlus size={15} />
+                <span>Create an account</span>
+              </Link>
             </div>
           </motion.div>
         </div>

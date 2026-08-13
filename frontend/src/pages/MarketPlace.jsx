@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import LoginPromptModal from '../components/ui/LoginPromptModal';
+import logo from '@/assets/logo.png';
+import { CanvasText } from '@/components/ui/canvas-text';
+import { UserAvatarMarquee } from '@/components/ui/user-avatar-marquee';
 import {
   Autocomplete,
   AutocompleteContent,
@@ -41,6 +44,11 @@ import {
   LogIn,
   SlidersHorizontal,
   RotateCcw,
+  Sparkles,
+  TrendingUp,
+  ArrowUpDown,
+  Calendar,
+  Layers,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
@@ -75,6 +83,10 @@ export default function Marketplace() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [amountRange, setAmountRange] = useState([AMOUNT_MIN, AMOUNT_MAX]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount' | 'duration'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
 
   const [page, setPage] = useState(1);
   const [results, setResults] = useState([]);
@@ -209,13 +221,35 @@ export default function Marketplace() {
     setPage(1);
   }, [selectedCategories]);
 
-  const visibleResults = results.filter((loan) => {
-    if (blockedIds.includes(loan.borrowerId?._id)) return false;
-    if (selectedCategories.length && !selectedCategories.includes(loan.category)) return false;
-    const amt = Number(loan.amount) || 0;
-    if (amt < amountRange[0] || amt > amountRange[1]) return false;
-    return true;
-  });
+  // Filtered & Sorted Results
+  const visibleResults = useMemo(() => {
+    const list = results.filter((loan) => {
+      if (blockedIds.includes(loan.borrowerId?._id)) return false;
+      if (selectedCategories.length && !selectedCategories.includes(loan.category)) return false;
+      const amt = Number(loan.amount) || 0;
+      if (amt < amountRange[0] || amt > amountRange[1]) return false;
+      return true;
+    });
+
+    return list.sort((a, b) => {
+      let valA = 0;
+      let valB = 0;
+
+      if (sortBy === 'amount') {
+        valA = Number(a.amount) || 0;
+        valB = Number(b.amount) || 0;
+      } else if (sortBy === 'duration') {
+        valA = Number(a.durationDays) || 0;
+        valB = Number(b.durationDays) || 0;
+      } else {
+        // 'date'
+        valA = new Date(a.createdAt || 0).getTime();
+        valB = new Date(b.createdAt || 0).getTime();
+      }
+
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
+    });
+  }, [results, blockedIds, selectedCategories, amountRange, sortBy, sortOrder]);
 
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
@@ -253,46 +287,28 @@ export default function Marketplace() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
-      {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-background text-foreground relative selection:bg-primary/20 selection:text-primary">
+      {/* ── INTEGRATED TOP NAVBAR WITH SEARCH & FILTERS ────────────────────── */}
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-card/85 backdrop-blur-xl shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 md:gap-6">
+          <div className="flex items-center gap-3 shrink-0">
             <Link
               to={user ? '/dashboard' : '/'}
-              className="p-2 rounded-lg border border-border bg-background hover:bg-muted transition-all cursor-pointer"
+              className="p-2.5 rounded-xl border border-border/80 bg-background hover:bg-muted/60 hover:border-primary/40 transition-all cursor-pointer shadow-2xs"
+              title="Return"
             >
               <ArrowLeft size={18} className="text-foreground" />
             </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
-                  Borrowing Marketplace
-                </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 tracking-wider uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Live
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img src={logo} alt="MT Pocket Logo" className="h-8 w-auto object-contain shrink-0" />
+              <h1 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight hidden sm:block">
+                MT Pocket
+              </h1>
             </div>
           </div>
 
-          {!user && (
-            <Link
-              to="/login"
-              className="text-xs sm:text-sm font-semibold text-primary-foreground bg-primary px-3.5 py-2 rounded-xl hover:bg-primary/90 transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <LogIn size={15} />
-              <span>Log in to lend</span>
-            </Link>
-          )}
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* ── SEARCH & FILTER BAR ─────────────────────────────────────── */}
-        <div className="mb-6">
-          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5">
+          {/* Embedded Search & Filter Control Bar */}
+          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-2xl flex items-center gap-2">
             <div className="flex-1">
               <Autocomplete
                 value={keyword}
@@ -301,19 +317,19 @@ export default function Marketplace() {
                 itemToStringValue={(item) => item.value}
               >
                 <AutocompleteInput
-                  placeholder="Search by purpose, city, state, or keywords..."
+                  placeholder="Search opportunities by purpose, city, state..."
                   showClear
                   size="lg"
-                  className="bg-card border-border focus:border-primary text-sm rounded-xl h-11"
+                  className="bg-background border-border/80 focus:border-primary text-xs sm:text-sm rounded-xl h-11 shadow-2xs"
                 />
-                <AutocompleteContent align="start" sideOffset={6} className="rounded-xl border-border shadow-lg">
+                <AutocompleteContent align="start" sideOffset={6} className="rounded-xl border-border shadow-xl">
                   <AutocompleteEmpty className="text-xs text-muted-foreground p-3">
                     No matching suggestions found
                   </AutocompleteEmpty>
                   <AutocompleteList>
                     {(item) => (
-                      <AutocompleteItem key={item.id} value={item} className="cursor-pointer text-xs font-medium py-2">
-                        <Search className="mr-2 h-3.5 w-3.5 opacity-60 text-primary" />
+                      <AutocompleteItem key={item.id} value={item} className="cursor-pointer text-xs font-medium py-2.5">
+                        <Search className="mr-2 h-3.5 w-3.5 text-primary" />
                         {item.value}
                       </AutocompleteItem>
                     )}
@@ -322,195 +338,343 @@ export default function Marketplace() {
               </Autocomplete>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                className="px-5 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
-              >
-                <Search size={16} />
-                <span>Search</span>
-              </button>
+            <button
+              type="submit"
+              className="px-4 sm:px-5 h-11 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-98"
+            >
+              <Search size={15} />
+              <span className="hidden sm:inline">Search</span>
+            </button>
 
-              <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-                <PopoverTrigger
-                  render={
+            <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="relative shrink-0 gap-2 px-3.5 h-11 rounded-xl border-border/80 bg-background hover:bg-muted/60 cursor-pointer font-semibold text-xs sm:text-sm shadow-2xs"
+                  />
+                }
+              >
+                <SlidersHorizontal size={15} className="text-muted-foreground" />
+                <span className="hidden sm:inline">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-black">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </PopoverTrigger>
+
+              <PopoverContent align="end" sideOffset={8} className="w-80 rounded-2xl border-border p-5 shadow-2xl backdrop-blur-md">
+                <div className="grid gap-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
+                    <span className="font-bold text-sm text-foreground">Filter Marketplace</span>
                     <Button
                       type="button"
-                      variant="outline"
-                      className="relative shrink-0 gap-2 px-4 h-11 rounded-xl border-border bg-card hover:bg-muted/60 cursor-pointer font-semibold text-sm"
-                    />
-                  }
-                >
-                  <SlidersHorizontal size={16} className="text-muted-foreground" />
-                  <span>Filters</span>
-                  {activeFilterCount > 0 && (
-                    <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-extrabold">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </PopoverTrigger>
-
-                <PopoverContent align="end" sideOffset={8} className="w-80 rounded-2xl border-border p-5 shadow-xl">
-                  <div className="grid gap-5">
-                    <div className="flex items-center justify-between pb-3 border-b border-border">
-                      <span className="font-bold text-sm text-foreground">Filter Requests</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-7 rounded-full px-2 text-xs font-semibold gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                        onClick={resetFilters}
-                      >
-                        <RotateCcw size={11} />
-                        Reset
-                      </Button>
-                    </div>
-
-                    <div className="flex flex-col gap-2.5">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Category
-                      </Label>
-                      <div className="grid grid-cols-1 gap-1.5">
-                        {LOAN_CATEGORIES.map((cat) => {
-                          const Icon = cat.icon;
-                          const isChecked = selectedCategories.includes(cat.value);
-                          return (
-                            <div
-                              key={cat.value}
-                              onClick={() => toggleCategory(cat.value)}
-                              className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${
-                                isChecked
-                                  ? 'bg-primary/5 border-primary/40 text-foreground font-semibold'
-                                  : 'border-transparent hover:bg-muted/40 text-muted-foreground'
-                              }`}
-                            >
-                              <Checkbox
-                                id={`filter-cat-${cat.value}`}
-                                checked={isChecked}
-                                onCheckedChange={() => toggleCategory(cat.value)}
-                                className="cursor-pointer"
-                              />
-                              <Label
-                                htmlFor={`filter-cat-${cat.value}`}
-                                className="flex items-center gap-2 text-xs cursor-pointer font-medium text-foreground pointer-events-none"
-                              >
-                                <Icon size={14} className={isChecked ? 'text-primary' : 'text-muted-foreground'} />
-                                {cat.label}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 pt-2 border-t border-border">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Amount Range
-                      </Label>
-                      <div className="space-y-3 pt-1">
-                        <Slider
-                          value={amountRange}
-                          onValueChange={(value) => setAmountRange(value)}
-                          min={AMOUNT_MIN}
-                          max={AMOUNT_MAX}
-                          step={AMOUNT_STEP}
-                          aria-label="Amount range"
-                          className="cursor-pointer"
-                        />
-                        <div className="flex items-center justify-between text-xs font-bold text-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
-                          <span>₹{amountRange[0].toLocaleString('en-IN')}</span>
-                          <span className="text-muted-foreground text-[10px] font-medium">to</span>
-                          <span>₹{amountRange[1].toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button type="button" onClick={applyFilters} className="w-full text-xs font-bold py-2.5 rounded-xl cursor-pointer">
-                      Apply Filters
+                      variant="ghost"
+                      className="h-7 rounded-full px-2 text-xs font-semibold gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                      onClick={resetFilters}
+                    >
+                      <RotateCcw size={11} />
+                      Reset
                     </Button>
                   </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Category
+                    </Label>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {LOAN_CATEGORIES.map((cat) => {
+                        const Icon = cat.icon;
+                        const isChecked = selectedCategories.includes(cat.value);
+                        return (
+                          <div
+                            key={cat.value}
+                            onClick={() => toggleCategory(cat.value)}
+                            className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-primary/10 border-primary/40 text-foreground font-semibold'
+                                : 'border-transparent hover:bg-muted/40 text-muted-foreground'
+                            }`}
+                          >
+                            <Checkbox
+                              id={`filter-cat-${cat.value}`}
+                              checked={isChecked}
+                              onCheckedChange={() => toggleCategory(cat.value)}
+                              className="cursor-pointer"
+                            />
+                            <Label
+                              htmlFor={`filter-cat-${cat.value}`}
+                              className="flex items-center gap-2 text-xs cursor-pointer font-medium text-foreground pointer-events-none"
+                            >
+                              <Icon size={14} className={isChecked ? 'text-primary' : 'text-muted-foreground'} />
+                              {cat.label}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 pt-2 border-t border-border">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Amount Range
+                    </Label>
+                    <div className="space-y-3 pt-1">
+                      <Slider
+                        value={amountRange}
+                        onValueChange={(value) => setAmountRange(value)}
+                        min={AMOUNT_MIN}
+                        max={AMOUNT_MAX}
+                        step={AMOUNT_STEP}
+                        aria-label="Amount range"
+                        className="cursor-pointer"
+                      />
+                      <div className="flex items-center justify-between text-xs font-bold text-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
+                        <span>₹{amountRange[0].toLocaleString('en-IN')}</span>
+                        <span className="text-muted-foreground text-[10px] font-medium">to</span>
+                        <span>₹{amountRange[1].toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button type="button" onClick={applyFilters} className="w-full text-xs font-bold py-2.5 rounded-xl cursor-pointer shadow-xs">
+                    Apply Filters
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </form>
+
+          {!user && (
+            <Link
+              to="/login"
+              className="shrink-0 text-xs sm:text-sm font-semibold text-primary-foreground bg-primary px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+            >
+              <LogIn size={15} />
+              <span className="hidden md:inline">Log in to Lend</span>
+            </Link>
+          )}
+        </div>
+      </header>
+
+      {/* ── HERO BANNER WITH CANVAS ANIMATED TEXT ───────────────────────────── */}
+      <section className="relative overflow-hidden pt-10 pb-6 px-4 text-center">
+        <div className="max-w-4xl mx-auto space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-extrabold tracking-wide uppercase shadow-2xs">
+            <TrendingUp size={16} /> Direct Peer-to-Peer Capital Network
+          </div>
+
+          <h2 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-foreground leading-tight">
+            Empowering Borrowers,{' '}
+            <CanvasText
+              text="Rewarding Lenders"
+              backgroundClassName="bg-primary dark:bg-primary"
+              colors={[
+                'rgba(59, 130, 246, 1)',
+                'rgba(99, 102, 241, 0.9)',
+                'rgba(168, 85, 247, 0.8)',
+                'rgba(236, 72, 153, 0.7)',
+                'rgba(59, 130, 246, 0.5)',
+              ]}
+              lineGap={5}
+              animationDuration={15}
+            />
+          </h2>
+
+          <p className="text-base sm:text-lg text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
+            Transparent, verified, and direct funding opportunities. Connect with high-trust individuals seeking capital for real growth.
+          </p>
         </div>
 
-        {/* ── RESULTS META ─────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground font-medium mb-4">
-          <span>
-            Showing <strong className="text-foreground font-bold">{visibleResults.length}</strong> of{' '}
-            <strong className="text-foreground font-bold">{total}</strong> active request{total !== 1 ? 's' : ''}
-          </span>
+        {/* Infinite Avatar Marquee Loop with breathing room */}
+        <div className="mt-8 mb-4">
+          <UserAvatarMarquee users={results} />
+        </div>
+      </section>
+
+      {/* ── EXPANDED CATEGORY FILTER BUTTONS ──────────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-8 sm:my-12">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Layers size={16} className="text-primary" /> Filter Category
+            </span>
+            {selectedCategories.length > 0 && (
+              <button
+                onClick={() => setSelectedCategories([])}
+                className="text-xs font-extrabold text-primary hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <RotateCcw size={12} /> Clear Filter ({selectedCategories.length})
+              </button>
+            )}
+          </div>
+
+          {/* Full-width Responsive Grid of Category Buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
+            <button
+              onClick={() => setSelectedCategories([])}
+              className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${
+                selectedCategories.length === 0
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20'
+                  : 'bg-card/80 backdrop-blur-md text-foreground border-border/80 hover:bg-muted/70 hover:border-primary/40'
+              }`}
+            >
+              <Layers size={18} />
+              <span>All Opportunities</span>
+            </button>
+
+            {LOAN_CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const active = selectedCategories.includes(cat.value);
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => toggleCategory(cat.value)}
+                  className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20'
+                      : 'bg-card/80 backdrop-blur-md text-foreground border-border/80 hover:bg-muted/70 hover:border-primary/40'
+                  }`}
+                >
+                  <Icon size={18} className={active ? 'text-primary-foreground' : 'text-primary'} />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── MAIN MARKETPLACE GRID SECTION ─────────────────────────────────── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 space-y-8">
+        {/* Results Metadata & Sorting Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs sm:text-sm text-muted-foreground font-semibold pb-4 border-b border-border/60">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+            </span>
+            <span className="text-sm font-medium">
+              Displaying <strong className="text-foreground font-extrabold text-base">{visibleResults.length}</strong> active opportunity{visibleResults.length !== 1 ? 'ies' : ''}
+            </span>
+          </div>
+
+          {/* Sorting Controls */}
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            <span className="text-muted-foreground font-bold flex items-center gap-1.5 text-xs sm:text-sm">
+              <ArrowUpDown size={15} /> Sort by:
+            </span>
+            <div className="flex items-center gap-1.5 bg-card border border-border/80 rounded-2xl p-1.5 shadow-sm">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent text-xs sm:text-sm font-bold text-foreground focus:outline-none cursor-pointer px-3 py-1"
+              >
+                <option value="date">Date Posted</option>
+                <option value="amount">Loan Amount</option>
+                <option value="duration">Tenure Days</option>
+              </select>
+
+              <button
+                onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                title={sortOrder === 'asc' ? 'Ascending Order' : 'Descending Order'}
+                className="px-2.5 py-1 text-xs sm:text-sm font-extrabold text-primary hover:bg-primary/10 rounded-xl transition-colors cursor-pointer"
+              >
+                {sortOrder === 'desc' ? 'High → Low' : 'Low → High'}
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* ── GRID CONTENT ─────────────────────────────────────────────── */}
+        {/* Grid Content with Framer Motion Category Filter Animations */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground space-y-3">
-            <Loader2 size={28} className="animate-spin text-primary" />
-            <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Loading loan requests...</p>
+          <div className="flex flex-col items-center justify-center py-32 text-muted-foreground space-y-4">
+            <Loader2 size={40} className="animate-spin text-primary" />
+            <p className="text-xs sm:text-sm font-extrabold tracking-widest uppercase text-muted-foreground">Fetching Live Requests...</p>
           </div>
         ) : visibleResults.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground space-y-3 text-center border border-dashed border-border rounded-2xl bg-card/40">
-            <div className="p-3 rounded-xl bg-muted/50 border border-border">
-              <Inbox size={32} className="text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-28 text-muted-foreground space-y-5 text-center border-2 border-dashed border-border/80 rounded-3xl bg-card/30 backdrop-blur-md p-8">
+            <div className="p-5 rounded-2xl bg-muted/60 border border-border">
+              <Inbox size={44} className="text-primary" />
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-foreground">No loan requests found</p>
-              <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                Try adjusting your search terms or clearing active filters.
+            <div className="space-y-2 max-w-md">
+              <p className="text-lg font-extrabold text-foreground">No matching loan requests found</p>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                Try loosening your category selection or amount range filter to discover available opportunities.
               </p>
             </div>
+            <Button onClick={resetFilters} className="text-xs sm:text-sm font-extrabold px-6 py-2.5 rounded-xl cursor-pointer shadow-md">
+              Reset All Filters
+            </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {visibleResults.map((loan) => (
-              <LoanItem
-                key={loan._id}
-                loan={loan}
-                isLoggedIn={isLoggedIn}
-                isLender={isLender}
-                isOwnRequest={user && loan.borrowerId?._id === user.id}
-                hasSentOffer={sentOfferIds.has(loan._id)}
-                sentOfferIdsLoading={sentOfferIdsLoading}
-                onOffer={() => requestOffer(loan)}
-                onSafety={() => requestSafety(loan)}
-                onProfile={() => requestProfile(loan.borrowerId?._id)}
-              />
-            ))}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedCategories.join(',') + '-' + sortBy + '-' + sortOrder}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+            >
+              {visibleResults.map((loan, index) => (
+                <motion.div
+                  key={loan._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.3) }}
+                >
+                  <LoanItem
+                    loan={loan}
+                    isLoggedIn={isLoggedIn}
+                    isLender={isLender}
+                    isOwnRequest={user && loan.borrowerId?._id === user.id}
+                    hasSentOffer={sentOfferIds.has(loan._id)}
+                    sentOfferIdsLoading={sentOfferIdsLoading}
+                    onOffer={() => requestOffer(loan)}
+                    onSafety={() => requestSafety(loan)}
+                    onProfile={() => requestProfile(loan.borrowerId?._id)}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </AnimatePresence>
         )}
 
-        {/* ── PAGINATION ────────────────────────────────────────────────── */}
+        {/* Pagination */}
         {!loading && pages > 1 && (
-          <div className="flex items-center justify-center gap-3 pt-8 mt-6 border-t border-border">
+          <div className="flex items-center justify-center gap-5 pt-12 border-t border-border/60">
             <button
               disabled={page === 1}
               onClick={() => goPage(page - 1)}
-              className="p-2 rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed shadow-xs"
+              className="p-3 rounded-2xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed shadow-sm"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={20} />
             </button>
-            <span className="text-xs font-semibold text-muted-foreground px-2">
-              Page <strong className="text-foreground font-bold">{page}</strong> of <strong className="text-foreground font-bold">{pages}</strong>
+            <span className="text-xs sm:text-sm font-bold text-muted-foreground px-3">
+              Page <strong className="text-foreground font-black text-base">{page}</strong> of <strong className="text-foreground font-black text-base">{pages}</strong>
             </span>
             <button
               disabled={page >= pages}
               onClick={() => goPage(page + 1)}
-              className="p-2 rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed shadow-xs"
+              className="p-3 rounded-2xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed shadow-sm"
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={20} />
             </button>
           </div>
         )}
       </main>
 
-      {/* ── MODALS ────────────────────────────────────────────────────── */}
+      {/* ── MODALS ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {offerLoan && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
@@ -541,9 +705,9 @@ export default function Marketplace() {
         {safetyLoan && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
@@ -582,7 +746,7 @@ export default function Marketplace() {
   );
 }
 
-// ── STANDARD LOAN OFFER CARD ─────────────────────────────────────────────
+// ── ELEVATED LOAN ITEM CARD ──────────────────────────────────────────────
 function LoanItem({
   loan,
   isLoggedIn,
@@ -594,109 +758,158 @@ function LoanItem({
   onSafety,
   onProfile,
 }) {
+  const fullLocation = [loan.city, loan.state].filter(Boolean).join(', ') || 'India';
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 flex flex-col justify-between transition-all duration-200 hover:border-border/80 hover:shadow-md">
+    <div className="group relative rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:border-primary/40 hover:bg-primary/[0.02] hover:shadow-lg cursor-pointer">
       <div>
-        {/* Amount & Category Header */}
+        {/* Header: Amount & Category Badge */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">Requested Amount</span>
-            <p className="text-xl font-black text-foreground tracking-tight mt-0.5">
+            <span className="text-xs font-black tracking-widest uppercase text-muted-foreground block mb-1">
+              Capital Required
+            </span>
+            <p className="text-3xl sm:text-4xl font-black text-foreground tracking-tight group-hover:text-primary transition-colors">
               ₹{Number(loan.amount).toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] capitalize font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
-              <Tag size={11} />
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm capitalize font-extrabold text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-2xs">
+              <Tag size={13} />
               {loan.category}
             </span>
             {!isOwnRequest && (
               <button
-                onClick={onSafety}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSafety();
+                }}
                 title="Report or block"
-                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors cursor-pointer"
               >
-                <ShieldAlert size={15} />
+                <ShieldAlert size={18} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Description */}
-        <p className="text-xs text-muted-foreground mt-3 line-clamp-2 leading-relaxed font-normal">
-          {loan.description || 'No detailed description provided.'}
-        </p>
+        {/* Formatted Purpose Description Box */}
+        <div className="mt-4 p-4 rounded-2xl bg-muted/40 border border-border/60 text-xs sm:text-sm font-medium text-foreground/90 leading-relaxed min-h-[4.5rem] flex items-center">
+          <p className="line-clamp-2">
+            {loan.description || 'No detailed description provided by the borrower.'}
+          </p>
+        </div>
 
-        {/* Borrower Profile */}
+        {/* Borrower Profile Information Bar */}
         {loan.borrowerId?._id && (
           <button
             type="button"
-            onClick={onProfile}
-            className="flex items-center gap-2 mt-4 pt-3 border-t border-border/80 text-left w-full group/borrower cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onProfile();
+            }}
+            className="flex items-center justify-between mt-5 pt-4 border-t border-border/60 text-left w-full group/borrower cursor-pointer"
           >
-            {loan.borrowerId.avatarUrl ? (
-              <img
-                src={loan.borrowerId.avatarUrl}
-                alt={loan.borrowerId.fullName || 'Borrower'}
-                className="w-7 h-7 rounded-full object-cover ring-1 ring-border group-hover/borrower:ring-primary/40 transition-all"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold border border-primary/20">
-                {(loan.borrowerId.fullName || '?').charAt(0).toUpperCase()}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                {loan.borrowerId.avatarUrl ? (
+                  <img
+                    src={loan.borrowerId.avatarUrl}
+                    alt={loan.borrowerId.fullName || 'Borrower'}
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/20 group-hover/borrower:ring-primary/60 transition-all"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-black ring-2 ring-primary/20">
+                    {(loan.borrowerId.fullName || '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {loan.borrowerId.identityVerified && (
+                  <span className="absolute -bottom-0.5 -right-0.5 p-0.5 bg-emerald-500 rounded-full text-white ring-2 ring-card">
+                    <ShieldCheck size={11} />
+                  </span>
+                )}
               </div>
-            )}
-            <span className="text-xs font-semibold text-foreground group-hover/borrower:text-primary transition-colors truncate">
-              {loan.borrowerId.fullName || 'Anonymous User'}
-            </span>
-            {loan.borrowerId.identityVerified && (
-              <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
-            )}
+
+              <div className="flex flex-col truncate">
+                <span className="text-xs sm:text-sm font-bold text-foreground group-hover/borrower:text-primary transition-colors truncate">
+                  {loan.borrowerId.fullName || 'Anonymous User'}
+                </span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {loan.borrowerId.identityVerified ? 'Verified Account' : 'Standard Member'}
+                </span>
+              </div>
+            </div>
+
+            <ChevronRight size={16} className="text-muted-foreground group-hover/borrower:text-primary transition-transform group-hover/borrower:translate-x-0.5" />
           </button>
         )}
 
-        {/* Details Row */}
-        <div className="grid grid-cols-3 gap-2 mt-4 text-[11px] font-medium text-muted-foreground bg-muted/40 p-2.5 rounded-xl border border-border/60">
-          <div className="flex items-center gap-1.5 truncate" title="Location">
-            <MapPin size={12} className="shrink-0 text-muted-foreground" />
-            <span className="truncate">{[loan.city, loan.state].filter(Boolean).join(', ') || 'N/A'}</span>
+        {/* Key Metrics Row - Perfectly Aligned 3 Highlight Pill Boxes */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mt-5 p-3.5 sm:p-4 rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/20">
+          <div className="flex flex-col group/loc relative" title={fullLocation}>
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-muted-foreground">
+              <MapPin size={13} className="text-primary shrink-0" />
+              <span className="truncate">Location</span>
+            </div>
+            <p className="text-xs sm:text-sm font-extrabold text-foreground truncate group-hover/loc:whitespace-normal group-hover/loc:overflow-visible transition-all mt-1">
+              {fullLocation}
+            </p>
           </div>
-          <div className="flex items-center gap-1.5 truncate" title="Tenure">
-            <Clock size={12} className="shrink-0 text-muted-foreground" />
-            <span className="truncate">{loan.durationDays ? `${loan.durationDays} days` : 'Flexible'}</span>
+
+          <div className="flex flex-col truncate border-l border-primary/15 pl-2.5 sm:pl-3" title="Expected Rate">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-muted-foreground">
+              <Percent size={13} className="text-primary shrink-0" />
+              <span className="truncate">Interest</span>
+            </div>
+            <p className="text-xs sm:text-sm font-extrabold text-foreground truncate mt-1">
+              {loan.interestRateHint != null ? `${loan.interestRateHint}% p.a.` : 'Open'}
+            </p>
           </div>
-          <div className="flex items-center gap-1.5 truncate" title="Interest Expectation">
-            <Percent size={12} className="shrink-0 text-muted-foreground" />
-            <span className="truncate">{loan.interestRateHint != null ? `${loan.interestRateHint}%` : 'Open'}</span>
+
+          <div className="flex flex-col truncate border-l border-primary/15 pl-2.5 sm:pl-3" title="Tenure">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-muted-foreground">
+              <Clock size={13} className="text-primary shrink-0" />
+              <span className="truncate">Duration</span>
+            </div>
+            <p className="text-xs sm:text-sm font-extrabold text-foreground truncate mt-1">
+              {loan.durationDays ? `${loan.durationDays} Days` : 'Flexible'}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Action CTA */}
-      <div className="mt-5 pt-3 border-t border-border/80">
+      {/* Action CTA Button */}
+      <div className="mt-6 pt-4 border-t border-border/60">
         {!isLoggedIn ? (
           <button
-            onClick={onOffer}
-            className="w-full text-xs font-bold border border-border bg-background hover:bg-muted text-foreground py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOffer();
+            }}
+            className="w-full text-xs sm:text-sm font-extrabold border border-border bg-background hover:bg-muted text-foreground py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-98"
           >
-            <Handshake size={15} /> Log in to offer
+            <Handshake size={18} /> Log in to offer
           </button>
         ) : isLender ? (
           hasSentOffer ? (
-            <div className="w-full text-xs font-bold text-emerald-600 bg-emerald-50/80 border border-emerald-200 py-2.5 rounded-xl flex items-center justify-center gap-1.5 dark:bg-emerald-950/30 dark:border-emerald-800/60 dark:text-emerald-400">
-              <CheckCircle2 size={15} /> Offer Submitted
+            <div className="w-full text-xs sm:text-sm font-extrabold text-emerald-600 bg-emerald-500/10 border border-emerald-500/30 py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-2xs">
+              <CheckCircle2 size={18} /> Offer Submitted
             </div>
           ) : (
             <button
-              onClick={onOffer}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOffer();
+              }}
               disabled={sentOfferIdsLoading}
-              className="w-full text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-xs active:scale-98"
+              className="w-full text-xs sm:text-sm font-extrabold bg-primary text-primary-foreground hover:bg-primary/90 py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-98"
             >
-              <Handshake size={15} /> Send Offer
+              <Handshake size={18} /> Send Funding Offer
             </button>
           )
         ) : (
-          <p className="text-[11px] font-medium text-muted-foreground text-center py-1 bg-muted/20 rounded-lg border border-border/60">
+          <p className="text-xs font-semibold text-muted-foreground text-center py-2.5 bg-muted/30 rounded-xl border border-border/60">
             Lender account required
           </p>
         )}
