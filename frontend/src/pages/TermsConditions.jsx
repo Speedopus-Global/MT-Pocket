@@ -6,7 +6,7 @@ import PolicyList from "../components/Policy/PolicyList";
 
 const sections = [
   {
-    eyebrow: "3.1",
+    eyebrow: "1",
     title: "Acceptance of Terms",
     body: (
       <p>
@@ -17,7 +17,20 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.2",
+    eyebrow: "2",
+    title: "Eligibility",
+    body: (
+      <p>
+        You must be at least 18 years old and capable of entering into a
+        legally binding agreement under applicable law to use MT Pocket.
+        By creating an account, you confirm that you meet these
+        requirements and that all information you provide, including your
+        identity documents, is accurate and belongs to you.
+      </p>
+    ),
+  },
+  {
+    eyebrow: "3",
     title: "Nature of the Platform",
     body: (
       <p>
@@ -32,7 +45,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.3",
+    eyebrow: "4",
     title: "No Financial Services Provided",
     body: (
       <>
@@ -57,7 +70,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.4",
+    eyebrow: "5",
     title: "No Control Over Loan Terms",
     body: (
       <p>
@@ -71,7 +84,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.5",
+    eyebrow: "6",
     title: "Verification Is Not a Guarantee",
     body: (
       <p>
@@ -85,7 +98,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.6",
+    eyebrow: "7",
     title: "User Responsibility & Assumption of Risk",
     body: (
       <>
@@ -101,7 +114,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.7",
+    eyebrow: "8",
     title: "Limitation of Liability",
     body: (
       <p>
@@ -116,7 +129,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.8",
+    eyebrow: "9",
     title: "Prohibited Conduct",
     body: (
       <>
@@ -133,7 +146,22 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.9",
+    eyebrow: "10",
+    title: "Intellectual Property",
+    body: (
+      <p>
+        The MT Pocket name, logo, app, and platform design belong to us and
+        are protected by applicable intellectual property law. Using the
+        Platform doesn't give you any ownership over it — just a limited,
+        personal, non-transferable right to use it for its intended
+        purpose. Content you post — profile details, messages, listing
+        information — remains yours, but you grant us the right to display
+        and process it as needed to operate the Platform.
+      </p>
+    ),
+  },
+  {
+    eyebrow: "11",
     title: "Indemnification",
     body: (
       <p>
@@ -145,7 +173,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.10",
+    eyebrow: "12",
     title: "Account Suspension & Termination",
     body: (
       <p>
@@ -157,7 +185,7 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.11",
+    eyebrow: "13",
     title: "Disputes Between Users",
     body: (
       <p>
@@ -171,18 +199,43 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.12",
+    eyebrow: "14",
     title: "Changes to These Terms",
     body: (
       <p>
         We may update these Terms from time to time. Continued use of the
         Platform after changes take effect constitutes acceptance of the
-        updated Terms. Material changes will be highlighted at next login.
+        updated Terms. Material changes will be highlighted at next login,
+        and where legally required, we'll ask you to re-confirm your
+        acceptance before you continue.
       </p>
     ),
   },
   {
-    eyebrow: "3.13",
+    eyebrow: "15",
+    title: "Severability",
+    body: (
+      <p>
+        If any provision of these Terms is found unenforceable by a court
+        or regulator, that provision will be limited or removed to the
+        minimum extent necessary, and the rest of these Terms will remain
+        in full effect.
+      </p>
+    ),
+  },
+  {
+    eyebrow: "16",
+    title: "Entire Agreement",
+    body: (
+      <p>
+        These Terms, together with our Privacy Policy, make up the entire
+        agreement between you and MT Pocket regarding use of the Platform,
+        and supersede any prior agreement or understanding on the subject.
+      </p>
+    ),
+  },
+  {
+    eyebrow: "17",
     title: "Governing Law",
     body: (
       <p>
@@ -193,12 +246,12 @@ const sections = [
     ),
   },
   {
-    eyebrow: "3.14",
+    eyebrow: "18",
     title: "Contact",
     body: (
       <p>
         Questions about these Terms:{" "}
-        <span className="text-foreground">[support email]</span>
+        <span className="text-foreground">support@mtpocket.com</span>
       </p>
     ),
   },
@@ -210,13 +263,13 @@ export default function TermsConditions() {
       <PolicyHero
         title="Terms & Conditions"
         subtitle={
-          <>Last updated <span className="text-foreground">[DATE]</span> — please read this before you use MT Pocket.</>
+          <>Last updated <span className="text-foreground">12/08/2026</span> — please read this before you use MT Pocket.</>
         }
       />
       <div className="pb-4 text-center text-sm text-muted-foreground">
         MT Pocket is a technology platform that helps borrowers and lenders
         discover each other locally. We are not a lender, broker, or party
-        to any loan — see section 3.2 below.
+        to any loan — see section 3 below.
       </div>
       {sections.map((section, i) => (
         <div key={section.title}>

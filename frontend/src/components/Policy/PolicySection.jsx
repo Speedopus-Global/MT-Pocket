@@ -5,23 +5,26 @@ const easeOut = [0.16, 1, 0.3, 1];
 export default function PolicySection({ eyebrow, title, children }) {
   return (
     <motion.article
-      initial={{ opacity: 0.32, filter: "blur(6px)", y: 26 }}
-      whileInView={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-      viewport={{ once: false, amount: 0.5 }}
-      transition={{ duration: 0.7, ease: easeOut }}
-      className="flex min-h-[55vh] flex-col justify-center gap-5 py-16 sm:py-20"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: false, amount: 0.2 }}
+      transition={{ duration: 0.6, ease: easeOut }}
+      className="flex flex-col gap-4 py-10 sm:py-12"
     >
+      {/* Eyebrow label */}
       {eyebrow ? (
-        <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        <span className="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">
           {eyebrow}
         </span>
       ) : null}
 
-      <h2 className="max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-foreground transition-colors duration-300 sm:text-4xl lg:text-[2.75rem]">
+      {/* Section title — full width, underline green on hover */}
+      <h2 className="w-full text-2xl sm:text-4xl lg:text-5xl font-black leading-[1.15] tracking-tight text-foreground underline-offset-8 decoration-emerald-500 hover:underline hover:decoration-[3px] transition-all duration-200 cursor-default">
         {title}
       </h2>
 
-      <div className="max-w-[70ch] space-y-4 text-lg leading-relaxed text-muted-foreground sm:text-xl">
+      {/* Body text — full width, justified */}
+      <div className="w-full space-y-4 text-base sm:text-lg leading-relaxed text-muted-foreground text-justify">
         {children}
       </div>
     </motion.article>

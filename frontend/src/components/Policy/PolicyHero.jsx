@@ -5,30 +5,36 @@ const easeOut = [0.16, 1, 0.3, 1];
 
 export default function PolicyHero({ title, subtitle }) {
   return (
-    <section className="flex min-h-[35vh] flex-col items-center justify-center gap-6 py-20 text-center sm:min-h-[45vh]">
+    <section className="flex flex-col items-start justify-center gap-4 py-10 sm:py-14">
+      {/* Icon + Eyebrow */}
       <motion.div
-        initial={{ opacity: 0, filter: "blur(8px)", y: 12 }}
-        animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-        transition={{ duration: 0.8, ease: easeOut }}
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: easeOut }}
+        className="flex items-center gap-2.5 text-primary"
       >
-        <Sparkles className="h-5 w-5" strokeWidth={1.5} />
+        <Sparkles className="h-5 w-5 shrink-0" strokeWidth={2} />
+        <span className="text-xs font-black uppercase tracking-[0.25em] text-primary">
+          MT Pocket
+        </span>
       </motion.div>
 
+      {/* Hero Title */}
       <motion.h1
-        initial={{ opacity: 0, filter: "blur(10px)", y: 16 }}
-        animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-        transition={{ duration: 0.9, delay: 0.1, ease: easeOut }}
-        className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.08, ease: easeOut }}
+        className="text-4xl font-black tracking-tight text-foreground sm:text-6xl lg:text-7xl leading-[1.1]"
       >
         {title}
       </motion.h1>
 
+      {/* Subtitle */}
       <motion.p
-        initial={{ opacity: 0, filter: "blur(6px)", y: 10 }}
-        animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-        transition={{ duration: 0.8, delay: 0.22, ease: easeOut }}
-        className="max-w-xl px-4 text-base text-muted-foreground sm:text-lg"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.18, ease: easeOut }}
+        className="text-base sm:text-lg text-muted-foreground font-medium leading-relaxed max-w-3xl"
       >
         {subtitle}
       </motion.p>
