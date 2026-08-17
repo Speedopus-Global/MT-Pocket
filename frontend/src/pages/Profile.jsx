@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -171,77 +172,116 @@ export default function Profile() {
 
   return (
     <motion.div
-      className="flex-1 flex flex-col space-y-8 min-h-full"
+      className="flex-1 flex flex-col min-h-full w-full px-4 sm:px-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      {/* Top Profile Header Details Card */}
+      {/* Top Profile Header (Instagram style) */}
       <motion.div
         variants={itemVariants}
-        className="rounded-2xl border border-border bg-card p-8 shadow-md relative overflow-hidden"
+        className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-16 pt-6 pb-8"
       >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none -mr-24 -mt-24" />
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              {/* Profile Ring: Green for verified, Grey/Border for unverified */}
-              <div className={`w-20 h-20 rounded-2xl overflow-hidden border-2 flex items-center justify-center ${user.identityVerified ? 'border-emerald-500' : 'border-muted'}`}>
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-primary/10 text-primary font-extrabold flex items-center justify-center text-3xl">
-                    {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
-                  </div>
-                )}
-              </div>
+        {/* Left Side: Circular Avatar with Verified Ring */}
+        <div className="relative shrink-0">
+          <div className={`rounded-full p-[3.5px] flex items-center justify-center ${user.identityVerified ? 'bg-gradient-to-tr from-primary via-emerald-500 to-accent' : 'bg-muted border border-border'}`}>
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-sidebar bg-card flex items-center justify-center">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-primary/10 text-primary font-bold flex items-center justify-center text-4xl">
+                  {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                </div>
+              )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
-                  {user.fullName || 'Member Profile'}
-                </h1>
-                {/* Verified Shield Badge: Green for verified, Grey for unverified */}
-                {user.identityVerified ? (
-                  <ShieldCheck size={22} className="text-emerald-500 shrink-0" title="Verified Identity" />
-                ) : (
-                  <Shield size={22} className="text-muted-foreground/60 shrink-0" title="Unverified Identity" />
-                )}
-              </div>
-              <p className="text-sm font-bold text-primary uppercase tracking-wider mt-1 capitalize">
-                {user.role} Account
-              </p>
-              <div className="flex flex-wrap gap-4 mt-2.5 text-xs text-muted-foreground font-medium">
-                {(user.city || user.state) && (
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin size={13} /> {[user.city, user.state].filter(Boolean).join(', ')}
-                  </span>
-                )}
-                {user.createdAt && (
-                  <span className="inline-flex items-center gap-1">
-                    <CalendarDays size={13} />
-                    Joined {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-                  </span>
-                )}
-              </div>
+          </div>
+        </div>
+
+        {/* Right Side: Details & Stats */}
+        <div className="flex-1 flex flex-col text-center md:text-left">
+          {/* Row 1: Name and Buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-center md:justify-start">
+            <div className="flex items-center gap-2 justify-center md:justify-start">
+              <h1 className="text-xl sm:text-2xl font-normal text-foreground tracking-tight">
+                {user.fullName || 'Member Profile'}
+              </h1>
+              {user.identityVerified ? (
+                <ShieldCheck size={20} className="text-emerald-500 shrink-0" title="Verified Identity" />
+              ) : (
+                <Shield size={20} className="text-muted-foreground/60 shrink-0" title="Unverified Identity" />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 justify-center md:justify-start">
+              {isBorrower && (
+                <button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/95 transition-all shadow-sm hover:shadow cursor-pointer"
+                >
+                  Create Loan Request
+                </button>
+              )}
+              <Link
+                to="/dashboard/settings"
+                className="px-4 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-xs font-semibold transition-all cursor-pointer inline-flex items-center justify-center"
+              >
+                Edit Profile
+              </Link>
             </div>
           </div>
 
-          <div className="flex gap-3">
-            {/* If borrower, show Create Loan Request */}
-            {isBorrower && (
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/95 transition-all shadow-md shadow-primary/20 cursor-pointer"
-              >
-                <PlusCircle size={16} />
-                <span>Create Loan Request</span>
-              </button>
-            )}
+          {/* Row 2: Stats (Desktop) */}
+          <div className="hidden sm:flex items-center gap-8 text-sm text-muted-foreground my-4">
+            <span>
+              <strong className="text-foreground font-semibold">{myLoans.length}</strong> loan requests
+            </span>
+            <span>
+              <strong className="text-foreground font-semibold">{myOffers.length}</strong> offers sent
+            </span>
+            <span className="capitalize">
+              <strong className="text-foreground font-semibold">{user.role}</strong> account
+            </span>
+          </div>
+
+          {/* Row 3: Bio and Information */}
+          <div className="mt-3 md:mt-0 space-y-1 text-sm text-foreground/90 font-normal">
+            <p className="font-semibold text-foreground tracking-tight capitalize">
+              {user.fullName || 'Member Profile'}
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground justify-center md:justify-start">
+              {(user.city || user.state) && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={13} /> {[user.city, user.state].filter(Boolean).join(', ')}
+                </span>
+              )}
+              {user.createdAt && (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays size={13} />
+                  Joined {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex justify-center md:justify-start">
+              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${user.identityVerified ? 'text-emerald-600 bg-emerald-500/10' : 'text-amber-600 bg-amber-500/10'}`}>
+                {user.identityVerified ? '✓ Identity Verified' : '⚠ Identity Unverified'}
+              </span>
+            </div>
           </div>
         </div>
       </motion.div>
+
+      {/* Row 2: Stats (Mobile) */}
+      <div className="flex sm:hidden border-y border-border/50 py-3 justify-around text-xs text-center text-muted-foreground my-2 w-full">
+        <div>
+          <strong className="block text-foreground font-semibold text-sm">{myLoans.length}</strong> loan requests
+        </div>
+        <div>
+          <strong className="block text-foreground font-semibold text-sm">{myOffers.length}</strong> offers sent
+        </div>
+        <div className="capitalize">
+          <strong className="block text-foreground font-semibold text-sm">{user.role}</strong> account
+        </div>
+      </div>
 
       {/* Action status popups */}
       <AnimatePresence mode="wait">
@@ -269,39 +309,37 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      {/* Tab Selectors (Only shown if user has BOTH role) */}
-      {user.role === 'both' && (
-        <motion.div variants={itemVariants} className="flex border-b border-border gap-6">
-          <button
-            onClick={() => setActiveTab('loans')}
-            className={`pb-3 font-bold text-base transition-colors relative cursor-pointer ${
-              activeTab === 'loans' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span>My Loan Requests</span>
-            {activeTab === 'loans' && (
-              <motion.div
-                layoutId="profile-tab-bar"
-                className="absolute bottom-0 inset-x-0 h-0.5 bg-primary"
-              />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('offers')}
-            className={`pb-3 font-bold text-base transition-colors relative cursor-pointer ${
-              activeTab === 'offers' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span>My Offers Sent</span>
-            {activeTab === 'offers' && (
-              <motion.div
-                layoutId="profile-tab-bar"
-                className="absolute bottom-0 inset-x-0 h-0.5 bg-primary"
-              />
-            )}
-          </button>
-        </motion.div>
-      )}
+      {/* Instagram-style Tabs Selector */}
+      <motion.div variants={itemVariants} className="flex justify-center border-t border-border/60 mt-4 sm:mt-8">
+        <div className="flex gap-12 -mt-[1.5px]">
+          {isBorrower && (
+            <button
+              onClick={() => setActiveTab('loans')}
+              className={`flex items-center gap-1.5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer ${
+                activeTab === 'loans'
+                  ? 'border-t-2 border-foreground text-foreground'
+                  : 'border-t border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Banknote size={14} />
+              <span>My Loans</span>
+            </button>
+          )}
+          {isLender && (
+            <button
+              onClick={() => setActiveTab('offers')}
+              className={`flex items-center gap-1.5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer ${
+                activeTab === 'offers'
+                  ? 'border-t-2 border-foreground text-foreground'
+                  : 'border-t border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Tag size={14} />
+              <span>My Offers</span>
+            </button>
+          )}
+        </div>
+      </motion.div>
 
       {/* Tab Content Panels */}
       <div className="space-y-6">
@@ -329,13 +367,13 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground mt-1">Need money? Create a loan request above to get matching offers.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {myLoans.map((loan) => {
                   const CategoryIcon = CATEGORY_ICONS[loan.category] || HelpCircle;
                   return (
                     <div
                       key={loan._id}
-                      className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col justify-between"
+                      className="rounded-2xl border border-primary/20 bg-card p-5 shadow-xs hover:shadow-md hover:border-primary hover:bg-primary/[0.01] transition-all duration-300 flex flex-col justify-between cursor-pointer group"
                     >
                       <div>
                         {/* Card Header */}
@@ -450,13 +488,13 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground mt-1">Browse the Marketplace page to send investment offers to borrowers.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {myOffers.map((offer) => {
                   const CategoryIcon = CATEGORY_ICONS[offer.category] || HelpCircle;
                   return (
                     <div
                       key={offer.offerId}
-                      className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col justify-between"
+                      className="rounded-2xl border border-primary/20 bg-card p-5 shadow-xs hover:shadow-md hover:border-primary hover:bg-primary/[0.01] transition-all duration-300 flex flex-col justify-between cursor-pointer group"
                     >
                       <div>
                         {/* Header */}
@@ -540,17 +578,19 @@ export default function Profile() {
       {/* CREATE LOAN REQUEST MODAL */}
       <AnimatePresence>
         {createModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+              className="w-full max-w-lg rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Banknote size={20} className="text-primary" />
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border/50 bg-card">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Banknote size={18} />
+                  </div>
                   <h3 className="font-extrabold text-foreground text-lg">Create Loan Request</h3>
                 </div>
                 <button
@@ -575,17 +615,19 @@ export default function Profile() {
       {/* EDIT LOAN REQUEST MODAL */}
       <AnimatePresence>
         {editModalOpen && selectedLoan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+              className="w-full max-w-lg rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Edit2 size={18} className="text-primary" />
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border/50 bg-card">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Edit2 size={16} />
+                  </div>
                   <h3 className="font-extrabold text-foreground text-lg">Edit Loan Request</h3>
                 </div>
                 <button
@@ -713,11 +755,11 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
     { value: 'other',     label: 'Other',     icon: Lightbulb },
   ];
 
-  const inputCls = "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary cursor-text";
-  const labelCls = "text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block";
+  const inputCls = "w-full rounded-xl border border-border/80 bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-text";
+  const labelCls = "text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block";
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1">
+    <form onSubmit={submit} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
       {/* 🔵 Step 5 Disclaimer — one-time borrower alert */}
       <InfoBanner variant="info" dismissible={true} storageKey="mt_borrower_disclaimer_seen">
         MT Pocket never handles your money — all payment happens directly between you and the lender.
@@ -739,21 +781,22 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
       {/* Category Selection */}
       <div>
         <label className={labelCls}>Category *</label>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="flex flex-wrap gap-2">
           {LOAN_CATEGORIES.map((cat) => {
             const CatIcon = cat.icon;
+            const isSelected = form.category === cat.value;
             return (
               <button
                 key={cat.value}
                 type="button"
                 onClick={() => set('category', cat.value)}
-                className={`flex flex-col items-center gap-1.5 rounded-xl p-2.5 text-[10px] font-bold border transition-all cursor-pointer ${
-                  form.category === cat.value
-                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                    : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm scale-105'
+                    : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground'
                 }`}
               >
-                <CatIcon size={18} />
+                <CatIcon size={14} />
                 <span>{cat.label}</span>
               </button>
             );

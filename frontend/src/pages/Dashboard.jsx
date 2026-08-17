@@ -143,9 +143,15 @@ export default function Dashboard() {
       {/* ── TOP EXECUTIVE HEADER ────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-5">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              Dashboard Overview
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+              <span>Dashboard Overview</span>
+              <div className="relative group mt-0.5 flex items-center">
+                <Info size={16} className="text-muted-foreground hover:text-primary cursor-help transition-colors" />
+                <div className="absolute left-0 top-6 hidden group-hover:block w-72 bg-card border border-border p-3 rounded-lg shadow-lg text-[11px] text-muted-foreground font-normal normal-case z-50 leading-relaxed">
+                  <strong className="text-foreground font-semibold">Security Note:</strong> Always verify identity credentials and agree on repayment terms securely. MT Pocket facilitates peer connections and matches but never holds funds or enforces payments directly.
+                </div>
+              </div>
             </h1>
             {user.identityVerified ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
@@ -161,25 +167,18 @@ export default function Dashboard() {
             )}
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
-            Welcome back, <span className="text-foreground font-bold">{user.fullName || 'Member'}</span>. Monitor your active loan proposals, matches, and messaging in real time.
+            Welcome back, <span className="text-foreground font-bold">{user.fullName || 'Member'}</span>. Monitor your active loan proposals.
           </p>
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-center">
-          <Link
-            to="/marketplace"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/95 shadow-xs transition-colors cursor-pointer"
-          >
-            <Search size={14} />
-            <span>Explore Marketplace</span>
-          </Link>
           <NotificationDrawer accessToken={accessToken} />
         </div>
       </div>
 
       {/* ── KPI METRICS CARDS ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground mb-3">
             <span className="text-xs font-bold uppercase tracking-wider">Active Requests</span>
             <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -192,7 +191,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground mb-3">
             <span className="text-xs font-bold uppercase tracking-wider">Pending Proposals</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
@@ -209,7 +208,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground mb-3">
             <span className="text-xs font-bold uppercase tracking-wider">Accepted Matches</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
@@ -222,7 +221,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground mb-3">
             <span className="text-xs font-bold uppercase tracking-wider">Account Role</span>
             <div className="w-8 h-8 rounded-xl bg-muted text-foreground flex items-center justify-center">
@@ -248,7 +247,7 @@ export default function Dashboard() {
       )}
 
       {/* ── ACTIVE PROPOSALS & MATCHES SECTION ──────────────────────── */}
-      <div className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-6">
+      <div className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-6 flex-1 flex flex-col">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
           <div className="flex items-center gap-2.5">
             <Handshake className="text-primary h-5 w-5" />
@@ -275,7 +274,7 @@ export default function Dashboard() {
         </div>
 
         {/* Proposals content */}
-        <div className="space-y-8">
+        <div className="space-y-8 flex-1 flex flex-col">
           {/* LENDER MODE SECTION */}
           {isLender && (
             <div>
@@ -303,7 +302,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={o.offerId}
-                      className="rounded-xl border border-border/80 bg-background/50 p-4 hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between"
+                      className="rounded-xl border border-primary/20 bg-card p-4 hover:border-primary hover:bg-primary/[0.01] hover:shadow-md transition-all duration-300 flex flex-col justify-between cursor-pointer group"
                     >
                       <div>
                         {/* Card Header */}
@@ -400,10 +399,10 @@ export default function Dashboard() {
                   const CategoryIcon = CATEGORY_ICONS[o.loanRequest.category] || HelpCircle;
                   const lId = lenderIdOf(o);
                   const lName = lenderNameOf(o);
-                  return (
+                   return (
                     <div
                       key={o._id}
-                      className="rounded-xl border border-border/80 bg-background/50 p-4 hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between"
+                      className="rounded-xl border border-primary/20 bg-card p-4 hover:border-primary hover:bg-primary/[0.01] hover:shadow-md transition-all duration-300 flex flex-col justify-between cursor-pointer group"
                     >
                       <div>
                         {/* Header */}
@@ -498,13 +497,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── SECURITY / ADVISORY FOOTNOTE ─────────────────────────────── */}
-      <div className="rounded-xl border border-border/70 bg-card p-4 flex items-start gap-3 text-xs text-muted-foreground">
-        <Info size={16} className="text-primary shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          <strong className="text-foreground font-semibold">Security Note:</strong> Always verify identity credentials and agree on repayment terms securely. MT Pocket facilitates peer connections and matches but never holds funds or enforces payments directly.
-        </p>
-      </div>
+
 
       {/* ── USER PROFILE PREVIEW MODAL ───────────────────────────────── */}
       <AnimatePresence>
@@ -560,7 +553,7 @@ function OffersGrid({ loading, items, renderCard, emptyLabel }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1">
       {items.map(renderCard)}
     </div>
   );

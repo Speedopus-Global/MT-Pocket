@@ -121,7 +121,10 @@ export class SupportService {
 
     const adminEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h2 style="color: #059669;">New Support Ticket Received</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+        </div>
+        <h2 style="color: #059669; text-align: center; margin-top: 0;">New Support Ticket Received</h2>
         <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
         <p><strong>From:</strong> ${ticket.senderName} (${ticket.senderEmail})</p>
         <p><strong>Topic:</strong> ${ticket.category}</p>
@@ -136,7 +139,10 @@ export class SupportService {
 
     const userEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h2 style="color: #059669;">We Received Your Support Request</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+        </div>
+        <h2 style="color: #059669; text-align: center; margin-top: 0;">We Received Your Support Request</h2>
         <p>Hello <strong>${ticket.senderName}</strong>,</p>
         <p>Thank you for reaching out to MT Pocket. We have received your inquiry and created support ticket <strong>${ticket.ticketId}</strong>.</p>
         <div style="background-color: #f0fdf4; padding: 15px; border-radius: 6px; border-left: 4px solid #059669; margin: 15px 0;">

@@ -36,7 +36,7 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row text-foreground font-sans">
+    <div className="min-h-screen bg-sidebar flex flex-col md:flex-row text-foreground font-sans">
       
       {/* Mobile Header Bar */}
       <header className="md:hidden flex items-center justify-between px-6 py-4 bg-card/85 backdrop-blur-md border-b border-border/60 z-20">
@@ -62,7 +62,7 @@ export default function DashboardLayout() {
       <aside 
         className={`fixed inset-y-0 left-0 transform ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:sticky md:top-0 md:translate-x-0 transition-transform duration-300 ease-in-out z-30 w-64 bg-card/90 backdrop-blur-lg border-r border-border/60 flex flex-col h-screen max-h-screen`}
+        } md:sticky md:top-0 md:translate-x-0 transition-transform duration-300 ease-in-out z-30 w-64 bg-sidebar/95 backdrop-blur-lg border-r border-border/60 flex flex-col h-screen max-h-screen`}
       >
         {/* Sidebar Header */}
         <div className="p-6 border-b border-border/55 flex items-center gap-3">

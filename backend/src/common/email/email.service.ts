@@ -8,7 +8,10 @@ export class EmailService {
     const subject = 'Verify your email for MT Pocket';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e9e9e9; border-radius: 8px;">
-        <h2 style="color: #0F7A53;">MT Pocket Verification</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+        </div>
+        <h2 style="color: #0F7A53; text-align: center; margin-top: 0;">MT Pocket Verification</h2>
         <p>Hello,</p>
         <p>Thank you for signing up with MT Pocket. Please use the verification code below to verify your email address. This code is valid for 10 minutes:</p>
         <div style="background-color: #FDF6ED; border: 1px solid #DCCFC0; border-radius: 4px; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #0F7A53; margin: 20px 0;">
@@ -26,7 +29,10 @@ export class EmailService {
     const subject = 'Reset your password for MT Pocket';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e9e9e9; border-radius: 8px;">
-        <h2 style="color: #0F7A53;">MT Pocket Password Reset</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+        </div>
+        <h2 style="color: #0F7A53; text-align: center; margin-top: 0;">MT Pocket Password Reset</h2>
         <p>Hello,</p>
         <p>We received a request to reset your password. Please use the 6-digit OTP code below to set a new password. This code is valid for 10 minutes:</p>
         <div style="background-color: #FDF6ED; border: 1px solid #DCCFC0; border-radius: 4px; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #0F7A53; margin: 20px 0;">
