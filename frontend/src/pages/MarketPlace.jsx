@@ -50,6 +50,8 @@ import {
   ArrowUpDown,
   Calendar,
   Layers,
+  CalendarDays,
+  Shield,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
@@ -97,6 +99,7 @@ export default function Marketplace() {
   const [blockedIds, setBlockedIds] = useState([]);
   const [safetyLoan, setSafetyLoan] = useState(null);
   const [loginPrompt, setLoginPrompt] = useState(null);
+  const [previewUserId, setPreviewUserId] = useState(null);
 
   const [sentOfferIds, setSentOfferIds] = useState(new Set());
   const [sentOfferIdsLoading, setSentOfferIdsLoading] = useState(false);
@@ -166,7 +169,9 @@ export default function Marketplace() {
       setLoginPrompt('Please log in to view this user’s profile.');
       return;
     }
-    navigate(`/users/${borrowerId}`);
+    if (borrowerId) {
+      setPreviewUserId(borrowerId);
+    }
   };
 
   useEffect(() => {
@@ -491,7 +496,10 @@ export default function Marketplace() {
 
         {/* Infinite Avatar Marquee Loop with breathing room */}
         <div className="mt-8 mb-4">
-          <UserAvatarMarquee users={results} />
+          <UserAvatarMarquee
+            users={results}
+            onSelectUser={(uid) => requestProfile(uid)}
+          />
         </div>
       </section>
 
@@ -735,6 +743,16 @@ export default function Marketplace() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {previewUserId && (
+          <MarketplaceProfileModal
+            userId={previewUserId}
+            onClose={() => setPreviewUserId(null)}
+            accessToken={accessToken}
+          />
         )}
       </AnimatePresence>
 
@@ -1156,6 +1174,273 @@ function SafetyForm({ loan, accessToken, onDone }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── MARKETPLACE PROFILE PREVIEW MODAL ─────────────────────────────────────
+function MarketplaceProfileModal({ userId, onClose, accessToken }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Safety actions state
+  const [showSafety, setShowSafety] = useState(false);
+  const [safetyMode, setSafetyMode] = useState('report');
+  const [reportReason, setReportReason] = useState('fake_identity');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingSafety, setSubmittingSafety] = useState(false);
+  const [safetyMessage, setSafetyMessage] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    api.getPublicProfile(userId, accessToken)
+      .then((res) => setProfile(res))
+      .catch((err) => {
+        setError(err.message || 'Failed to fetch public profile.');
+      })
+      .finally(() => setLoading(false));
+  }, [userId, accessToken]);
+
+  const REPORT_REASONS = [
+    { value: 'fake_identity',     label: 'Fake Identity' },
+    { value: 'fraud_attempt',     label: 'Fraud Attempt' },
+    { value: 'harassment',        label: 'Harassment' },
+    { value: 'impersonation',     label: 'Impersonation' },
+    { value: 'spam',              label: 'Spam' },
+    { value: 'abusive_behaviour', label: 'Abusive Behaviour' },
+    { value: 'other',             label: 'Other' },
+  ];
+
+  const handleReport = async (e) => {
+    e.preventDefault();
+    if (reportReason === 'other' && !reportDetails.trim()) {
+      setSafetyMessage('Please add report details for "Other".');
+      return;
+    }
+    setSubmittingSafety(true);
+    setSafetyMessage('');
+    try {
+      await api.fileReport(
+        { reportedUserId: userId, reason: reportReason, details: reportDetails.trim() || undefined, reportContext: 'profile' },
+        accessToken
+      );
+      setSafetyMessage('Report submitted successfully.');
+      setReportDetails('');
+      setTimeout(() => setShowSafety(false), 2000);
+    } catch (err) {
+      setSafetyMessage(err.message || 'Could not submit report.');
+    } finally {
+      setSubmittingSafety(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!window.confirm(`Are you sure you want to block ${profile?.fullName || 'this user'}? This will hide their listings.`)) return;
+    setSubmittingSafety(true);
+    setSafetyMessage('');
+    try {
+      await api.blockUser(userId, accessToken);
+      setSafetyMessage('User has been blocked. Reloading…');
+      setTimeout(() => {
+        setShowSafety(false);
+        onClose();
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setSafetyMessage(err.message || 'Could not block user.');
+    } finally {
+      setSubmittingSafety(false);
+    }
+  };
+
+  const ROLE_LABELS = {
+    borrower: 'Borrower',
+    lender: 'Lender',
+    both: 'Borrower & Lender',
+    unset: 'Community Member',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+          <span className="font-bold text-foreground text-sm">Member Profile Preview</span>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto max-h-[75vh]">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-6 text-destructive flex flex-col items-center gap-2">
+              <ShieldAlert size={24} />
+              <p className="font-bold text-xs">{error}</p>
+            </div>
+          ) : profile ? (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3.5">
+                <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 flex items-center justify-center ${profile.identityVerified ? 'border-emerald-500' : 'border-border'}`}>
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg">
+                      {profile.fullName ? profile.fullName[0].toUpperCase() : '?'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-base text-foreground tracking-tight">
+                      {profile.fullName || 'Unnamed Member'}
+                    </h3>
+                    {profile.identityVerified ? (
+                      <ShieldCheck size={16} className="text-emerald-500 shrink-0" title="Verified Identity" />
+                    ) : (
+                      <Shield size={16} className="text-muted-foreground/50 shrink-0" title="Unverified Identity" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                    {ROLE_LABELS[profile.role] || 'Member'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-muted-foreground font-medium bg-muted/30 p-3 rounded-xl">
+                {(profile.city || profile.state) && (
+                  <p className="flex items-center gap-2">
+                    <MapPin size={14} className="text-primary shrink-0" />
+                    <span className="text-foreground">{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+                  </p>
+                )}
+                {profile.createdAt && (
+                  <p className="flex items-center gap-2">
+                    <CalendarDays size={14} className="text-primary shrink-0" />
+                    <span className="text-foreground">
+                      Member since {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2 px-3 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Close Preview
+                </button>
+                <button
+                  onClick={() => setShowSafety(!showSafety)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-destructive/20 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors cursor-pointer"
+                >
+                  <ShieldAlert size={14} />
+                  <span>Report / Block</span>
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showSafety && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="rounded-xl border border-border bg-muted/30 p-4 space-y-3 overflow-hidden text-xs"
+                  >
+                    <div className="flex border-b border-border gap-4 pb-2">
+                      <button
+                        onClick={() => { setSafetyMode('report'); setSafetyMessage(''); }}
+                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
+                          safetyMode === 'report' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Report
+                      </button>
+                      <button
+                        onClick={() => { setSafetyMode('block'); setSafetyMessage(''); }}
+                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
+                          safetyMode === 'block' ? 'text-destructive border-b-2 border-destructive' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Block
+                      </button>
+                    </div>
+
+                    {safetyMessage && (
+                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+                        {safetyMessage}
+                      </div>
+                    )}
+
+                    {safetyMode === 'report' ? (
+                      <form onSubmit={handleReport} className="space-y-3">
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Reason</label>
+                          <select
+                            value={reportReason}
+                            onChange={(e) => setReportReason(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-background p-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                          >
+                            {REPORT_REASONS.map((r) => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Details</label>
+                          <textarea
+                            rows={2}
+                            placeholder="Add details about the infraction…"
+                            value={reportDetails}
+                            onChange={(e) => setReportDetails(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-background p-2 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary cursor-text"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={submittingSafety}
+                          className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors cursor-pointer"
+                        >
+                          {submittingSafety && <Loader2 size={12} className="animate-spin" />}
+                          <span>Submit Report</span>
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="space-y-2.5 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          Blocking this member hides their loan requests and prevents further messaging.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleBlock}
+                          disabled={submittingSafety}
+                          className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors cursor-pointer"
+                        >
+                          {submittingSafety && <Loader2 size={12} className="animate-spin" />}
+                          <span>Block {profile.fullName || 'Member'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : null}
+        </div>
+      </motion.div>
     </div>
   );
 }

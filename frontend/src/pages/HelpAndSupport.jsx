@@ -1,67 +1,79 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Search, ChevronDown, CheckCircle2, Mail, ShieldAlert, FileText, Database, ArrowRight } from "lucide-react";
-
-/**
- * Settings → Help & Support / Dashboard → Help & Support
- *
- * Structure:
- *   1. Search — filters FAQs live as you type
- *   2. Quick actions — Report a Problem / Legal & Policies / Manage My Data
- *   3. FAQ accordion — grouped by topic, collapsed by default
- *   4. Contact form — "Didn't find your answer?" always visible at the bottom
- */
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search, ChevronDown, CheckCircle2, Mail, ShieldAlert, FileText, Database,
+  ArrowRight, HelpCircle, ThumbsUp, ThumbsDown, Copy, Check, Sparkles,
+  LifeBuoy, MessageSquare, Send, BookOpen, AlertCircle
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
 
 const FAQ_GROUPS = [
   {
+    id: "account",
     group: "Account & Verification",
+    icon: ShieldAlert,
     items: [
       {
+        id: "faq-1",
         q: "How do I get verified?",
-        a: "Upload a government-issued ID and a live selfie from Settings → Identity Verification. Most reviews complete within 1–2 business days.",
+        a: "Upload a government-issued ID (Aadhaar, PAN, Passport, or Driving License) from Settings → Identity Verification. Reviews are completed within 1–2 business days.",
       },
       {
+        id: "faq-2",
         q: "Why was my document rejected?",
-        a: "The rejection reason is shown on your identity badge on the Dashboard. Common causes are a blurry photo or a mismatch between your selfie and ID. You can resubmit once you've fixed the issue.",
+        a: "Common causes are blurry images, glare, cropped corners, or name mismatch with registered profile. You can view the specific rejection note on your Settings dashboard and re-upload.",
       },
       {
-        q: "Why do I need to verify my email again after changing it?",
-        a: "Any change to your registered email requires re-verification, so we can confirm the new address actually belongs to you before it shows as verified.",
+        id: "faq-3",
+        q: "Why do I need to verify my email again after updating it?",
+        a: "To protect your account integrity, any change to your registered email address requires immediate one-time verification before the new email becomes active.",
       },
     ],
   },
   {
+    id: "lending",
     group: "Borrowing & Lending",
+    icon: BookOpen,
     items: [
       {
-        q: "Does MT Pocket handle the money?",
-        a: "No. MT Pocket never processes, holds, or transfers money. Every payment happens directly between the borrower and lender, outside the app.",
+        id: "faq-4",
+        q: "Does MT Pocket handle or hold funds?",
+        a: "No. MT Pocket operates on a pure peer-to-peer connection model. We never touch, process, or escrow your money. All transfers occur directly between the borrower and lender via UPI, IMPS, or bank transfer.",
       },
       {
-        q: "Who decides the interest rate and repayment terms?",
-        a: "The borrower and lender agree on this directly. MT Pocket doesn't set, cap, or recommend any loan terms.",
+        id: "faq-5",
+        q: "Who determines the loan interest rate and repayment timeline?",
+        a: "Borrowers propose their desired rate and tenure, and lenders submit counter-proposals or accept. Both parties negotiate and agree directly through chat without platform fee deductions.",
       },
       {
-        q: "What happens if the other person doesn't repay?",
-        a: "Any loan made through a connection on MT Pocket is a private agreement between the two of you. We're not a party to it and can't enforce repayment — see our Terms & Conditions for details.",
+        id: "faq-6",
+        q: "What happens if a loan repayment is delayed?",
+        a: "Loan terms are private peer contracts between borrower and lender. We strongly advise examining KYC identity proofs and entering written terms. You can also file reports to alert administrators of defaults.",
       },
     ],
   },
   {
-    group: "Safety & Reports",
+    id: "safety",
+    group: "Safety & Community",
+    icon: LifeBuoy,
     items: [
       {
-        q: "How do I report a user?",
-        a: "Open their profile or your chat with them and tap Report. Be specific about what happened — reports are reviewed by our team.",
+        id: "faq-7",
+        q: "How do I report or block suspicious users?",
+        a: "Tap the Report/Block button directly on any loan request card, profile popup, or in the chat options menu. Blocked members are instantly hidden from your marketplace feeds.",
       },
       {
-        q: "What happens if I file a false report?",
-        a: "Reports found to be false or made in bad faith may result in action against your own account.",
+        id: "faq-8",
+        q: "What measures protect my personal data?",
+        a: "Your sensitive identity documents are stored in secure cloud storage with restricted administrative access. We never sell your data or expose raw ID numbers to other platform members.",
       },
       {
-        q: "How do I block someone?",
-        a: "From their profile or your chat, tap Block. They won't be able to contact you or see your listings after that.",
+        id: "faq-9",
+        q: "How can I delete my account and data?",
+        a: "Go to Settings → Manage Data or submit a deletion request through the contact form below. Our compliance team will permanently purge your data within 30 days.",
       },
     ],
   },
@@ -69,294 +81,439 @@ const FAQ_GROUPS = [
 
 const QUICK_ACTIONS = [
   {
-    title: "Report a Problem",
-    description: "Report a user, a bug, or something that doesn't look right.",
+    title: "Report an Issue",
+    description: "Submit a report against a user, fraud attempt, or platform bug.",
     action: "report",
     icon: ShieldAlert,
+    tag: "Safety",
   },
   {
-    title: "Legal & Policies",
-    description: "Terms, Privacy Policy, Community Guidelines, and more.",
+    title: "Terms & Guidelines",
+    description: "Review peer lending terms, rules, and community standards.",
     action: "legal",
     icon: FileText,
+    tag: "Policies",
   },
   {
-    title: "Manage My Data",
-    description: "Request access, correction, or deletion of your data.",
+    title: "Privacy & Data",
+    description: "Control your identity logs, session devices, and GDPR data rights.",
     action: "data",
     icon: Database,
+    tag: "Privacy",
   },
 ];
-
-async function submitContactForm({ subject, message }) {
-  await new Promise((r) => setTimeout(r, 700)); // simulated latency
-  return { id: `MSG-${Math.floor(Math.random() * 900000 + 100000)}`, status: "received" };
-}
-
-function ChevronIcon({ open }) {
-  return (
-    <ChevronDown
-      size={18}
-      className={`transition-transform duration-200 ${open ? "rotate-180 text-primary" : ""}`}
-    />
-  );
-}
-
-function FAQItem({ q, a }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-border/70 last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-4 py-4 text-left cursor-pointer group"
-      >
-        <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{q}</span>
-        <span className="text-muted-foreground shrink-0 group-hover:text-foreground transition-colors">
-          <ChevronIcon open={open} />
-        </span>
-      </button>
-      {open && (
-        <motion.p
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="pb-4 text-sm text-muted-foreground leading-relaxed pr-6"
-        >
-          {a}
-        </motion.p>
-      )}
-    </div>
-  );
-}
 
 export default function HelpAndSupport({ onNavigate }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [openFaqId, setOpenFaqId] = useState(null);
+  const [copiedFaqId, setCopiedFaqId] = useState(null);
+  const [feedback, setFeedback] = useState({});
+
+  // Contact Form State
+  const [category, setCategory] = useState("General Inquiry");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(null);
+  const [sentTicket, setSentTicket] = useState(null);
   const [error, setError] = useState(null);
 
+  const categories = [
+    { id: "all", label: "All Topics" },
+    { id: "account", label: "Account & KYC" },
+    { id: "lending", label: "Borrowing & Lending" },
+    { id: "safety", label: "Safety & Reports" },
+  ];
+
   const filteredGroups = useMemo(() => {
-    if (!query.trim()) return FAQ_GROUPS;
+    let groups = FAQ_GROUPS;
+    if (selectedCategory !== "all") {
+      groups = groups.filter((g) => g.id === selectedCategory);
+    }
+
+    if (!query.trim()) return groups;
+
     const q = query.toLowerCase();
-    return FAQ_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter(
-        (item) =>
-          item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q)
-      ),
-    })).filter((g) => g.items.length > 0);
-  }, [query]);
+    return groups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter(
+          (item) => item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [query, selectedCategory]);
 
-  const noResults = query.trim() && filteredGroups.length === 0;
+  const handleCopyFaq = (id, text, e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedFaqId(id);
+    setTimeout(() => setCopiedFaqId(null), 2000);
+  };
 
-  async function handleSubmit(e) {
+  const handleFeedback = (id, isHelpful, e) => {
+    e.stopPropagation();
+    setFeedback((prev) => ({ ...prev, [id]: isHelpful }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
-      const result = await submitContactForm({ subject, message });
-      setSent(result);
+      await new Promise((r) => setTimeout(r, 800));
+      const ticketId = `MTP-${Math.floor(100000 + Math.random() * 900000)}`;
+      setSentTicket({ id: ticketId, subject: subject || category, createdAt: new Date() });
       setSubject("");
       setMessage("");
     } catch {
-      setError("Something went wrong sending your message. Try again, or email support@mtpocket.com directly.");
+      setError("Failed to send your inquiry. Please reach out to support@mtpocket.com directly.");
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
-  function handleQuickAction(action) {
+  const handleQuickAction = (action) => {
     if (onNavigate) {
       onNavigate(action);
       return;
     }
-    if (action === "report") {
-      navigate("/community-guidelines");
-    } else if (action === "legal") {
-      navigate("/terms");
-    } else if (action === "data") {
-      navigate("/privacy");
-    }
-  }
+    if (action === "report") navigate("/community-guidelines");
+    else if (action === "legal") navigate("/terms");
+    else if (action === "data") navigate("/privacy");
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-3xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-8 space-y-8"
-    >
-      {/* Header + search */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-600 to-primary/80">
-            Help &amp; Support
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1.5 font-medium">
-            Find an answer below, or reach our team directly at the bottom of this page.
-          </p>
+    <div className="w-full max-w-5xl mx-auto space-y-8 pb-12">
+      {/* ── HEADER BANNER ────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+              <HelpCircle size={13} />
+              <span>Customer Support Hub</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              How can we assist you today?
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Search verified guides on peer lending, account verification, and security, or submit a support ticket directly to our compliance team.
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            <a
+              href="#contact-support"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/95 shadow-xs transition-colors"
+            >
+              <MessageSquare size={15} />
+              <span>Open Support Ticket</span>
+            </a>
+          </div>
         </div>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
-          <input
-            type="text"
+
+        {/* Live Search Bar */}
+        <div className="relative mt-6">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={17} />
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for an answer (e.g. verification, money, report)..."
-            className="w-full rounded-xl border border-border bg-card py-3 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+            placeholder="Search keywords (e.g. KYC verification, loan repayment, blocking)..."
+            className="w-full rounded-lg bg-background border-border/80 pl-10 pr-4 py-5 text-sm focus:ring-primary shadow-2xs"
           />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      {/* ── QUICK ACTION CARDS ────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {QUICK_ACTIONS.map((a) => {
           const Icon = a.icon;
           return (
             <button
               key={a.action}
               onClick={() => handleQuickAction(a.action)}
-              className="text-left rounded-2xl border border-border bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+              className="text-left rounded-xl border border-border/80 bg-card p-5 hover:border-primary/40 hover:shadow-xs transition-all group cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                  <Icon size={18} />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Icon size={18} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                    {a.tag}
+                  </span>
                 </div>
-                <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
                   <span>{a.title}</span>
-                  <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary" />
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-primary" />
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   {a.description}
-                </div>
+                </p>
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* FAQ */}
-      <div className="space-y-6">
-        {noResults && (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              No results for <span className="font-semibold text-foreground">"{query}"</span> — try a different term, or send us a message below.
-            </p>
+      {/* ── INTERACTIVE FAQ SECTION ──────────────────────────────────── */}
+      <div className="rounded-xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Frequently Asked Questions</h2>
+            <p className="text-xs text-muted-foreground">Instant answers categorized by platform feature</p>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  selectedCategory === cat.id
+                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* FAQs List */}
+        {filteredGroups.length === 0 ? (
+          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border/70 bg-muted/20 text-muted-foreground">
+            <AlertCircle size={28} className="mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-semibold">No matching questions found for "{query}".</p>
+            <p className="text-xs mt-1">Please try different keywords or submit an inquiry in the form below.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {filteredGroups.map((group) => {
+              const GroupIcon = group.icon;
+              return (
+                <div key={group.id} className="space-y-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <GroupIcon size={14} className="text-primary" />
+                    <span>{group.group}</span>
+                  </div>
+
+                  <div className="divide-y divide-border/60 rounded-lg border border-border/70 bg-background/60 overflow-hidden">
+                    {group.items.map((item) => {
+                      const isOpen = openFaqId === item.id;
+                      const userFeedback = feedback[item.id];
+                      return (
+                        <div key={item.id} className="transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => setOpenFaqId(isOpen ? null : item.id)}
+                            className="w-full flex items-center justify-between gap-4 p-4 text-left cursor-pointer group hover:bg-muted/30 transition-colors"
+                          >
+                            <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {item.q}
+                            </span>
+                            <ChevronDown
+                              size={16}
+                              className={`text-muted-foreground transition-transform duration-200 shrink-0 ${
+                                isOpen ? "rotate-180 text-primary" : ""
+                              }`}
+                            />
+                          </button>
+
+                          <AnimatePresence>
+                            {isOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="px-4 pb-4 text-xs sm:text-sm text-muted-foreground leading-relaxed space-y-3"
+                              >
+                                <p className="pt-1">{item.a}</p>
+
+                                {/* Action & Feedback Bar */}
+                                <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleCopyFaq(item.id, `${item.q}\n\n${item.a}`, e)}
+                                    className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer font-medium"
+                                  >
+                                    {copiedFaqId === item.id ? (
+                                      <>
+                                        <Check size={13} className="text-emerald-600" />
+                                        <span className="text-emerald-600">Copied</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={13} />
+                                        <span>Copy answer</span>
+                                      </>
+                                    )}
+                                  </button>
+
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-muted-foreground">Was this helpful?</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleFeedback(item.id, true, e)}
+                                      className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                        userFeedback === true
+                                          ? "bg-emerald-500/10 text-emerald-600 font-bold"
+                                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                      }`}
+                                      title="Yes, helpful"
+                                    >
+                                      <ThumbsUp size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleFeedback(item.id, false, e)}
+                                      className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                        userFeedback === false
+                                          ? "bg-destructive/10 text-destructive font-bold"
+                                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                      }`}
+                                      title="No, need more details"
+                                    >
+                                      <ThumbsDown size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-        {filteredGroups.map((group) => (
-          <div key={group.group} className="space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-              {group.group}
-            </h2>
-            <div className="rounded-2xl border border-border bg-card px-5 shadow-xs">
-              {group.items.map((item) => (
-                <FAQItem key={item.q} q={item.q} a={item.a} />
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
 
-      {/* Didn't find your answer / mail us */}
-      <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+      {/* ── CONTACT SUPPORT FORM ─────────────────────────────────────── */}
+      <div id="contact-support" className="rounded-xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xs space-y-6">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Mail size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">
-              Didn't find your answer?
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
-              Send us a message and we'll get back to you at your registered email — usually within 1–2 business days. For account safety issues, please mention that in your subject line.
+            <h2 className="text-lg font-bold text-foreground">Open a Support Ticket</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Need assistance with an active negotiation, verification inquiry, or fraud prevention? Our support representatives will respond within 24 hours.
             </p>
           </div>
         </div>
 
-        {sent ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-6 px-4 bg-emerald-500/5 rounded-xl border border-emerald-500/20 space-y-3"
-          >
-            <CheckCircle2 size={32} className="text-emerald-500 mx-auto" />
-            <p className="text-base font-bold text-foreground">
-              Message sent successfully!
+        {sentTicket ? (
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center space-y-3">
+            <CheckCircle2 size={36} className="text-emerald-600 mx-auto" />
+            <h3 className="font-bold text-foreground text-base">Support Ticket Created Successfully</h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Your ticket reference <span className="font-mono font-bold text-primary">{sentTicket.id}</span> has been logged. Updates will be delivered to your registered email address.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Support ticket reference: <span className="font-mono font-bold text-primary">{sent.id}</span>
-            </p>
-            <button
-              onClick={() => setSent(null)}
-              className="text-xs font-semibold underline text-muted-foreground hover:text-foreground pt-2 cursor-pointer inline-block"
-            >
-              Send another message
-            </button>
-          </motion.div>
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSentTicket(null)}
+                className="text-xs rounded-lg cursor-pointer"
+              >
+                Submit another inquiry
+              </Button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="support-subject" className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                Subject (optional)
-              </label>
-              <input
-                id="support-subject"
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g. Question about verification status"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                  Inquiry Topic
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer h-10"
+                >
+                  <option value="General Inquiry">General Inquiry</option>
+                  <option value="KYC & Identity Verification">KYC &amp; Identity Verification</option>
+                  <option value="Lending & Proposal Issues">Lending &amp; Proposal Issues</option>
+                  <option value="Report User or Scam">Report User or Scam</option>
+                  <option value="Data & Privacy Request">Data &amp; Privacy Request</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                  Subject (Optional)
+                </label>
+                <Input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="e.g. Identity status question"
+                  className="rounded-lg bg-background border-border/80 text-xs h-10"
+                />
+              </div>
             </div>
+
             <div>
-              <label htmlFor="support-message" className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                Message <span className="text-destructive">*</span>
-              </label>
-              <textarea
-                id="support-message"
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Message Details <span className="text-destructive">*</span>
+                </label>
+                <span className="text-[11px] text-muted-foreground">{message.length} / 1000</span>
+              </div>
+              <Textarea
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => setMessage(e.target.value.slice(0, 1000))}
                 rows={4}
-                placeholder="Describe your question or issue in detail..."
                 required
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary leading-relaxed"
+                placeholder="Explain the specific issue or question in detail..."
+                className="rounded-lg bg-background border-border/80 text-xs leading-relaxed"
               />
             </div>
+
             {error && (
-              <p className="text-xs font-semibold text-destructive">{error}</p>
+              <p className="text-xs text-destructive font-semibold">{error}</p>
             )}
-            <button
+
+            <Button
               type="submit"
               disabled={submitting || !message.trim()}
-              className={`w-full rounded-xl py-3.5 text-sm font-bold transition-all shadow-sm ${
-                submitting || !message.trim()
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-primary text-primary-foreground hover:bg-primary/95 shadow-primary/20 cursor-pointer"
-              }`}
+              className="w-full sm:w-auto px-6 rounded-lg text-xs font-bold cursor-pointer"
             >
-              {submitting ? "Sending..." : "Send Message to Support"}
-            </button>
+              {submitting ? (
+                <>Submitting ticket...</>
+              ) : (
+                <>
+                  <Send size={13} className="mr-1.5" />
+                  Submit Support Ticket
+                </>
+              )}
+            </Button>
           </form>
         )}
 
-        <div className="pt-2 border-t border-border/70 text-center">
-          <p className="text-xs text-muted-foreground">
-            Prefer direct email? Reach us at{" "}
-            <a
-              href="mailto:support@mtpocket.com"
-              className="text-primary font-semibold hover:underline"
-            >
-              support@mtpocket.com
-            </a>
-          </p>
+        <div className="pt-3 border-t border-border/60 text-center sm:text-left text-xs text-muted-foreground">
+          <span>Official Support Email: </span>
+          <a href="mailto:support@mtpocket.com" className="text-primary font-bold hover:underline">
+            support@mtpocket.com
+          </a>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

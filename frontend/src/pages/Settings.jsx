@@ -20,16 +20,21 @@ import {
   FileText,
   XCircle,
   HelpCircle,
+  CreditCard,
+  Globe,
+  Car,
+  Check,
+  FileCheck,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 import InfoBanner from '../components/ui/InfoBanner';
 import { Link } from 'react-router-dom';
 
 const DOCUMENT_OPTIONS = [
-  { value: 'aadhaar',         label: 'Aadhaar Card' },
-  { value: 'pan',             label: 'PAN Card' },
-  { value: 'passport',        label: 'Passport' },
-  { value: 'driving_license', label: 'Driving Licence' },
+  { value: 'aadhaar',         label: 'Aadhaar Card',    icon: Fingerprint },
+  { value: 'pan',             label: 'PAN Card',        icon: CreditCard },
+  { value: 'passport',        label: 'Passport',        icon: Globe },
+  { value: 'driving_license', label: 'Driving Licence', icon: Car },
 ];
 
 async function reverseGeocode(lat, lng) {
@@ -353,24 +358,30 @@ export default function Settings() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+              className="w-full max-w-lg rounded-lg border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Fingerprint size={20} className="text-primary" />
-                  <h3 className="font-extrabold text-foreground text-lg">Upload Identity Document</h3>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                    <Fingerprint size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground text-base leading-none">Identity Verification</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Upload a valid government-issued photo ID</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setKycModalOpen(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
-                  <X size={18} />
+                  <X size={17} />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-5">
                 <IdentityUploadForm
                   accessToken={accessToken}
                   onSubmitted={onKycSubmitted}
+                  onCancel={() => setKycModalOpen(false)}
                 />
               </div>
             </motion.div>
@@ -942,17 +953,35 @@ function BadgeRowLink({ icon: Icon, label, verified, badgeLabel, badgeColor, onC
   );
 }
 
-// Identity upload form within modal
-function IdentityUploadForm({ accessToken, onSubmitted }) {
+// Identity upload form within modal (Square shadcn UI styled)
+function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
   const [documentType, setDocumentType] = useState(DOCUMENT_OPTIONS[0].value);
   const [file,         setFile]         = useState(null);
+  const [previewUrl,   setPreviewUrl]   = useState(null);
   const [submitting,   setSubmitting]   = useState(false);
   const [error,        setError]        = useState('');
   const [dragOver,     setDragOver]     = useState(false);
 
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (newFile) => {
+    if (!newFile) return;
+    if (newFile.size > 8 * 1024 * 1024) {
+      setError('File exceeds 8MB limit. Please compress or select another file.');
+      return;
+    }
+    setFile(newFile);
+    setError('');
+    if (newFile.type.startsWith('image/')) {
+      setPreviewUrl(URL.createObjectURL(newFile));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!file) { setError('Please select a document file to upload'); return; }
+    if (!file) { setError('Please select or drop a document file to upload'); return; }
     setSubmitting(true);
     setError('');
     try {
@@ -969,69 +998,144 @@ function IdentityUploadForm({ accessToken, onSubmitted }) {
     e.preventDefault();
     setDragOver(false);
     const dropped = e.dataTransfer.files?.[0];
-    if (dropped) setFile(dropped);
+    if (dropped) handleFileChange(dropped);
+  };
+
+  const removeFile = (e) => {
+    e.stopPropagation();
+    setFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-5">
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      {/* 1. Document Type Grid (Interactive Square Cards) */}
       <div>
-        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-          Select Document Type
+        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+          1. Select ID Document Type
         </label>
-        <select
-          value={documentType}
-          onChange={(e) => setDocumentType(e.target.value)}
-          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-        >
-          {DOCUMENT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {DOCUMENT_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            const isSelected = documentType === opt.value;
+            return (
+              <button
+                type="button"
+                key={opt.value}
+                onClick={() => setDocumentType(opt.value)}
+                className={`relative flex flex-col items-center justify-center p-3 rounded-lg border text-center transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary shadow-xs'
+                    : 'border-border/80 bg-background/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon size={18} className={isSelected ? 'text-primary' : 'text-muted-foreground'} />
+                <span className="text-xs font-bold mt-1.5 leading-tight">{opt.label}</span>
+                {isSelected && (
+                  <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[9px]">
+                    <Check size={9} strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Drag and drop file zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        className={`relative rounded-xl border-2 border-dashed transition-all p-8 text-center cursor-pointer ${
-          dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/20'
-        }`}
-        onClick={() => document.getElementById('kyc-file-input-modal').click()}
-      >
-        <input
-          id="kyc-file-input-modal"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="hidden"
-        />
-        <UploadCloud size={36} className={`mx-auto mb-3 transition-colors ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-        {file ? (
-          <p className="text-base font-bold text-foreground truncate max-w-xs mx-auto">{file.name}</p>
-        ) : (
-          <>
-            <p className="text-base font-bold text-foreground">Drag file here or click to browse</p>
-            <p className="text-xs text-muted-foreground mt-1.5">Supports PDF, JPG, PNG or WEBP (Max 8MB)</p>
-          </>
-        )}
+      {/* 2. Drag & Drop File Zone (Square with Preview) */}
+      <div>
+        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+          2. Upload ID File
+        </label>
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`relative rounded-lg border-2 border-dashed transition-all p-6 text-center cursor-pointer ${
+            dragOver
+              ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+              : 'border-border/80 hover:border-primary/50 bg-background/40 hover:bg-muted/20'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+            className="hidden"
+          />
+
+          {file ? (
+            <div className="flex items-center gap-3 p-2 bg-card rounded-md border border-border/80 text-left">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-12 h-12 object-cover rounded-md border border-border" />
+              ) : (
+                <div className="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <FileText size={22} />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-foreground truncate">{file.name}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{(file.size / (1024 * 1024)).toFixed(2)} MB • Ready</p>
+              </div>
+              <button
+                type="button"
+                onClick={removeFile}
+                className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                title="Remove file"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="py-2">
+              <UploadCloud size={32} className={`mx-auto mb-2 transition-colors ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+              <p className="text-xs font-bold text-foreground">Click to browse or drag & drop document</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Supports PDF, JPG, PNG or WEBP (Max 8MB)</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Verification Guidelines Box */}
+      <div className="rounded-lg bg-muted/30 border border-border/60 p-3 text-[11px] text-muted-foreground space-y-1">
+        <p className="font-bold text-foreground">Document Requirements:</p>
+        <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 list-disc list-inside">
+          <li>Must be officially issued</li>
+          <li>All 4 corners visible</li>
+          <li>No glare or blur</li>
+          <li>Full name must match</li>
+        </ul>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-xl px-3 py-2">
-          <AlertCircle size={16} className="shrink-0" />
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+          <AlertCircle size={14} className="shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting || !file}
-        className="inline-flex items-center justify-center gap-2 text-base font-bold bg-primary text-primary-foreground px-4 py-3.5 rounded-xl hover:bg-primary/95 transition-all disabled:opacity-50 cursor-pointer"
-      >
-        {submitting ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
-        {submitting ? 'Uploading ID…' : 'Submit ID for Verification'}
-      </button>
+      {/* Shadcn Square Action Buttons */}
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="px-4 py-2 text-xs font-semibold rounded-md border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting || !file}
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+        >
+          {submitting ? <Loader2 size={13} className="animate-spin" /> : <FileCheck size={13} />}
+          <span>{submitting ? 'Submitting...' : 'Submit Verification ID'}</span>
+        </button>
+      </div>
     </form>
   );
 }

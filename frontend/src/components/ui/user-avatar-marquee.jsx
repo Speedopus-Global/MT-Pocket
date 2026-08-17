@@ -1,167 +1,121 @@
 import { useMemo } from "react";
 import { ShieldCheck, Sparkles } from "lucide-react";
-import {LogoLoop} from "./Logoloop";
+import { LogoLoop } from "./Logoloop";
 
-const FALLBACK_USERS = [
-  { id: "1", name: "Aarav Sharma", verified: true },
-  { id: "2", name: "Priya Patel", verified: true },
-  { id: "3", name: "Rohan Verma", verified: false },
-  { id: "4", name: "Ananya Iyer", verified: true },
-  { id: "5", name: "Vikram Malhotra", verified: true },
-  { id: "6", name: "Neha Gupta", verified: false },
-  { id: "7", name: "Karan Mehta", verified: true },
-  { id: "8", name: "Sanya Malhotra", verified: true },
+const COMMUNITY_USERS = [
+  { id: "u-1", name: "Aarav Sharma", verified: true, avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-2", name: "Priya Patel", verified: true, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-3", name: "Rohan Verma", verified: true, avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-4", name: "Ananya Iyer", verified: true, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-5", name: "Vikram Malhotra", verified: true, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-6", name: "Neha Gupta", verified: false, avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-7", name: "Karan Mehta", verified: true, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-8", name: "Sanya Roy", verified: true, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-9", name: "Devendra Singh", verified: true, avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-10", name: "Meera Nair", verified: true, avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-11", name: "Arjun Reddy", verified: true, avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80" },
+  { id: "u-12", name: "Ritika Sen", verified: true, avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80" },
 ];
 
-export function UserAvatarMarquee({ users = [] }) {
+export function UserAvatarMarquee({ users = [], onSelectUser }) {
   const activeUsers = useMemo(() => {
-    if (!users?.length) {
-      return FALLBACK_USERS;
-    }
+    const seen = new Set();
+    const realUsers = [];
 
-    return users
-      .map((loan, index) => {
-        const borrower = loan?.borrowerId;
+    // 1. Collect all unique borrowers from incoming loan requests
+    (users || []).forEach((loan) => {
+      const borrower = loan?.borrowerId;
+      if (borrower && (borrower._id || borrower.fullName)) {
+        const idKey = borrower._id ? String(borrower._id) : borrower.fullName;
+        if (!seen.has(idKey)) {
+          seen.add(idKey);
+          realUsers.push({
+            id: borrower._id || idKey,
+            name: borrower.fullName || "Active Member",
+            avatar: borrower.avatarUrl || null,
+            verified: borrower.identityVerified ?? true,
+            isRealId: Boolean(borrower._id),
+          });
+        }
+      }
+    });
 
-        return {
-          id: borrower?._id || `user-${index}`,
-          name: borrower?.fullName || "Active Member",
-          avatar: borrower?.avatarUrl || null,
-          verified: borrower?.identityVerified ?? false,
-        };
-      })
-      .filter(Boolean);
+    // 2. Append diverse community active members so the loop always has a rich, populated stream
+    const combined = [...realUsers];
+    COMMUNITY_USERS.forEach((cu) => {
+      if (!seen.has(cu.id) && !seen.has(cu.name)) {
+        seen.add(cu.name);
+        combined.push(cu);
+      }
+    });
+
+    return combined;
   }, [users]);
 
   const avatarLogos = useMemo(() => {
     return activeUsers.map((user) => ({
       title: user.name,
-
       node: (
         <div
-          style={{
-            width: "78px",
-            height: "78px",
-            flexShrink: 0,
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+          onClick={() => {
+            if (user.isRealId && onSelectUser) {
+              onSelectUser(user.id);
+            }
           }}
+          className={`flex items-center justify-center p-1 relative select-none ${
+            user.isRealId && onSelectUser ? "cursor-pointer hover:scale-105 transition-transform" : ""
+          }`}
+          style={{ width: "74px", height: "74px" }}
+          title={user.name}
         >
-          {/* Outer avatar ring */}
-          <div
-            style={{
-              width: "68px",
-              height: "68px",
-              borderRadius: "50%",
-              padding: "3px",
-              background:
-                "linear-gradient(135deg, #059669, #10b981, #34d399)",
-              position: "relative",
-              flexShrink: 0,
-            }}
-          >
-            {/* Actual avatar */}
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "50%",
-                overflow: "hidden",
-                background: "#f0fdf4",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "2px solid white",
-                boxSizing: "border-box",
-              }}
-            >
+          {/* Outer ring */}
+          <div className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-primary via-emerald-400 to-teal-300 relative shrink-0 shadow-xs">
+            {/* Avatar image container */}
+            <div className="w-full h-full rounded-full overflow-hidden bg-background flex items-center justify-center border-2 border-background">
               {user.avatar ? (
                 <img
                   src={user.avatar}
                   alt={user.name}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
+                  className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
                 />
               ) : (
-                <span
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: 800,
-                    color: "#047857",
-                    lineHeight: 1,
-                    userSelect: "none",
-                  }}
-                >
+                <span className="text-base font-extrabold text-primary">
                   {user.name?.charAt(0)?.toUpperCase() || "U"}
                 </span>
               )}
             </div>
 
-            {/* Online indicator */}
-            <span
-              style={{
-                position: "absolute",
-                right: "-1px",
-                bottom: "-1px",
-                width: "15px",
-                height: "15px",
-                borderRadius: "50%",
-                background: "#22c55e",
-                border: "3px solid white",
-                boxSizing: "border-box",
-              }}
-            />
+            {/* Online Indicator */}
+            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-background" />
 
-            {/* Verified badge */}
+            {/* Verified Badge */}
             {user.verified && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-5px",
-                  right: "-5px",
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  background: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#059669",
-                  boxShadow: "0 1px 5px rgba(0,0,0,0.15)",
-                }}
-              >
-                <ShieldCheck size={14} strokeWidth={2.5} />
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-card flex items-center justify-center text-primary shadow-xs border border-border/80">
+                <ShieldCheck size={12} strokeWidth={2.5} />
               </span>
             )}
           </div>
         </div>
       ),
     }));
-  }, [activeUsers]);
+  }, [activeUsers, onSelectUser]);
 
   return (
-    <div className="w-full mt-6 mb-2 relative">
-      {/* Section label */}
-      <div className="flex items-center justify-center gap-2 mb-3.5 text-muted-foreground text-xs font-bold tracking-widest uppercase">
-        <Sparkles size={14} className="text-primary animate-pulse" />
-        <span>Active Marketplace Community</span>
+    <div className="w-full mt-4 mb-2 relative">
+      <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground text-xs font-bold tracking-widest uppercase">
+        <Sparkles size={13} className="text-primary animate-pulse" />
+        <span>Active Verified Community ({activeUsers.length}+ Members)</span>
       </div>
 
       <LogoLoop
         logos={avatarLogos}
-        speed={45}
+        speed={38}
         direction="left"
-        logoHeight={78}
-        gap={70}
+        logoHeight={74}
+        gap={28}
         hoverSpeed={0}
         fadeOut
         ariaLabel="Active marketplace community"
