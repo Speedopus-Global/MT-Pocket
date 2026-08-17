@@ -26,6 +26,7 @@ import {
   Undo
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
+import InfoBanner from '../components/ui/InfoBanner';
 
 const CATEGORY_ICONS = {
   medical: Hospital,
@@ -717,6 +718,11 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1">
+      {/* 🔵 Step 5 Disclaimer — one-time borrower alert */}
+      <InfoBanner variant="info" dismissible={true} storageKey="mt_borrower_disclaimer_seen">
+        MT Pocket never handles your money — all payment happens directly between you and the lender.
+      </InfoBanner>
+
       {/* Amount */}
       <div>
         <label className={labelCls}>Amount (₹) *</label>

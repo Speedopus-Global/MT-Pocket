@@ -7,9 +7,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Loader2, ArrowLeft, CheckCircle2, ShieldCheck, KeyRound, User as UserIcon } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
+
+const CONSENT_SUMMARY = [
+  'MT Pocket never handles, holds, or transmits any money between users.',
+  'MT Pocket never sets loan terms — all terms are privately negotiated between borrower and lender.',
+  'Identity verification is a trust measure, not a guarantee of any user\'s honesty or ability to repay.',
+  'You are solely responsible for due diligence before entering any agreement.',
+];
 
 const STEPS = ['phone', 'otp', 'password', 'name', 'role'];
 
@@ -45,6 +53,7 @@ export default function Register() {
   const [fullName, setFullName]     = useState('');
   const [isSubmitting, setSubmit]   = useState(false);
   const [error, setError]           = useState('');
+  const [consentChecked, setConsentChecked] = useState(false);
 
   // ── Step 1: request OTP ──────────────────────────────────────────────
   async function handleRequestOtp(e) {
@@ -99,11 +108,13 @@ export default function Register() {
   }
 
   // ── Step 5: pick role → complete registration ────────────────────────
+  // Legal Consent acceptance logged in backend (timestamp, IP, T&C version hash, Privacy Policy version hash)
   async function handleSetRole(role) {
+    if (!consentChecked) return;
     setError('');
     setSubmit(true);
     try {
-      const result = await api.registerComplete(phone, password, fullName, role);
+      const result = await api.registerComplete(phone, password, fullName, role, 'tc_v2026_08_12', 'pp_v2026_08_12');
       completeLogin(result);
       navigate('/dashboard');
     } catch (err) {
@@ -265,12 +276,42 @@ export default function Register() {
           {/* Choose Role */}
           {step === 'role' && (
             <div className="flex flex-col gap-3">
+              {/* ⚠️ Legal Consent Checkpoint — LEGALLY BINDING */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Before you proceed</p>
+                <div className="max-h-32 overflow-y-auto space-y-2 pr-1">
+                  {CONSENT_SUMMARY.map((text, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+                <label className="flex items-start gap-2.5 cursor-pointer group pt-1">
+                  <Checkbox
+                    checked={consentChecked}
+                    onCheckedChange={(v) => setConsentChecked(!!v)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors select-none">
+                    I agree to the{' '}
+                    <Link to="/terms" className="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank">
+                      Terms & Conditions
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy" className="text-primary underline underline-offset-2 hover:text-primary/80" target="_blank">
+                      Privacy Policy
+                    </Link>.
+                  </span>
+                </label>
+              </div>
+
               {ROLE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !consentChecked}
                   onClick={() => handleSetRole(opt.value)}
-                  className="text-left rounded-xl border border-border bg-background px-4 py-3 hover:border-primary hover:bg-primary/5 transition-all duration-200 disabled:opacity-50"
+                  className="text-left rounded-xl border border-border bg-background px-4 py-3 hover:border-primary hover:bg-primary/5 transition-all duration-200 disabled:opacity-50 cursor-pointer"
                 >
                   <div className="flex items-center gap-2 font-medium mb-0.5 text-foreground">
                     <span>{opt.emoji}</span>
@@ -289,8 +330,8 @@ export default function Register() {
         {step === 'phone' && (
           <p className="text-xs text-center mt-4 text-muted-foreground">
             By continuing, you agree to MT Pocket's{' '}
-            <a href="#" className="text-primary hover:underline">Terms of Service</a> and{' '}
-            <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
+            <Link to="/terms" className="text-primary hover:underline">Terms & Conditions</Link> and{' '}
+            <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
           </p>
         )}
 

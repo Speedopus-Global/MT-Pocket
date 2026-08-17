@@ -256,6 +256,34 @@ export class User {
     default: 0,
   })
   reportCount: number;
+
+  // ─────────────────────────────────────────────────────────────
+  // Legal Consent Checkpoint Record
+  // ─────────────────────────────────────────────────────────────
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  termsAcceptedAt: Date | null;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  termsAcceptedIp: string | null;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  termsVersionHash: string | null;
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  privacyVersionHash: string | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

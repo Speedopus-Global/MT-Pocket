@@ -47,7 +47,8 @@ export const api = {
   // ── Auth ─────────────────────────────────────────────────────────────────
   registerRequestOtp: (phone) => request('/auth/register/request-otp', { method: 'POST', body: { phone } }),
   registerVerifyOtp: (phone, otp) => request('/auth/register/verify-otp', { method: 'POST', body: { phone, otp } }),
-  registerComplete: (phone, password, fullName, role) => request('/auth/register/complete', { method: 'POST', body: { phone, password, fullName, role } }),
+  registerComplete: (phone, password, fullName, role, termsVersionHash = 'tc_v2026_08_12', privacyVersionHash = 'pp_v2026_08_12') =>
+    request('/auth/register/complete', { method: 'POST', body: { phone, password, fullName, role, termsVersionHash, privacyVersionHash } }),
   loginPassword: (identifier, password) => request('/auth/login/password', { method: 'POST', body: { identifier, password } }),
   loginOtpRequest: (identifier) => request('/auth/login/otp/request', { method: 'POST', body: { identifier } }),
   loginOtpVerify: (identifier, otp) => request('/auth/login/otp/verify', { method: 'POST', body: { identifier, otp } }),

@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Loader2, ArrowLeft, KeyRound, Lock, Smartphone } from 'lucide-react';
+import { ShieldCheck, Loader2, ArrowLeft, KeyRound, Lock, Smartphone, AlertCircle, Ban } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
@@ -171,9 +172,24 @@ export default function Login() {
 
           {/* Alert messages */}
           {error && (
-            <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-2 text-sm text-destructive">
-              {error}
-            </div>
+            /suspended|banned/i.test(error) ? (
+              <Alert variant="destructive" className="mb-4">
+                <Ban size={16} />
+                <AlertTitle>Account Suspended</AlertTitle>
+                <AlertDescription>
+                  {error}
+                  {' '}Contact support at{' '}
+                  <a href="mailto:support@mtpocket.com" className="underline underline-offset-2 font-semibold">
+                    support@mtpocket.com
+                  </a>{' '}
+                  if you think this is a mistake.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )
           )}
           {success && (
             <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 text-sm text-emerald-600">

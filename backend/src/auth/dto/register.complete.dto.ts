@@ -1,4 +1,4 @@
-import { IsPhoneNumber, IsString, IsNotEmpty, MinLength, IsIn } from 'class-validator';
+import { IsPhoneNumber, IsString, IsNotEmpty, MinLength, IsIn, IsOptional } from 'class-validator';
 
 export class RegisterCompleteDto {
   @IsPhoneNumber(undefined, { message: 'Enter a valid phone number, including country code' })
@@ -14,4 +14,12 @@ export class RegisterCompleteDto {
 
   @IsIn(['borrower', 'lender', 'both'], { message: 'Role must be borrower, lender, or both' })
   role: 'borrower' | 'lender' | 'both';
+
+  @IsOptional()
+  @IsString()
+  termsVersionHash?: string;
+
+  @IsOptional()
+  @IsString()
+  privacyVersionHash?: string;
 }

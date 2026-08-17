@@ -41,12 +41,22 @@ export class AuthController {
   }
 
   @Post('register/complete')
-  async registerComplete(@Body() dto: RegisterCompleteDto, @Res({ passthrough: true }) res: Response) {
+  async registerComplete(
+    @Req() req: Request,
+    @Body() dto: RegisterCompleteDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || req.ip || '127.0.0.1';
     const { accessToken, refreshToken, refreshTokenMaxAgeMs, user } = await this.authService.completeRegistration(
       dto.phone,
       dto.password,
       dto.fullName,
       dto.role,
+      {
+        ip: clientIp,
+        termsVersionHash: dto.termsVersionHash,
+        privacyVersionHash: dto.privacyVersionHash,
+      },
     );
     res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions, maxAge: refreshTokenMaxAgeMs });
     return { accessToken, user };

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import LoginPromptModal from '../components/ui/LoginPromptModal';
+import InfoBanner from '../components/ui/InfoBanner';
 import logo from '@/assets/logo.png';
 import { CanvasText } from '@/components/ui/canvas-text';
 import { UserAvatarMarquee } from '@/components/ui/user-avatar-marquee';
@@ -948,6 +949,11 @@ function OfferForm({ loan, accessToken, onSent }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
+      {/* 🔵 Step 6 Disclaimer — one-time lender alert */}
+      <InfoBanner variant="info" dismissible={true} storageKey="mt_lender_disclaimer_seen">
+        You're responsible for verifying repayment terms directly with the borrower.
+      </InfoBanner>
+
       <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground leading-relaxed">
         Offering capital funding on a <strong className="text-foreground font-bold">₹{Number(loan.amount).toLocaleString('en-IN')}</strong> loan request.
       </div>

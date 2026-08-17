@@ -1,7 +1,8 @@
-import { Link, useLocation} from 'react-router-dom';
-import { useEffect } from 'react';
+import { Link, useLocation, useNavigate} from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ConsentCheckpointModal from '../components/ui/ConsentCheckpointModal';
 import WhyTrust from "./TrustStripe";
 import HowItWorks from './HowitWorks';
 import FeatureSection from './FeatureSection';
@@ -41,11 +42,23 @@ function TrustBadge({ label }) {
 
 export default function Home() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [consentOpen, setConsentOpen] = useState(false);
+
   useEffect(() => {
     if (!location.hash) return;
     const el = document.getElementById(location.hash.slice(1));
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [location.hash]);
+
+  const handleGetStarted = () => {
+    // If already consented (soft gate), skip modal
+    if (localStorage.getItem('mt_landing_consent') === 'true') {
+      navigate('/register');
+      return;
+    }
+    setConsentOpen(true);
+  };
 
 
   return (
@@ -105,13 +118,13 @@ export default function Home() {
             variants={fadeUp}
             className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
           >
-            <Link
-              to="/register"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-sm transition duration-300 hover:scale-[1.02] hover:bg-primary/90"
+            <button
+              onClick={handleGetStarted}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-sm transition duration-300 hover:scale-[1.02] hover:bg-primary/90 cursor-pointer"
             >
               Get Started
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </button>
 
             <Link
                 to="marketplace"
@@ -159,6 +172,17 @@ export default function Home() {
       </div>
 
       <ContactSection />
+
+      {/* ⚠️ Step 0 Consent Modal — soft gate, not legally binding */}
+      <ConsentCheckpointModal
+        open={consentOpen}
+        onAccept={() => {
+          localStorage.setItem('mt_landing_consent', 'true');
+          setConsentOpen(false);
+          navigate('/register');
+        }}
+        onCancel={() => setConsentOpen(false)}
+      />
     
     </>
   );

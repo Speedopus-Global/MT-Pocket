@@ -633,6 +633,7 @@ function UsersTab({ accessToken }) {
   const [suspendReason, setSuspendReason] = useState('');
   const [reportId, setReportId]       = useState(null);
   const [reportReason, setReportReason] = useState('');
+  const [banTarget, setBanTarget]       = useState(null); // { id, name }
 
   const load = async (p = page, s = search) => {
     setLoading(true);
@@ -663,9 +664,8 @@ function UsersTab({ accessToken }) {
   };
 
   const ban = async (id) => {
-    if (!confirm('Permanently ban this user? This cannot be undone.')) return;
     setBusy((b) => ({ ...b, [id]: 'banning' }));
-    try { await api.adminBanUser(id, accessToken); load(); }
+    try { await api.adminBanUser(id, accessToken); setBanTarget(null); load(); }
     finally { setBusy((b) => ({ ...b, [id]: null })); }
   };
 
@@ -767,7 +767,7 @@ function UsersTab({ accessToken }) {
                       )}
                       {u.accountStatus !== 'banned' && (
                         <button
-                          onClick={() => ban(u._id)} disabled={!!busy[u._id]}
+                          onClick={() => setBanTarget({ id: u._id, name: u.fullName || 'User' })} disabled={!!busy[u._id]}
                           className="inline-flex items-center gap-1.5 text-xs font-semibold text-destructive border border-destructive/30 bg-destructive/5 px-3 py-1.5 rounded-xl hover:bg-destructive/10 transition-colors disabled:opacity-50 cursor-pointer"
                         >
                           {busy[u._id] === 'banning' ? <Loader2 size={12} className="animate-spin" /> : <Ban size={12} />}
@@ -864,6 +864,51 @@ function UsersTab({ accessToken }) {
           )}
         </div>
       )}
+
+      {/* Ban confirmation modal */}
+      <AnimatePresence>
+        {banTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3 text-destructive">
+                <div className="w-10 h-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center shrink-0">
+                  <Ban size={20} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-foreground">Ban User Permanently</h3>
+                  <p className="text-xs text-muted-foreground">{banTarget.name}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Are you sure you want to permanently ban this user? Their access will be immediately revoked and this action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBanTarget(null)}
+                  className="px-4 py-2 rounded-xl border border-border text-xs font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => ban(banTarget.id)}
+                  disabled={busy[banTarget.id] === 'banning'}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {busy[banTarget.id] === 'banning' && <Loader2 size={12} className="animate-spin" />}
+                  Confirm Ban
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

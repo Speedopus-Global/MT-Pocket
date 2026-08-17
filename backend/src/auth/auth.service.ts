@@ -78,7 +78,13 @@ export class AuthService {
     return { verified: true, message: 'Phone verified. Complete registration.' };
   }
 
-  async completeRegistration(phone: string, password: string, fullName: string, role: 'borrower' | 'lender' | 'both') {
+  async completeRegistration(
+    phone: string,
+    password: string,
+    fullName: string,
+    role: 'borrower' | 'lender' | 'both',
+    consentData?: { ip?: string; termsVersionHash?: string; privacyVersionHash?: string },
+  ) {
     const user = await this.usersService.findByPhone(phone);
     if (!user) {
       throw new BadRequestException('Verification required first');
@@ -92,6 +98,10 @@ export class AuthService {
       passwordHash,
       fullName,
       role,
+      termsAcceptedAt: new Date(),
+      termsAcceptedIp: consentData?.ip || null,
+      termsVersionHash: consentData?.termsVersionHash || 'tc_v2026_08_12',
+      privacyVersionHash: consentData?.privacyVersionHash || 'pp_v2026_08_12',
     });
 
     if (!updatedUser) {

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import MessageButton from '../components/ui/MessageButton';
 import NotificationDrawer from '../components/notifications/NotificationDrawer';
+import OfferAcceptDialog from '../components/ui/OfferAcceptDialog';
+import InfoBanner from '../components/ui/InfoBanner';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -96,6 +98,10 @@ export default function Dashboard() {
   // modal) needs the actual offer relationship, not just "who is this".
   const [previewContext, setPreviewContext] = useState(null);
 
+  // Offer dialog state — replaces window.confirm()
+  const [pendingAccept, setPendingAccept] = useState(null); // { loanRequestId, offerId }
+  const [pendingReject, setPendingReject] = useState(null); // { loanRequestId, offerId }
+
   const isLender   = user?.role === 'lender'   || user?.role === 'both';
   const isBorrower = user?.role === 'borrower' || user?.role === 'both';
 
@@ -130,7 +136,6 @@ export default function Dashboard() {
   );
 
   const acceptOffer = async (loanRequestId, offerId) => {
-    if (!window.confirm('Are you sure you want to accept this offer? This will transition the request to "In Progress".')) return;
     try {
       const updated = await api.acceptOffer(loanRequestId, offerId, accessToken);
       setMyLoans((prev) => prev.map((l) => (l._id === updated._id ? updated : l)));
@@ -140,7 +145,6 @@ export default function Dashboard() {
   };
 
   const rejectOffer = async (loanRequestId, offerId) => {
-    if (!window.confirm('Are you sure you want to decline this offer?')) return;
     try {
       const updated = await api.rejectOffer(loanRequestId, offerId, accessToken);
       setMyLoans((prev) => prev.map((l) => (l._id === updated._id ? updated : l)));
@@ -178,6 +182,13 @@ export default function Dashboard() {
         {/* Notifications */}
         <NotificationDrawer accessToken={accessToken} />
       </motion.div>
+
+      {/* New offers info banner */}
+      {receivedOffers.filter((o) => o.status === 'pending').length > 0 && (
+        <InfoBanner variant="info" dismissible={true}>
+          You have <strong>{receivedOffers.filter((o) => o.status === 'pending').length} new offer{receivedOffers.filter((o) => o.status === 'pending').length > 1 ? 's' : ''}</strong> — review them below.
+        </InfoBanner>
+      )}
 
       {/* OFFERS MONOLITHIC CARD VIEW */}
       <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-8 shadow-md">
@@ -401,13 +412,13 @@ export default function Dashboard() {
                             {o.status === 'pending' ? (
                               <>
                                 <button
-                                  onClick={() => acceptOffer(o.loanRequest._id, o._id)}
+                                  onClick={() => setPendingAccept({ loanRequestId: o.loanRequest._id, offerId: o._id })}
                                   className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors cursor-pointer"
                                 >
                                   Accept
                                 </button>
                                 <button
-                                  onClick={() => rejectOffer(o.loanRequest._id, o._id)}
+                                  onClick={() => setPendingReject({ loanRequestId: o.loanRequest._id, offerId: o._id })}
                                   className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors cursor-pointer"
                                 >
                                   Decline
@@ -453,6 +464,30 @@ export default function Dashboard() {
           />
         )}
       </AnimatePresence>
+
+      {/* ⚠️ Offer Accept Dialog — highest-stakes alert in the app */}
+      <OfferAcceptDialog
+        open={!!pendingAccept}
+        variant="accept"
+        onConfirm={async () => {
+          const { loanRequestId, offerId } = pendingAccept;
+          setPendingAccept(null);
+          await acceptOffer(loanRequestId, offerId);
+        }}
+        onCancel={() => setPendingAccept(null)}
+      />
+
+      {/* Offer Reject Dialog */}
+      <OfferAcceptDialog
+        open={!!pendingReject}
+        variant="reject"
+        onConfirm={async () => {
+          const { loanRequestId, offerId } = pendingReject;
+          setPendingReject(null);
+          await rejectOffer(loanRequestId, offerId);
+        }}
+        onCancel={() => setPendingReject(null)}
+      />
     </motion.div>
   );
 }
@@ -705,6 +740,9 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
 
                     {safetyMode === 'report' ? (
                       <form onSubmit={handleReport} className="space-y-3.5">
+                        <InfoBanner variant="warning" dismissible={false} className="!py-2 !px-3 !text-xs">
+                          False reports may result in action against your account.
+                        </InfoBanner>
                         <div>
                           <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Reason</label>
                           <select

@@ -21,6 +21,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
+import InfoBanner from '../components/ui/InfoBanner';
+import { Link } from 'react-router-dom';
 
 const DOCUMENT_OPTIONS = [
   { value: 'aadhaar',         label: 'Aadhaar Card' },
@@ -159,7 +161,11 @@ export default function Settings() {
         setIsDetecting(false);
       },
       (err) => {
-        setError(`Could not detect location: ${err.message}`);
+        if (err.code === err.PERMISSION_DENIED) {
+          setError('Location access denied — you can still type your address manually.');
+        } else {
+          setError(`Could not detect location: ${err.message}`);
+        }
         setIsDetecting(false);
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
@@ -536,6 +542,11 @@ function GeneralSettingsPage({
                       </span>
                     )}
                   </div>
+                  {email && email !== user.email && (
+                    <InfoBanner variant="info" dismissible={false} className="mt-2 !py-2 !px-3 !text-xs">
+                      We'll need to verify your new email before it shows as verified again.
+                    </InfoBanner>
+                  )}
                 </div>
               </div>
 
@@ -768,6 +779,12 @@ function IdentityVerificationPage({
           <span>{isApproved ? 'Update ID Document' : isPending ? 'Update / Resubmit ID' : isRejected ? 'Resubmit Verification' : 'Verify ID Now'}</span>
         </button>
       </motion.div>
+
+      {/* 🔵 KYC upload disclaimer — shown once before first upload */}
+      <InfoBanner variant="info" dismissible={true} storageKey="mt_kyc_disclaimer_seen">
+        Your document is stored securely and used only for identity verification. See our{' '}
+        <Link to="/kyc-consent" className="text-primary underline underline-offset-2 font-semibold hover:text-primary/80">Identity Verification & Data Notice</Link>.
+      </InfoBanner>
 
       {/* Uploaded Verification Records & History */}
       <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-6 shadow-md">

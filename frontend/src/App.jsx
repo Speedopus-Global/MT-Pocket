@@ -18,6 +18,10 @@ import UserProfile from './pages/UserProfile';
 import AboutUs from './pages/AboutUs';
 import TermsConditions from './pages/TermsConditions';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import KYCConsentNotice from './pages/Kyconsentnotice';
+import RefundPolicy from './pages/RefundPolicy';
+import CookiePolicy from './pages/CookiePolicy';
+import CommunityGuidelines from './pages/CommunityGuidelines';
 import Chat from './pages/Chat';
 function App() {
   return (
@@ -55,10 +59,17 @@ function App() {
           </Route>
 
           {/* Dev only */}
-          <Route path="/style-guide" element={<StyleGuide />} />
-          <Route path="About" element={<AboutUs />} />
-          <Route path="Privacy" element={<PrivacyPolicy />} />
-          <Route path="Terms" element={<TermsConditions />} />
+          {/* Legal / Policy pages */}
+          <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/Terms" element={<TermsConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/Privacy" element={<PrivacyPolicy />} />
+          <Route path="/kyc-consent" element={<KYCConsentNotice />} />
+          <Route path="/refund" element={<RefundPolicy />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/community-guidelines" element={<CommunityGuidelines />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/About" element={<AboutUs />} />
 
            
          

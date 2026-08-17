@@ -148,12 +148,13 @@ export class LoanRequestsService {
     if (offer.status !== 'pending') throw new BadRequestException('This offer is no longer pending');
 
     offer.status = 'accepted';
+    (offer as any).acceptedAt = new Date();
     req.status = 'in_progress';
     req.statusHistory.push({
       status: 'in_progress',
       changedAt: new Date(),
       changedBy: new Types.ObjectId(borrowerId),
-      note: `Offer ${offerId} accepted`,
+      note: `Offer ${offerId} accepted from lender ${offer.lenderId}`,
     } as any);
 
     const saved = await req.save();
