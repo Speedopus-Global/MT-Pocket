@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../lib/api";
 import {
   Search, ChevronDown, CheckCircle2, Mail, ShieldAlert, FileText, Database,
   ArrowRight, HelpCircle, ThumbsUp, ThumbsDown, Copy, Check, Sparkles,
-  LifeBuoy, MessageSquare, Send, BookOpen, AlertCircle
+  LifeBuoy, MessageSquare, Send, BookOpen, AlertCircle, Clock, Tag
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -104,7 +106,9 @@ const QUICK_ACTIONS = [
 ];
 
 export default function HelpAndSupport({ onNavigate }) {
+  const { user, accessToken } = useAuth();
   const navigate = useNavigate();
+
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [openFaqId, setOpenFaqId] = useState(null);
@@ -113,11 +117,29 @@ export default function HelpAndSupport({ onNavigate }) {
 
   // Contact Form State
   const [category, setCategory] = useState("General Inquiry");
+  const [guestEmail, setGuestEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sentTicket, setSentTicket] = useState(null);
   const [error, setError] = useState(null);
+
+  // My Submitted Tickets
+  const [myTickets, setMyTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
+  const fetchMyTickets = () => {
+    if (!accessToken) return;
+    setLoadingTickets(true);
+    api.getMySupportTickets(accessToken)
+      .then(setMyTickets)
+      .catch(() => {})
+      .finally(() => setLoadingTickets(false));
+  };
+
+  useEffect(() => {
+    fetchMyTickets();
+  }, [accessToken]);
 
   const categories = [
     { id: "all", label: "All Topics" },
@@ -159,17 +181,32 @@ export default function HelpAndSupport({ onNavigate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const email = user?.email || guestEmail.trim();
+    if (!email) {
+      setError("Please provide your email address so we can reply.");
+      return;
+    }
     if (!message.trim()) return;
+
     setSubmitting(true);
     setError(null);
     try {
-      await new Promise((r) => setTimeout(r, 800));
-      const ticketId = `MTP-${Math.floor(100000 + Math.random() * 900000)}`;
-      setSentTicket({ id: ticketId, subject: subject || category, createdAt: new Date() });
+      const ticketData = {
+        userId: user?.id,
+        senderEmail: email,
+        senderName: user?.fullName || 'MT Pocket Member',
+        category,
+        subject: subject.trim() || category,
+        message: message.trim(),
+      };
+
+      const result = await api.createSupportTicket(ticketData, accessToken);
+      setSentTicket(result);
       setSubject("");
       setMessage("");
-    } catch {
-      setError("Failed to send your inquiry. Please reach out to support@mtpocket.com directly.");
+      fetchMyTickets();
+    } catch (err) {
+      setError(err.message || "Failed to submit your inquiry. Please reach out to support@mtpocket.com directly.");
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +240,7 @@ export default function HelpAndSupport({ onNavigate }) {
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-3">
             <a
               href="#contact-support"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/95 shadow-xs transition-colors"
@@ -265,6 +302,41 @@ export default function HelpAndSupport({ onNavigate }) {
           );
         })}
       </div>
+
+      {/* ── MY TICKETS OVERVIEW (IF LOGGED IN) ───────────────────────── */}
+      {user && myTickets.length > 0 && (
+        <div className="rounded-xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-border/70 pb-3">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-primary" />
+              <h2 className="text-sm sm:text-base font-bold text-foreground">Your Submitted Tickets ({myTickets.length})</h2>
+            </div>
+            <span className="text-xs text-muted-foreground font-semibold">Live Database Tracking</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {myTickets.map((t) => (
+              <div key={t._id || t.ticketId} className="rounded-lg border border-border/70 bg-background/50 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-primary">{t.ticketId}</span>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${
+                    t.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-600' :
+                    t.status === 'in_progress' ? 'bg-sky-500/10 text-sky-600' :
+                    'bg-amber-500/10 text-amber-600'
+                  }`}>
+                    {t.status.replace('_', ' ')}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-foreground truncate">{t.subject}</p>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40">
+                  <span>{t.category}</span>
+                  <span>{new Date(t.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── INTERACTIVE FAQ SECTION ──────────────────────────────────── */}
       <div className="rounded-xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-6">
@@ -423,7 +495,7 @@ export default function HelpAndSupport({ onNavigate }) {
             <CheckCircle2 size={36} className="text-emerald-600 mx-auto" />
             <h3 className="font-bold text-foreground text-base">Support Ticket Created Successfully</h3>
             <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Your ticket reference <span className="font-mono font-bold text-primary">{sentTicket.id}</span> has been logged. Updates will be delivered to your registered email address.
+              Your ticket reference <span className="font-mono font-bold text-primary">{sentTicket.ticketId || sentTicket.id}</span> has been logged. An email confirmation has been sent via Resend to <strong>{sentTicket.senderEmail || user?.email}</strong>.
             </p>
             <div className="pt-2">
               <Button
@@ -468,6 +540,22 @@ export default function HelpAndSupport({ onNavigate }) {
                 />
               </div>
             </div>
+
+            {!user && (
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                  Your Email Address <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="email"
+                  required
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="rounded-lg bg-background border-border/80 text-xs h-10"
+                />
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1.5">

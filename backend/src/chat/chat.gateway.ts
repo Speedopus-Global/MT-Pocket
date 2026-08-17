@@ -146,39 +146,74 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ) {
     const senderId = socket.data.userId;
-    const { message, recipientId } = await this.chatService.createMessage(
-      data.conversationId,
-      senderId,
-      data.text,
-      {
-        mediaUrl: data.mediaUrl,
-        mediaType: data.mediaType,
-        fileName: data.fileName,
-        fileSize: data.fileSize,
-      },
-    );
 
-    // Push to everyone actively in the thread — both participants, every
-    // open tab, including the sender (so multi-device stays in sync).
-    this.server.to(`conversation:${data.conversationId}`).emit('new_message', message);
-
-    let preview = message.text;
-    if (!preview && message.mediaUrl) {
-      preview = message.mediaType === 'image' ? '📷 Photo' : `📎 ${message.fileName || 'Attachment'}`;
+    // Auto-join the sender to the conversation room if not already in it
+    // (happens after socket reconnect where join_conversation wasn't re-emitted)
+    if (!socket.data.joinedConversations?.has(data.conversationId)) {
+      socket.join(`conversation:${data.conversationId}`);
+      socket.data.joinedConversations = socket.data.joinedConversations ?? new Set();
+      socket.data.joinedConversations.add(data.conversationId);
     }
 
-    // Nudge the recipient's personal room
-    this.server.to(`user:${recipientId}`).emit('conversation_updated', {
-      conversationId: data.conversationId,
-      lastMessagePreview: preview,
-      lastMessageAt: (message as any).createdAt,
-    });
+    // Wrapped in try/catch on purpose: Nest's default WS exception filter
+    // turns a thrown exception into a socket 'exception' event, NOT an ack
+    // — so without this, the client's ack callback (used to confirm/replace
+    // the optimistic message) would simply never fire, leaving a message
+    // that looks "sent" in the UI but was never persisted.
+    try {
+      const { message, recipientId } = await this.chatService.createMessage(
+        data.conversationId,
+        senderId,
+        data.text,
+        {
+          mediaUrl: data.mediaUrl,
+          mediaType: data.mediaType,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+        },
+      );
 
-    if (!this.isOnline(recipientId)) {
-      await this.chatService.notifyOfflineRecipient(recipientId, data.conversationId, preview);
+      // Serialize to plain JSON — Mongoose docs emit ObjectIds as objects
+      // which breaks frontend identity comparisons (senderId === user.id)
+      const plain = (message as any).toObject ? (message as any).toObject({ virtuals: false }) : message;
+      // Normalize ObjectId fields to plain strings for the frontend
+      const msgPayload = {
+        ...plain,
+        _id: String(plain._id),
+        conversationId: String(plain.conversationId),
+        senderId: String(plain.senderId),
+        deletedFor: (plain.deletedFor ?? []).map(String),
+        reactions: (plain.reactions ?? []).map((r: any) => ({ ...r, userId: String(r.userId) })),
+      };
+
+      // Broadcast to ALL sockets in the conversation room (both participants)
+      this.server.to(`conversation:${data.conversationId}`).emit('new_message', msgPayload);
+
+      let preview = message.text;
+      if (!preview && message.mediaUrl) {
+        preview = message.mediaType === 'image' ? '📷 Photo' : `📎 ${message.fileName || 'Attachment'}`;
+      }
+
+      // Nudge the recipient's personal room so their conversation list updates
+      this.server.to(`user:${recipientId}`).emit('conversation_updated', {
+        conversationId: data.conversationId,
+        lastMessagePreview: preview,
+        lastMessageAt: (message as any).createdAt,
+      });
+
+      if (!this.isOnline(recipientId)) {
+        await this.chatService.notifyOfflineRecipient(recipientId, data.conversationId, preview);
+      }
+
+      // Return acknowledgement to sender (used by frontend to replace temp message)
+      return { sent: true, messageId: String(message._id), message: msgPayload };
+    } catch (err) {
+      this.logger.warn(`send_message failed for ${senderId}: ${(err as Error).message}`);
+      // Return an error ack instead of letting it fall through to the
+      // default WS exception filter, so the client can roll back its
+      // optimistic message and tell the user instead of hanging forever.
+      return { sent: false, error: (err as Error).message || 'Failed to send message' };
     }
-
-    return { sent: true, messageId: message._id };
   }
 
   // ── Edit a message (within 15 minutes) ───────────────────────────────
@@ -191,13 +226,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const updated = await this.chatService.editMessage(data.messageId, userId, data.text);
 
     this.server.to(`conversation:${data.conversationId}`).emit('message_edited', {
-      messageId: updated._id,
+      messageId: String(updated._id),
       text: updated.text,
       isEdited: updated.isEdited,
       editedAt: updated.editedAt,
     });
 
-    return { success: true, message: updated };
+    return { success: true };
   }
 
   // ── React to a message ───────────────────────────────────────────────
@@ -209,12 +244,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = socket.data.userId;
     const updated = await this.chatService.reactMessage(data.messageId, userId, data.emoji);
 
+    const reactions = (updated.reactions ?? []).map((r: any) => ({
+      userId: String(r.userId),
+      emoji: r.emoji,
+    }));
+
     this.server.to(`conversation:${data.conversationId}`).emit('message_reacted', {
-      messageId: updated._id,
-      reactions: updated.reactions,
+      messageId: String(updated._id),
+      reactions,
     });
 
-    return { success: true, reactions: updated.reactions };
+    return { success: true, reactions };
   }
 
   // ── Delete for me ────────────────────────────────────────────────────

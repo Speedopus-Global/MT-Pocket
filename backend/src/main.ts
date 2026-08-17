@@ -16,8 +16,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // strips any field not declared on the DTO
-      forbidNonWhitelisted: true,
+      whitelist: true,       // strips unknown fields but does NOT reject requests
+      forbidNonWhitelisted: false, // don't throw 400 for undecorated body fields
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,

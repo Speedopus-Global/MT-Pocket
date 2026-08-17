@@ -105,7 +105,12 @@ export default function Chat({ initialConversationId = null }) {
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const socketRef = useRef(null);
-  const activeIdRef = useRef(activeId);
+  // IMPORTANT: must start as null, NOT `activeId`/`urlConversationId`.
+  // The mount-time effect below only calls openConversation() (which
+  // fetches history from MongoDB) when urlConversationId !== activeIdRef.current.
+  // If this ref started pre-equal to urlConversationId, that check would
+  // silently pass on refresh and the message list would never be re-fetched.
+  const activeIdRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
@@ -121,30 +126,33 @@ export default function Chat({ initialConversationId = null }) {
     socketRef.current = socket;
 
     const onNewMessage = (msg) => {
+      const senderId = typeof msg.senderId === 'object' ? msg.senderId?._id || String(msg.senderId) : msg.senderId;
+      const msgNormalized = { ...msg, senderId: String(senderId) };
+
       let preview = msg.text;
       if (!preview && msg.mediaUrl) {
         preview = msg.mediaType === 'image' ? '📷 Photo' : `📎 ${msg.fileName || 'Attachment'}`;
       }
 
       setConversations((prev) => prev.map((c) => (
-        c.conversationId === msg.conversationId
+        String(c.conversationId) === String(msg.conversationId)
           ? { ...c, lastMessagePreview: preview, lastMessageAt: msg.createdAt }
           : c
       )));
 
-      if (msg.conversationId === activeIdRef.current) {
+      if (String(msg.conversationId) === activeIdRef.current) {
         setMessages((prev) => {
-          // Replace matching temp message if sender is current user
-          const tempIdx = prev.findIndex((m) => m._id && String(m._id).startsWith('temp-') && m.text === msg.text);
-          if (tempIdx > -1) {
-            const next = [...prev];
-            next[tempIdx] = msg;
-            return next;
-          }
-          if (prev.some((m) => m._id === msg._id)) return prev;
-          return [...prev, msg];
+          // Replace matching temp message — match on tempId embedded in the message or fallback dedup by _id
+          const realId = String(msg._id);
+          if (prev.some((m) => String(m._id) === realId)) return prev; // already have it (from ack)
+          // Remove any temp message with same text if still pending
+          const withoutTemp = prev.filter((m) => {
+            if (!String(m._id).startsWith('temp-')) return true;
+            return m.text !== msg.text || String(m.senderId) !== String(senderId);
+          });
+          return [...withoutTemp, msgNormalized];
         });
-        if (msg.senderId !== user?.id) {
+        if (String(senderId) !== String(user?.id)) {
           socket?.emit('mark_read', { conversationId: msg.conversationId });
         }
       }
@@ -152,12 +160,12 @@ export default function Chat({ initialConversationId = null }) {
 
     const onConversationUpdated = (data) => {
       setConversations((prev) => prev.map((c) => (
-        c.conversationId === data.conversationId
+        String(c.conversationId) === String(data.conversationId)
           ? {
               ...c,
               lastMessagePreview: data.lastMessagePreview,
               lastMessageAt: data.lastMessageAt,
-              unreadCount: data.conversationId === activeIdRef.current ? c.unreadCount : (c.unreadCount || 0) + 1,
+              unreadCount: String(data.conversationId) === activeIdRef.current ? c.unreadCount : (c.unreadCount || 0) + 1,
             }
           : c
       )));
@@ -165,13 +173,13 @@ export default function Chat({ initialConversationId = null }) {
 
     const onMessageEdited = ({ messageId, text, isEdited, editedAt }) => {
       setMessages((prev) => prev.map((m) => (
-        m._id === messageId ? { ...m, text, isEdited, editedAt } : m
+        String(m._id) === String(messageId) ? { ...m, text, isEdited, editedAt } : m
       )));
     };
 
     const onMessageReacted = ({ messageId, reactions }) => {
       setMessages((prev) => prev.map((m) => (
-        m._id === messageId ? { ...m, reactions } : m
+        String(m._id) === String(messageId) ? { ...m, reactions } : m
       )));
     };
 
@@ -183,14 +191,21 @@ export default function Chat({ initialConversationId = null }) {
     };
 
     const onTyping = ({ userId, isTyping }) => {
-      if (userId !== user?.id) setOtherTyping(isTyping);
+      if (String(userId) !== String(user?.id)) setOtherTyping(isTyping);
     };
 
     const onReadReceipt = ({ conversationId, readAt }) => {
-      if (conversationId !== activeIdRef.current) return;
+      if (String(conversationId) !== activeIdRef.current) return;
       setMessages((prev) => prev.map((m) => (
-        m.senderId === user?.id ? { ...m, status: 'read', readAt } : m
+        String(m.senderId) === String(user?.id) ? { ...m, status: 'read', readAt } : m
       )));
+    };
+
+    // Re-join active conversation on reconnect
+    const onReconnect = () => {
+      if (activeIdRef.current) {
+        socket?.emit('join_conversation', { conversationId: activeIdRef.current });
+      }
     };
 
     socket?.on('new_message', onNewMessage);
@@ -200,6 +215,7 @@ export default function Chat({ initialConversationId = null }) {
     socket?.on('presence', onPresence);
     socket?.on('typing', onTyping);
     socket?.on('read_receipt', onReadReceipt);
+    socket?.on('connect', onReconnect);
 
     return () => {
       socket?.off('new_message', onNewMessage);
@@ -209,6 +225,7 @@ export default function Chat({ initialConversationId = null }) {
       socket?.off('presence', onPresence);
       socket?.off('typing', onTyping);
       socket?.off('read_receipt', onReadReceipt);
+      socket?.off('connect', onReconnect);
     };
   }, [accessToken, user?.id]);
 
@@ -322,7 +339,7 @@ export default function Chat({ initialConversationId = null }) {
     const optimisticMsg = {
       _id: tempId,
       conversationId: activeId,
-      senderId: user?.id,
+      senderId: String(user?.id),
       text,
       status: 'sent',
       createdAt: new Date().toISOString(),
@@ -336,9 +353,39 @@ export default function Chat({ initialConversationId = null }) {
     try {
       const socket = socketRef.current;
       if (socket && socket.connected) {
-        socket.emit('send_message', { conversationId: activeId, text }, (res) => {
-          if (res?.messageId) {
-            setMessages((prev) => prev.map((m) => m._id === tempId ? { ...m, _id: res.messageId } : m));
+        // Use socket.io acknowledgement — server returns the saved message.
+        // Guard against the ack never arriving (dropped connection, or the
+        // gateway throwing before it can reply) with a timeout that falls
+        // back to REST instead of leaving the optimistic bubble stranded.
+        let settled = false;
+        const ackTimeout = setTimeout(async () => {
+          if (settled) return;
+          settled = true;
+          try {
+            const saved = await api.sendChatMessage(activeId, { text }, accessToken);
+            setMessages((prev) => prev.map((m) => m._id === tempId ? saved : m));
+          } catch (e) {
+            setMessages((prev) => prev.filter((m) => m._id !== tempId));
+            alert('Failed to deliver message: ' + (e.message || 'Please check your connection'));
+          }
+        }, 6000);
+
+        socket.emit('send_message', { conversationId: activeId, text }, (ack) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(ackTimeout);
+
+          if (ack?.error) {
+            // Server explicitly rejected it (blocked user, validation, etc.)
+            setMessages((prev) => prev.filter((m) => m._id !== tempId));
+            alert('Failed to deliver message: ' + ack.error);
+            return;
+          }
+          if (ack?.message) {
+            // Replace temp with the real persisted message from the server
+            setMessages((prev) => prev.map((m) => m._id === tempId ? ack.message : m));
+          } else if (ack?.messageId) {
+            setMessages((prev) => prev.map((m) => m._id === tempId ? { ...m, _id: ack.messageId } : m));
           }
         });
       } else {
@@ -634,7 +681,7 @@ export default function Chat({ initialConversationId = null }) {
               ) : (
                 <div className="flex flex-col gap-3">
                   {messages.map((m, idx) => {
-                    const isMine = m.senderId === user?.id;
+                    const isMine = String(m.senderId) === String(user?.id);
                     const canEdit = isMine && (Date.now() - new Date(m.createdAt).getTime()) <= 15 * 60 * 1000;
 
                     // Day Divider Logic

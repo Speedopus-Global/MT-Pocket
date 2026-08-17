@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { connectChatSocket, disconnectChatSocket } from '../lib/socket';
+import { connectChatSocket, disconnectChatSocket } from '../lib/Socket';
 
 const AuthContext = createContext(null);
 
@@ -25,17 +25,14 @@ export function AuthProvider({ children }) {
 
   // 2. Socket Connection Management
   useEffect(() => {
-    // Only connect if we have a valid access token
-    if (accessToken) {
-      connectChatSocket(accessToken);
-    }
-
-    // The cleanup function runs when the component unmounts 
-    // OR right before the effect runs again because accessToken changed
-    return () => {
+    if (!accessToken) {
       disconnectChatSocket();
-    };
-  }, [accessToken]); // Dependency array: Re-run this effect when accessToken changes
+      return;
+    }
+    connectChatSocket(accessToken);
+    // Do NOT disconnect on cleanup — the socket should persist across
+    // re-renders and navigation. It's only disconnected on logout (above).
+  }, [accessToken]);
 
   const completeLogin = ({ accessToken, user }) => {
     setAccessToken(accessToken);

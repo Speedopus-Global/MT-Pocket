@@ -217,6 +217,21 @@ export const api = {
   // DELETE /chat/messages/:id/for-me
   deleteChatMessageForMe: (id, accessToken) =>
     request(`/chat/messages/${id}/for-me`, { method: 'DELETE', accessToken }),
+
+  // ── Support Tickets (Hybrid DB + Resend) ──────────────────────────────
+  createSupportTicket: (ticketData, accessToken) =>
+    request('/support/tickets', { method: 'POST', body: ticketData, accessToken }),
+  getMySupportTickets: (accessToken) =>
+    request('/support/my-tickets', { accessToken }),
+  getAdminSupportTickets: ({ status, category, page = 1, limit = 20 } = {}, accessToken) => {
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (status) q.set('status', status);
+    if (category) q.set('category', category);
+    return request(`/support/admin/tickets?${q.toString()}`, { accessToken });
+  },
+  updateSupportTicketStatus: (id, status, adminNotes, accessToken) =>
+    request(`/support/admin/tickets/${id}/status`, { method: 'PATCH', body: { status, adminNotes }, accessToken }),
 };
+
 
  
