@@ -144,10 +144,13 @@ export class ChatService {
     if (trimmed.length > 4000) throw new BadRequestException('Message too long');
 
     const convo = await this.assertMember(conversationId, senderId);
-    const recipientId = convo.participantIds.find((p) => p.toString() !== senderId)!.toString();
+    const otherParticipant = convo.participantIds.find((p) => p.toString() !== senderId);
+    const recipientId = otherParticipant ? otherParticipant.toString() : senderId;
 
-    const blocked = await this.blocksService.isBlockedEitherWay(senderId, recipientId);
-    if (blocked) throw new ForbiddenException('You cannot message this user');
+    if (recipientId && recipientId !== senderId) {
+      const blocked = await this.blocksService.isBlockedEitherWay(senderId, recipientId);
+      if (blocked) throw new ForbiddenException('You cannot message this user');
+    }
 
     const messageData: any = {
       conversationId: convo._id,

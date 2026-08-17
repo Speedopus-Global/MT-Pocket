@@ -12,12 +12,20 @@ let socket = null;
 // and does not re-check it later, so a stale token here just means the
 // socket connects successfully but as whoever that token belonged to.
 export function connectChatSocket(accessToken) {
-  if (socket?.connected) return socket;
+  if (!accessToken) return null;
+  if (socket) {
+    socket.auth = { token: accessToken };
+    if (!socket.connected) socket.connect();
+    return socket;
+  }
   socket = io(`${SOCKET_ORIGIN}/chat`, {
     auth: { token: accessToken },
     withCredentials: true,
-    transports: ['websocket'],
+    transports: ['polling', 'websocket'],
     autoConnect: true,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
   });
   return socket;
 }

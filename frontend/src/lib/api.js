@@ -199,6 +199,9 @@ export const api = {
   // POST /chat/conversations/:id/read — REST fallback, socket also does this live
   markChatRead: (conversationId, accessToken) =>
     request(`/chat/conversations/${conversationId}/read`, { method: 'POST', accessToken }),
+  // POST /chat/conversations/:id/messages — send message via REST
+  sendChatMessage: (conversationId, payload, accessToken) =>
+    request(`/chat/conversations/${conversationId}/messages`, { method: 'POST', body: payload, accessToken }),
   // POST /chat/upload — upload photo/document
   uploadChatMedia: (file, accessToken) => {
     const form = new FormData();

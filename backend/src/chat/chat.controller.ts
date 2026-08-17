@@ -45,6 +45,22 @@ export class ChatController {
     return this.chatService.markRead(id, (req.user as any).sub);
   }
 
+  // POST /chat/conversations/:id/messages — REST fallback for sending
+  @Post('conversations/:id/messages')
+  async sendMessage(
+    @Param('id') id: string,
+    @Body() body: { text?: string; mediaUrl?: string; mediaType?: 'image' | 'file'; fileName?: string; fileSize?: number },
+    @Req() req: Request,
+  ) {
+    const { message } = await this.chatService.createMessage(
+      id,
+      (req.user as any).sub,
+      body.text,
+      body,
+    );
+    return message;
+  }
+
   // POST /chat/upload — upload chat media (photo/document) to Cloudinary
   @Post('upload')
   @UseInterceptors(

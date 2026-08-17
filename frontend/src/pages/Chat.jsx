@@ -2,12 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { connectChatSocket, getChatSocket } from '../lib/socket';
+import { connectChatSocket, getChatSocket } from '../lib/Socket';
 import {
   Send, Loader2, Check, CheckCheck, RefreshCw, MessageCircle, ChevronLeft,
   Paperclip, Image as ImageIcon, FileText, MoreVertical, Edit2, Trash2, Smile, X, Download, AlertCircle
 } from 'lucide-react';
-import { ScrollArea } from '../components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -92,11 +91,10 @@ export default function Chat({ initialConversationId = null }) {
   const [sending, setSending] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
-  // userId -> { online: boolean, lastActiveAt: string|null }
   const [presence, setPresence] = useState({});
 
   // Editing state
-  const [editingMessage, setEditingMessage] = useState(null); // { id, text }
+  const [editingMessage, setEditingMessage] = useState(null);
   const [activeMenuMessageId, setActiveMenuMessageId] = useState(null);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
 
@@ -136,11 +134,18 @@ export default function Chat({ initialConversationId = null }) {
 
       if (msg.conversationId === activeIdRef.current) {
         setMessages((prev) => {
+          // Replace matching temp message if sender is current user
+          const tempIdx = prev.findIndex((m) => m._id && String(m._id).startsWith('temp-') && m.text === msg.text);
+          if (tempIdx > -1) {
+            const next = [...prev];
+            next[tempIdx] = msg;
+            return next;
+          }
           if (prev.some((m) => m._id === msg._id)) return prev;
           return [...prev, msg];
         });
         if (msg.senderId !== user?.id) {
-          socket.emit('mark_read', { conversationId: msg.conversationId });
+          socket?.emit('mark_read', { conversationId: msg.conversationId });
         }
       }
     };
@@ -188,22 +193,22 @@ export default function Chat({ initialConversationId = null }) {
       )));
     };
 
-    socket.on('new_message', onNewMessage);
-    socket.on('conversation_updated', onConversationUpdated);
-    socket.on('message_edited', onMessageEdited);
-    socket.on('message_reacted', onMessageReacted);
-    socket.on('presence', onPresence);
-    socket.on('typing', onTyping);
-    socket.on('read_receipt', onReadReceipt);
+    socket?.on('new_message', onNewMessage);
+    socket?.on('conversation_updated', onConversationUpdated);
+    socket?.on('message_edited', onMessageEdited);
+    socket?.on('message_reacted', onMessageReacted);
+    socket?.on('presence', onPresence);
+    socket?.on('typing', onTyping);
+    socket?.on('read_receipt', onReadReceipt);
 
     return () => {
-      socket.off('new_message', onNewMessage);
-      socket.off('conversation_updated', onConversationUpdated);
-      socket.off('message_edited', onMessageEdited);
-      socket.off('message_reacted', onMessageReacted);
-      socket.off('presence', onPresence);
-      socket.off('typing', onTyping);
-      socket.off('read_receipt', onReadReceipt);
+      socket?.off('new_message', onNewMessage);
+      socket?.off('conversation_updated', onConversationUpdated);
+      socket?.off('message_edited', onMessageEdited);
+      socket?.off('message_reacted', onMessageReacted);
+      socket?.off('presence', onPresence);
+      socket?.off('typing', onTyping);
+      socket?.off('read_receipt', onReadReceipt);
     };
   }, [accessToken, user?.id]);
 
@@ -250,7 +255,7 @@ export default function Chat({ initialConversationId = null }) {
     }
   }, [urlConversationId, openConversation]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll strictly within message container
   useEffect(() => {
     if (!loadingMessages) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -299,23 +304,55 @@ export default function Chat({ initialConversationId = null }) {
     typingTimeoutRef.current = setTimeout(stopTyping, 1500);
   };
 
-  // ── Send text ────────────────────────────────────────────────────────
-  const send = () => {
+  // ── Send text with Instant Optimistic UI + Socket/REST resilience ───
+  const send = async () => {
     const text = draft.trim();
     if (!text || !activeId || sending) return;
 
     if (editingMessage) {
-      // Save edited message
       submitEdit();
       return;
     }
 
     setSending(true);
-    socketRef.current?.emit('send_message', { conversationId: activeId, text }, () => {
-      setSending(false);
-    });
     setDraft('');
     stopTyping();
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg = {
+      _id: tempId,
+      conversationId: activeId,
+      senderId: user?.id,
+      text,
+      status: 'sent',
+      createdAt: new Date().toISOString(),
+      reactions: [],
+      deletedFor: [],
+    };
+
+    // Instant local append so there's zero lag/buffering
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      const socket = socketRef.current;
+      if (socket && socket.connected) {
+        socket.emit('send_message', { conversationId: activeId, text }, (res) => {
+          if (res?.messageId) {
+            setMessages((prev) => prev.map((m) => m._id === tempId ? { ...m, _id: res.messageId } : m));
+          }
+        });
+      } else {
+        // Direct REST fallback if socket connection is pending or offline
+        const saved = await api.sendChatMessage(activeId, { text }, accessToken);
+        setMessages((prev) => prev.map((m) => m._id === tempId ? saved : m));
+      }
+    } catch (err) {
+      console.error('Send message error:', err);
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
+      alert('Failed to deliver message: ' + (err.message || 'Please check your connection'));
+    } finally {
+      setSending(false);
+    }
   };
 
   // ── File & Image Upload ──────────────────────────────────────────────
@@ -325,14 +362,21 @@ export default function Chat({ initialConversationId = null }) {
     setUploadingMedia(true);
     try {
       const uploadRes = await api.uploadChatMedia(file, accessToken);
-      socketRef.current?.emit('send_message', {
-        conversationId: activeId,
-        text: draft.trim(),
+      const payload = {
+        text: draft.trim() || undefined,
         mediaUrl: uploadRes.mediaUrl,
         mediaType: uploadRes.mediaType,
         fileName: uploadRes.fileName,
         fileSize: uploadRes.fileSize,
-      });
+      };
+
+      const socket = socketRef.current;
+      if (socket && socket.connected) {
+        socket.emit('send_message', { conversationId: activeId, ...payload });
+      } else {
+        const saved = await api.sendChatMessage(activeId, payload, accessToken);
+        setMessages((prev) => [...prev, saved]);
+      }
       setDraft('');
     } catch (err) {
       console.error('Failed to upload file:', err);
@@ -371,24 +415,38 @@ export default function Chat({ initialConversationId = null }) {
     setDraft('');
   };
 
-  const submitEdit = () => {
+  const submitEdit = async () => {
     if (!editingMessage || !draft.trim()) return;
-    socketRef.current?.emit(
-      'edit_message',
-      { conversationId: activeId, messageId: editingMessage.id, text: draft.trim() },
-      (res) => {
-        if (res?.error) alert(res.error);
+    try {
+      const socket = socketRef.current;
+      if (socket && socket.connected) {
+        socket.emit('edit_message', { conversationId: activeId, messageId: editingMessage.id, text: draft.trim() });
+      } else {
+        const updated = await api.editChatMessage(editingMessage.id, draft.trim(), accessToken);
+        setMessages((prev) => prev.map((m) => m._id === editingMessage.id ? updated : m));
       }
-    );
-    setEditingMessage(null);
-    setDraft('');
+    } catch (err) {
+      alert(err.message || 'Failed to edit message');
+    } finally {
+      setEditingMessage(null);
+      setDraft('');
+    }
   };
 
   // ── Delete for me Handler ────────────────────────────────────────────
-  const handleDeleteForMe = (messageId, e) => {
+  const handleDeleteForMe = async (messageId, e) => {
     e?.stopPropagation();
-    socketRef.current?.emit('delete_for_me', { conversationId: activeId, messageId });
-    setMessages((prev) => prev.filter((m) => m._id !== messageId));
+    try {
+      const socket = socketRef.current;
+      if (socket && socket.connected) {
+        socket.emit('delete_for_me', { conversationId: activeId, messageId });
+      } else {
+        await api.deleteChatMessageForMe(messageId, accessToken);
+      }
+      setMessages((prev) => prev.filter((m) => m._id !== messageId));
+    } catch (err) {
+      console.error('Failed to delete for me:', err);
+    }
     setActiveMenuMessageId(null);
   };
 
@@ -399,7 +457,7 @@ export default function Chat({ initialConversationId = null }) {
   };
 
   return (
-    <div className="flex-1 flex min-h-full rounded-2xl border border-border/80 bg-card overflow-hidden shadow-sm">
+    <div className="h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] max-h-[900px] w-full flex rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
       {/* ── Hidden File Inputs ───────────────────────────────────────── */}
       <input
         type="file"
@@ -416,12 +474,12 @@ export default function Chat({ initialConversationId = null }) {
         className="hidden"
       />
 
-      {/* ── Conversation list ─────────────────────────────────────────── */}
-      <div className={`w-full sm:w-80 md:w-96 shrink-0 border-r border-border/70 flex flex-col bg-card/60 ${activeId ? 'hidden sm:flex' : 'flex'}`}>
-        <div className="px-5 py-4 border-b border-border/70 bg-card">
+      {/* ── Conversation list (Fixed column with internal scrolling) ── */}
+      <div className={`w-full sm:w-80 md:w-96 shrink-0 border-r border-border/70 flex flex-col h-full overflow-hidden bg-card/60 ${activeId ? 'hidden sm:flex' : 'flex'}`}>
+        <div className="px-5 py-4 border-b border-border/70 bg-card shrink-0">
           <h2 className="font-extrabold text-lg text-foreground tracking-tight">Messages</h2>
         </div>
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-border/30">
           {loadingList ? (
             <div className="flex justify-center py-12">
               <Loader2 className="animate-spin text-primary" size={22} />
@@ -433,7 +491,7 @@ export default function Chat({ initialConversationId = null }) {
               <p className="text-xs text-muted-foreground/70 mt-1">Connect with borrowers or lenders from the Marketplace.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/30">
+            <div>
               {conversations.map((c) => {
                 const other = c.otherParticipant;
                 const isOnline = presence[other._id]?.online ?? false;
@@ -482,11 +540,11 @@ export default function Chat({ initialConversationId = null }) {
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </div>
 
-      {/* ── Thread ─────────────────────────────────────────────────────── */}
-      <div className={`flex-1 flex flex-col bg-background/50 ${activeId ? 'flex' : 'hidden sm:flex'}`}>
+      {/* ── Thread (Fixed column with isolated message scrolling) ───── */}
+      <div className={`flex-1 flex flex-col h-full overflow-hidden bg-background/50 ${activeId ? 'flex' : 'hidden sm:flex'}`}>
         {!activeConversation ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
             <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
@@ -497,8 +555,8 @@ export default function Chat({ initialConversationId = null }) {
           </div>
         ) : (
           <>
-            {/* WhatsApp Styled Thread Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/70 bg-card z-10">
+            {/* Header (Shrink-0, never scrolls) */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/70 bg-card z-10 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   onClick={backToList}
@@ -548,8 +606,8 @@ export default function Chat({ initialConversationId = null }) {
               )}
             </div>
 
-            {/* Messages Thread Container */}
-            <ScrollArea className="flex-1 px-3 sm:px-6 py-4" ref={scrollRef}>
+            {/* Dedicated Isolated Message History Scroll Area */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-6 py-4 space-y-3" ref={scrollRef}>
               {hasMore && messages.length > 0 && (
                 <div className="flex justify-center mb-4">
                   <Button
@@ -557,7 +615,7 @@ export default function Chat({ initialConversationId = null }) {
                     size="sm"
                     onClick={loadOlder}
                     disabled={loadingOlder}
-                    className="text-xs rounded-full px-4 h-8 bg-card shadow-xs cursor-pointer"
+                    className="text-xs rounded-full px-4 h-8 bg-card shadow-2xs cursor-pointer"
                   >
                     {loadingOlder ? (
                       <Loader2 size={13} className="animate-spin mr-1.5" />
@@ -586,7 +644,7 @@ export default function Chat({ initialConversationId = null }) {
                     const showDayDivider = currentDay !== prevDay;
 
                     return (
-                      <div key={m._id} className="flex flex-col">
+                      <div key={m._id || idx} className="flex flex-col">
                         {/* WhatsApp-Style Centered Day Chip */}
                         {showDayDivider && (
                           <div className="flex justify-center my-3">
@@ -775,14 +833,14 @@ export default function Chat({ initialConversationId = null }) {
                   <div ref={bottomRef} />
                 </div>
               )}
-            </ScrollArea>
+            </div>
 
             {/* Editing banner */}
             {editingMessage && (
-              <div className="flex items-center justify-between px-5 py-2.5 bg-amber-500/10 border-t border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
+              <div className="flex items-center justify-between px-5 py-2.5 bg-amber-500/10 border-t border-amber-500/20 text-xs text-amber-700 dark:text-amber-400 shrink-0">
                 <div className="flex items-center gap-2 truncate">
                   <Edit2 size={14} />
-                  <span>Editing message (only within 15 mins): <strong>"{editingMessage.text}"</strong></span>
+                  <span>Editing message: <strong>"{editingMessage.text}"</strong></span>
                 </div>
                 <button
                   onClick={cancelEdit}
@@ -793,9 +851,8 @@ export default function Chat({ initialConversationId = null }) {
               </div>
             )}
 
-            {/* WhatsApp Styled Bottom Composer */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-border/70 bg-card">
-              {/* Media Attachment buttons */}
+            {/* Bottom Composer (Shrink-0, stays firmly pinned at bottom) */}
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-border/70 bg-card shrink-0">
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -849,7 +906,7 @@ export default function Chat({ initialConversationId = null }) {
         )}
       </div>
 
-      {/* Image Preview Modal */}
+      {/* Image Preview Lightbox */}
       <AnimatePresence>
         {previewImage && (
           <div

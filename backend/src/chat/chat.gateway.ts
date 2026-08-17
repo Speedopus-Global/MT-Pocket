@@ -16,7 +16,12 @@ interface AuthedSocket extends Socket {
 
 @WebSocketGateway({
   namespace: '/chat',
-  cors: { origin: process.env.FRONTEND_URL || '*', credentials: true },
+  cors: {
+    origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      callback(null, true);
+    },
+    credentials: true,
+  },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ChatGateway.name);

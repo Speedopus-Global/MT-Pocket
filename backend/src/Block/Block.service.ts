@@ -63,6 +63,8 @@ export class BlocksService {
   // True if EITHER user has blocked the other — gates offers/chat both ways,
   // so a blocked user can't just approach from the other direction.
   async isBlockedEitherWay(userIdA: string, userIdB: string): Promise<boolean> {
+    if (!userIdA || !userIdB || userIdA === userIdB) return false;
+    if (!Types.ObjectId.isValid(userIdA) || !Types.ObjectId.isValid(userIdB)) return false;
     const count = await this.blockModel.countDocuments({
       $or: [
         { blockerId: new Types.ObjectId(userIdA), blockedUserId: new Types.ObjectId(userIdB) },
