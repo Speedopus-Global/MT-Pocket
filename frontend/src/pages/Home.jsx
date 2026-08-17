@@ -47,9 +47,17 @@ export default function Home() {
 
   useEffect(() => {
     if (!location.hash) return;
-    const el = document.getElementById(location.hash.slice(1));
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [location.hash]);
+    const targetId = location.hash.slice(1);
+    const scrollTarget = () => {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    scrollTarget();
+    const timer = setTimeout(scrollTarget, 100);
+    return () => clearTimeout(timer);
+  }, [location.hash, location.pathname]);
 
   const handleGetStarted = () => {
     // If already consented (soft gate), skip modal
@@ -164,14 +172,21 @@ export default function Home() {
         <FeatureSection />
       </div>
 
-      <TrustSafetySection />
-      <Testimonials />
+      <div id="trust-safety">
+        <TrustSafetySection />
+      </div>
+
+      <div id="testimonials">
+        <Testimonials />
+      </div>
 
       <div id="faq">
         <FAQSection />
       </div>
 
-      <ContactSection />
+      <div id="contact">
+        <ContactSection />
+      </div>
 
       {/* ⚠️ Step 0 Consent Modal — soft gate, not legally binding */}
       <ConsentCheckpointModal

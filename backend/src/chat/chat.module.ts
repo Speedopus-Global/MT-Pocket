@@ -21,6 +21,7 @@ import { ChatGateway } from './chat.gateway';
 // guesses based on your file names (Block.service.ts, notifications.service.ts).
 import { BlocksModule } from '../Block/block.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -30,14 +31,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: LoanRequest.name, schema: LoanRequestSchema },
       { name: User.name, schema: UserSchema },
     ]),
-    // A SEPARATE JwtModule registration from AuthModule's — the gateway
-    // needs its own JwtService instance to call .verify() during the socket
-    // handshake (sockets never go through AuthGuard/passport). No signing
-    // options needed here since we only ever call .verify(), and the secret
-    // is passed per-call in chat.gateway.ts from JWT_ACCESS_SECRET.
     JwtModule.register({}),
     BlocksModule,
     NotificationsModule,
+    CloudinaryModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

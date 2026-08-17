@@ -7,21 +7,21 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-hidden border-t border-border bg-background">
-      <div className="mx-auto max-w-[1600px] px-6 py-16 lg:px-10">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-2">
+    <footer className="relative overflow-hidden border-t border-border bg-background w-full">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
+        <div className="grid gap-8 sm:gap-10 lg:gap-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="sm:col-span-2">
             <Link to="/" className="group inline-block hover-line text-primary pb-1">
-              <h2 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                 MT POCKET
               </h2>
             </Link>
-            <p className="mt-4 max-w-md text-muted-foreground">
+            <p className="mt-4 max-w-md text-sm text-muted-foreground leading-relaxed">
               A trusted platform that helps borrowers connect with verified lenders
               through a transparent and secure experience.
             </p>
 
-            <div className="mt-6 flex gap-4">
+            <div className="mt-6 flex flex-wrap gap-3">
               <a href="#" className="rounded-full border border-primary/20 p-2 text-primary hover:bg-primary hover:text-primary-foreground hover:scale-110 hover:-translate-y-1 hover:rotate-12 transition-all duration-300" aria-label="LinkedIn">
                 <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M4.98 3.5C4.98 4.88 3.88 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM0 8.99h5V24H0V8.99zM8.5 8.99h4.79v2.05h.07c.67-1.27 2.31-2.61 4.75-2.61 5.08 0 6.02 3.34 6.02 7.68V24h-5V16.5c0-1.79-.03-4.09-2.49-4.09-2.49 0-2.87 1.94-2.87 3.95V24h-5V8.99z" />
@@ -44,49 +44,58 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="font-semibold mb-5">Product</h3>
-            <div className="space-y-3 flex flex-col items-start">
-              <Link to="/how-it-works" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+            <h3 className="font-semibold text-sm mb-4 text-foreground">Product</h3>
+            <div className="space-y-2.5 flex flex-col items-start">
+              <Link to="/#how-it-works" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">How it works</span>
               </Link>
-              <Link to="/trust-safety" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+              <Link to="/#trust-safety" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">Trust &amp; Safety</span>
               </Link>
-              <Link to="/faq" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+              <Link to="/#faq" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">FAQ</span>
               </Link>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-5">Company</h3>
-            <div className="space-y-3 flex flex-col items-start">
-              <Link to="/About" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
-                <span className="hover-line text-sm">About</span>
-              </Link>
-              <Link to="/contact" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
-                <span className="hover-line text-sm">Contact</span>
+              <Link to="/marketplace" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+                <span className="hover-line text-sm">Marketplace</span>
               </Link>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-5">Legal</h3>
-            <div className="space-y-3 flex flex-col items-start">
-              <Link to="/Terms" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+            <h3 className="font-semibold text-sm mb-4 text-foreground">Company</h3>
+            <div className="space-y-2.5 flex flex-col items-start">
+              <Link to="/about" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+                <span className="hover-line text-sm">About Us</span>
+              </Link>
+              <Link to="/#contact" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+                <span className="hover-line text-sm">Contact Us</span>
+              </Link>
+              <Link to="/support" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+                <span className="hover-line text-sm">Help &amp; Support</span>
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-sm mb-4 text-foreground">Legal &amp; Safety</h3>
+            <div className="space-y-2.5 flex flex-col items-start">
+              <Link to="/terms" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">Terms &amp; Conditions</span>
               </Link>
-              <Link to="/Privacy" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+              <Link to="/privacy" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">Privacy Policy</span>
               </Link>
+              <Link to="/community-guidelines" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
+                <span className="hover-line text-sm">Community Guidelines</span>
+              </Link>
               <a href="mailto:support@mtpocket.com" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
-                <span className="hover-line text-sm">Support Email</span>
+                <span className="hover-line text-sm">support@mtpocket.com</span>
               </a>
             </div>
           </div>
         </div>
 
-        <div className="mt-14 border-t border-border pt-8 text-center text-sm text-muted-foreground">
+        <div className="mt-12 sm:mt-14 border-t border-border pt-8 text-center text-xs sm:text-sm text-muted-foreground">
           <p>
             © {year} MT Pocket. MT Pocket is a facilitator platform — not a bank or
             NBFC. We never handle your money or set loan terms.
@@ -94,15 +103,15 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute bottom-[-4rem] left-1/2 -translate-x-1/2 select-none">
-        <h1 className="whitespace-nowrap text-[10rem] md:text-[15rem] font-black leading-none tracking-tight
+      <div className="pointer-events-none absolute bottom-[-1.5rem] sm:bottom-[-2.5rem] md:bottom-[-4rem] left-1/2 -translate-x-1/2 select-none w-full text-center overflow-hidden">
+        <h1 className="whitespace-nowrap text-[3.5rem] xs:text-[5.5rem] sm:text-[8rem] md:text-[11rem] lg:text-[14rem] font-black leading-none tracking-tight
         text-transparent bg-clip-text
         bg-gradient-to-b from-foreground/10 via-foreground/5 to-transparent">
           MT POCKET
         </h1>
       </div>
 
-      <div className="h-32" />
+      <div className="h-16 sm:h-24 md:h-32" />
     </footer>
   );
 }

@@ -34,6 +34,42 @@ export class CloudinaryService {
     });
   }
 
+  // ── Chat Media Upload (Photos / Documents) ──────────────────────────
+  async uploadChatMedia(
+    buffer: Buffer,
+    mimeType: string,
+    filename: string,
+    userId: string,
+  ): Promise<{ url: string; publicId: string; resourceType: string; fileSize: number; fileName: string }> {
+    const isImage = mimeType.startsWith('image/');
+    const resourceType = isImage ? 'image' : 'raw';
+    const cleanFileName = filename ? filename.replace(/[^a-zA-Z0-9.-]/g, '_') : 'file';
+
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `mtpocket/chat/${userId}`,
+          resource_type: resourceType,
+          use_filename: true,
+          unique_filename: true,
+        },
+        (err, res) => {
+          if (err || !res) return reject(err ?? new Error('Chat media upload failed'));
+          resolve(res);
+        },
+      );
+      streamifier.createReadStream(buffer).pipe(uploadStream);
+    });
+
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      resourceType: result.resource_type,
+      fileSize: result.bytes,
+      fileName: cleanFileName,
+    };
+  }
+
   // ── KYC Document ──────────────────────────────────────────────────────
   // Uploads as authenticated (private) asset. Never use the returned
   // secureUrl directly — generate a signed URL via getSignedFetchUrl().

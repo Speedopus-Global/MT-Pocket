@@ -11,7 +11,7 @@ export default function Navbar() {
     { label: 'How it works', href: '/#how-it-works' },
     { label: 'What We Offer', href: '/#what-we-offer' },
     { label: 'FAQ', href: '/#faq' },
-    { label: 'Trust & Safety', href: '/trust' },
+    { label: 'Trust & Safety', href: '/#trust-safety' },
     { label: 'Marketplace', href: '/marketplace' },
   ];
 

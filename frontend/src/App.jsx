@@ -23,6 +23,8 @@ import RefundPolicy from './pages/RefundPolicy';
 import CookiePolicy from './pages/CookiePolicy';
 import CommunityGuidelines from './pages/CommunityGuidelines';
 import Chat from './pages/Chat';
+import HelpAndSupport from './pages/HelpAndSupport';
+
 function App() {
   return (
     <AuthProvider>
@@ -41,6 +43,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="messages" element={<Chat />} />
+            <Route path="support" element={<HelpAndSupport />} />
           </Route>
 
           <Route path="/unauthorized" element={<Unauthorized />} />
@@ -48,7 +51,12 @@ function App() {
           {/* Main app marketplace — wrapped in Layout (navbar + footer) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
-           
+            <Route path="how-it-works" element={<Home />} />
+            <Route path="trust-safety" element={<Home />} />
+            <Route path="trust" element={<Home />} />
+            <Route path="faq" element={<Home />} />
+            <Route path="contact" element={<Home />} />
+            <Route path="support" element={<HelpAndSupport />} />
           </Route>
            <Route path="marketplace" element={<Marketplace />} />
             <Route path="users/:id" element={<UserProfile />} />
@@ -58,7 +66,6 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
-          {/* Dev only */}
           {/* Legal / Policy pages */}
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/Terms" element={<TermsConditions />} />

@@ -199,5 +199,21 @@ export const api = {
   // POST /chat/conversations/:id/read — REST fallback, socket also does this live
   markChatRead: (conversationId, accessToken) =>
     request(`/chat/conversations/${conversationId}/read`, { method: 'POST', accessToken }),
+  // POST /chat/upload — upload photo/document
+  uploadChatMedia: (file, accessToken) => {
+    const form = new FormData();
+    form.append('file', file);
+    return requestMultipart('/chat/upload', { method: 'POST', body: form, accessToken });
+  },
+  // POST /chat/messages/:id/edit
+  editChatMessage: (id, text, accessToken) =>
+    request(`/chat/messages/${id}/edit`, { method: 'POST', body: { text }, accessToken }),
+  // POST /chat/messages/:id/react
+  reactChatMessage: (id, emoji, accessToken) =>
+    request(`/chat/messages/${id}/react`, { method: 'POST', body: { emoji }, accessToken }),
+  // DELETE /chat/messages/:id/for-me
+  deleteChatMessageForMe: (id, accessToken) =>
+    request(`/chat/messages/${id}/for-me`, { method: 'DELETE', accessToken }),
 };
+
  

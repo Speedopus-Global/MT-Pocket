@@ -131,37 +131,96 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('send_message')
   async sendMessage(
     @ConnectedSocket() socket: AuthedSocket,
-    @MessageBody() data: { conversationId: string; text: string },
+    @MessageBody() data: {
+      conversationId: string;
+      text?: string;
+      mediaUrl?: string;
+      mediaType?: 'image' | 'file';
+      fileName?: string;
+      fileSize?: number;
+    },
   ) {
     const senderId = socket.data.userId;
     const { message, recipientId } = await this.chatService.createMessage(
       data.conversationId,
       senderId,
       data.text,
+      {
+        mediaUrl: data.mediaUrl,
+        mediaType: data.mediaType,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+      },
     );
 
     // Push to everyone actively in the thread — both participants, every
     // open tab, including the sender (so multi-device stays in sync).
     this.server.to(`conversation:${data.conversationId}`).emit('new_message', message);
 
-    // Nudge the recipient's personal room so their conversation LIST
-    // updates (unread badge, preview) even if this specific thread isn't
-    // open on their end right now.
+    let preview = message.text;
+    if (!preview && message.mediaUrl) {
+      preview = message.mediaType === 'image' ? '📷 Photo' : `📎 ${message.fileName || 'Attachment'}`;
+    }
+
+    // Nudge the recipient's personal room
     this.server.to(`user:${recipientId}`).emit('conversation_updated', {
       conversationId: data.conversationId,
-      lastMessagePreview: message.text,
+      lastMessagePreview: preview,
       lastMessageAt: (message as any).createdAt,
     });
 
-    // Recipient has no socket connected at all → fall back to an in-app
-    // notification. If they ARE online but just not in this room, the
-    // conversation_updated event above already covers it — no notification
-    // needed on top of that.
     if (!this.isOnline(recipientId)) {
-      await this.chatService.notifyOfflineRecipient(recipientId, data.conversationId, message.text);
+      await this.chatService.notifyOfflineRecipient(recipientId, data.conversationId, preview);
     }
 
     return { sent: true, messageId: message._id };
+  }
+
+  // ── Edit a message (within 15 minutes) ───────────────────────────────
+  @SubscribeMessage('edit_message')
+  async editMessage(
+    @ConnectedSocket() socket: AuthedSocket,
+    @MessageBody() data: { conversationId: string; messageId: string; text: string },
+  ) {
+    const userId = socket.data.userId;
+    const updated = await this.chatService.editMessage(data.messageId, userId, data.text);
+
+    this.server.to(`conversation:${data.conversationId}`).emit('message_edited', {
+      messageId: updated._id,
+      text: updated.text,
+      isEdited: updated.isEdited,
+      editedAt: updated.editedAt,
+    });
+
+    return { success: true, message: updated };
+  }
+
+  // ── React to a message ───────────────────────────────────────────────
+  @SubscribeMessage('react_message')
+  async reactMessage(
+    @ConnectedSocket() socket: AuthedSocket,
+    @MessageBody() data: { conversationId: string; messageId: string; emoji: string },
+  ) {
+    const userId = socket.data.userId;
+    const updated = await this.chatService.reactMessage(data.messageId, userId, data.emoji);
+
+    this.server.to(`conversation:${data.conversationId}`).emit('message_reacted', {
+      messageId: updated._id,
+      reactions: updated.reactions,
+    });
+
+    return { success: true, reactions: updated.reactions };
+  }
+
+  // ── Delete for me ────────────────────────────────────────────────────
+  @SubscribeMessage('delete_for_me')
+  async deleteForMe(
+    @ConnectedSocket() socket: AuthedSocket,
+    @MessageBody() data: { conversationId: string; messageId: string },
+  ) {
+    const userId = socket.data.userId;
+    await this.chatService.deleteForMe(data.messageId, userId);
+    return { success: true, messageId: data.messageId };
   }
 
   // ── Typing indicator — ephemeral, no DB write ────────────────────────

@@ -9,6 +9,7 @@ import { LoanRequest, LoanRequestDocument } from '../Loan/schemas/loan-request.s
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { BlocksService } from '../Block/Block.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 const DEFAULT_PAGE_SIZE = 30;
 
@@ -21,15 +22,13 @@ export class ChatService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly blocksService: BlocksService,
     private readonly notifService: NotificationsService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   // ── Get-or-create ─────────────────────────────────────────────────────
   // Callable only by the borrower who owns the request, or the specific
   // lender named — never a third party — and only once a real offer from
-  // that lender exists on that request. This is the entire access-control
-  // story for opening a thread; everything downstream (send/read/etc)
-  // re-derives membership from the Conversation document itself, never
-  // trusts the caller's claim about who they are.
+  // that lender exists on that request.
   async getOrCreateConversation(requesterId: string, loanRequestId: string, lenderId: string) {
     const req = await this.loanModel.findById(loanRequestId).select('borrowerId offers').lean();
     if (!req) throw new NotFoundException('Loan request not found');
@@ -82,6 +81,7 @@ export class ChatService {
           conversationId: { $in: conversations.map((c: any) => c._id) },
           senderId: { $ne: uid },
           status: { $ne: 'read' },
+          deletedFor: { $ne: uid },
         },
       },
       { $group: { _id: '$conversationId', count: { $sum: 1 } } },
@@ -101,7 +101,7 @@ export class ChatService {
     });
   }
 
-  private async assertMember(conversationId: string, userId: string): Promise<ConversationDocument> {
+  public async assertMember(conversationId: string, userId: string): Promise<ConversationDocument> {
     const convo = await this.conversationModel.findById(conversationId);
     if (!convo) throw new NotFoundException('Conversation not found');
     if (!convo.participantIds.some((p) => p.toString() === userId)) {
@@ -111,12 +111,14 @@ export class ChatService {
   }
 
   // ── Paginated history — newest page first, "before" cursor pages older ──
-  // The frontend's "load earlier messages" button at the top of the thread
-  // passes the oldest message _id it currently holds as `before`.
   async getMessages(conversationId: string, userId: string, before?: string, limit = DEFAULT_PAGE_SIZE) {
     await this.assertMember(conversationId, userId);
+    const uid = new Types.ObjectId(userId);
 
-    const query: Record<string, any> = { conversationId: new Types.ObjectId(conversationId) };
+    const query: Record<string, any> = {
+      conversationId: new Types.ObjectId(conversationId),
+      deletedFor: { $ne: uid },
+    };
     if (before) query._id = { $lt: new Types.ObjectId(before) };
 
     const messages = await this.messageModel
@@ -128,33 +130,142 @@ export class ChatService {
     return messages.reverse(); // chronological order for rendering
   }
 
-  // ── Send ─────────────────────────────────────────────────────────────
-  async createMessage(conversationId: string, senderId: string, text: string) {
-    const trimmed = text?.trim();
-    if (!trimmed) throw new BadRequestException('Message cannot be empty');
+  // ── Send message (supports text, images, and files) ───────────────────
+  async createMessage(
+    conversationId: string,
+    senderId: string,
+    text?: string,
+    media?: { mediaUrl?: string; mediaType?: 'image' | 'file'; fileName?: string; fileSize?: number },
+  ): Promise<{ message: MessageDocument; recipientId: string }> {
+    const trimmed = text?.trim() || '';
+    if (!trimmed && !media?.mediaUrl) {
+      throw new BadRequestException('Message must have text or media attachment');
+    }
     if (trimmed.length > 4000) throw new BadRequestException('Message too long');
 
     const convo = await this.assertMember(conversationId, senderId);
     const recipientId = convo.participantIds.find((p) => p.toString() !== senderId)!.toString();
 
-    // Re-checked on every send, not just at thread creation — a block that
-    // happens mid-conversation should stop new messages immediately.
     const blocked = await this.blocksService.isBlockedEitherWay(senderId, recipientId);
     if (blocked) throw new ForbiddenException('You cannot message this user');
 
-    const message = await this.messageModel.create({
+    const messageData: any = {
       conversationId: convo._id,
       senderId: new Types.ObjectId(senderId),
       text: trimmed,
       status: 'sent',
-    });
+      deletedFor: [],
+      reactions: [],
+    };
 
-    convo.lastMessagePreview = trimmed.slice(0, 120);
+    if (media?.mediaUrl) {
+      messageData.mediaUrl = media.mediaUrl;
+      messageData.mediaType = media.mediaType;
+      messageData.fileName = media.fileName;
+      messageData.fileSize = media.fileSize;
+    }
+
+    const message = await this.messageModel.create(messageData);
+
+    let preview = trimmed;
+    if (!preview && media?.mediaUrl) {
+      preview = media.mediaType === 'image' ? '📷 Photo' : `📎 ${media.fileName || 'Attachment'}`;
+    }
+    convo.lastMessagePreview = preview.slice(0, 120);
     convo.lastMessageAt = (message as any).createdAt;
     convo.lastMessageSenderId = new Types.ObjectId(senderId);
     await convo.save();
 
-    return { message, recipientId };
+    return { message: message as MessageDocument, recipientId };
+  }
+
+  // ── Edit message (Allowed ONLY within 15 minutes from creation) ────────
+  async editMessage(messageId: string, userId: string, newText: string) {
+    const trimmed = newText?.trim();
+    if (!trimmed) throw new BadRequestException('Edited message cannot be empty');
+    if (trimmed.length > 4000) throw new BadRequestException('Message too long');
+
+    const message = await this.messageModel.findById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    if (message.senderId.toString() !== userId) {
+      throw new ForbiddenException('You can only edit your own messages');
+    }
+
+    const createdTime = new Date((message as any).createdAt).getTime();
+    const elapsedMinutes = (Date.now() - createdTime) / 60000;
+    if (elapsedMinutes > 15) {
+      throw new BadRequestException('Messages can only be edited within 15 minutes of sending');
+    }
+
+    message.text = trimmed;
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    return message;
+  }
+
+  // ── React to message (WhatsApp-style emoji reaction toggle) ───────────
+  async reactMessage(messageId: string, userId: string, emoji: string) {
+    const message = await this.messageModel.findById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    await this.assertMember(message.conversationId.toString(), userId);
+    const uid = new Types.ObjectId(userId);
+
+    const existingIndex = (message.reactions || []).findIndex(
+      (r) => r.userId.toString() === userId && r.emoji === emoji,
+    );
+
+    if (existingIndex > -1) {
+      // Toggle off if same reaction clicked again
+      message.reactions.splice(existingIndex, 1);
+    } else {
+      // Replace existing reaction from this user or add new
+      const userPrevIndex = (message.reactions || []).findIndex((r) => r.userId.toString() === userId);
+      if (userPrevIndex > -1) {
+        message.reactions[userPrevIndex].emoji = emoji;
+      } else {
+        message.reactions.push({ userId: uid, emoji });
+      }
+    }
+
+    await message.save();
+    return message;
+  }
+
+  // ── Delete For Me (Only hides for requester, remains for recipient) ────
+  async deleteForMe(messageId: string, userId: string) {
+    const message = await this.messageModel.findById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    await this.assertMember(message.conversationId.toString(), userId);
+    const uid = new Types.ObjectId(userId);
+
+    if (!message.deletedFor.some((id) => id.toString() === userId)) {
+      message.deletedFor.push(uid);
+      await message.save();
+    }
+
+    return { success: true, messageId };
+  }
+
+  // ── Media Upload via Cloudinary ───────────────────────────────────────
+  async uploadMedia(file: Express.Multer.File, userId: string) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    const result = await this.cloudinaryService.uploadChatMedia(
+      file.buffer,
+      file.mimetype,
+      file.originalname,
+      userId,
+    );
+    return {
+      mediaUrl: result.url,
+      mediaType: file.mimetype.startsWith('image/') ? 'image' : 'file',
+      fileName: file.originalname,
+      fileSize: file.size,
+    };
   }
 
   // ── Delivery / read receipts ────────────────────────────────────────────

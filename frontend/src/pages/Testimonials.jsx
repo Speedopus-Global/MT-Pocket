@@ -125,17 +125,17 @@ export const Testimonials = ({
       {/* NEW — header only. Everything below (the card stack) is
           untouched in structure/logic; only card content + colors were
           swapped, per your instruction. */}
-      <div className="mx-auto max-w-6xl px-6">
-        <p className="text-s font-semibold uppercase tracking-[0.2em] text-primary">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-primary">
           [Testimonials]
         </p>
-       <h2 className="mt-4 max-w-4xl whitespace-nowrap text-8xl font-medium leading-[1.05] tracking-tight sm:text-5xl lg:text-8xl">
-        <span className="text-secondary">
+        <h2 className="mt-3 sm:mt-4 max-w-4xl text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[1.1] tracking-tight">
+          <span className="text-secondary">
             People love us,
-        </span>{" "}
-        <span className="font-light italic text-primary">
+          </span>{" "}
+          <span className="font-light italic text-primary">
             you know.
-        </span>
+          </span>
         </h2>
       </div>
 

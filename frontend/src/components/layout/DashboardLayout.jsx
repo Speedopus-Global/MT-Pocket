@@ -7,6 +7,7 @@ import {
   User as UserIcon, 
   Settings as SettingsIcon,
   MessageSquare, 
+  HelpCircle,
   LogOut, 
   Menu, 
   X, 
@@ -25,17 +26,17 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  // Messages is live now — chat is built (Chat.jsx + backend). Dropped the
-  // 'Soon' badge that was here as a placeholder.
+  // Messages is live now — chat is built (Chat.jsx + backend).
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/dashboard/profile', label: 'Profile', icon: UserIcon },
     { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
     { to: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+    { to: '/dashboard/support', label: 'Help & Support', icon: HelpCircle },
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDF6ED]/20 flex flex-col md:flex-row text-foreground font-sans">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row text-foreground font-sans">
       
       {/* Mobile Header Bar */}
       <header className="md:hidden flex items-center justify-between px-6 py-4 bg-card/85 backdrop-blur-md border-b border-border/60 z-20">
@@ -180,7 +181,7 @@ export default function DashboardLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-        <main className="flex-1 p-6 md:p-10 max-w-6xl w-full mx-auto flex flex-col">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-[1600px] mx-auto flex flex-col min-w-0">
           <Outlet />
         </main>
       </div>

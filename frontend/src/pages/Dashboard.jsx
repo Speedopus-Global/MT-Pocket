@@ -10,21 +10,14 @@ import InfoBanner from '../components/ui/InfoBanner';
 import {
   ShieldCheck,
   ShieldAlert,
-  Smartphone,
-  Mail,
-  Fingerprint,
   PlusCircle,
   ArrowUpRight,
-  Coins,
   Handshake,
   Info,
-  AlertTriangle,
   Loader2,
   X,
-  ChevronRight,
   TrendingUp,
   Banknote,
-  Tag,
   Hospital,
   GraduationCap,
   Briefcase,
@@ -34,7 +27,9 @@ import {
   CalendarDays,
   Shield,
   HelpCircle,
-  CheckCircle
+  CheckCircle,
+  Search,
+  ExternalLink
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 
@@ -60,20 +55,6 @@ const OFFER_TABS = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
-const containerVariants = {
-  hidden:  { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-const itemVariants = {
-  hidden:  { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-};
-const modalVariants = {
-  hidden:  { opacity: 0, scale: 0.95, y: 10 },
-  visible: { opacity: 1, scale: 1,    y: 0,  transition: { type: 'spring', stiffness: 380, damping: 26 } },
-  exit:    { opacity: 0, scale: 0.95, y: 10, transition: { duration: 0.15 } },
-};
-
 function lenderIdOf(offer) {
   return typeof offer.lenderId === 'object' ? offer.lenderId?._id : offer.lenderId;
 }
@@ -93,19 +74,17 @@ export default function Dashboard() {
   // Selected tab: pending / accepted / rejected
   const [offersTab, setOffersTab]         = useState('pending');
 
-  // Modal profile preview state — carries loanRequestId + lenderId
-  // alongside the previewed userId, since MessageButton (used inside the
-  // modal) needs the actual offer relationship, not just "who is this".
+  // Modal profile preview state
   const [previewContext, setPreviewContext] = useState(null);
 
-  // Offer dialog state — replaces window.confirm()
+  // Offer dialog state
   const [pendingAccept, setPendingAccept] = useState(null); // { loanRequestId, offerId }
   const [pendingReject, setPendingReject] = useState(null); // { loanRequestId, offerId }
 
   const isLender   = user?.role === 'lender'   || user?.role === 'both';
   const isBorrower = user?.role === 'borrower' || user?.role === 'both';
 
-  // Fetch borrower requests (has nested offers received)
+  // Fetch borrower requests
   const fetchBorrowerLoans = () => {
     if (!isBorrower || !accessToken) return;
     setMyLoansLoading(true);
@@ -155,81 +134,160 @@ export default function Dashboard() {
 
   if (!user) return null;
 
+  const pendingReceivedCount = receivedOffers.filter((o) => o.status === 'pending').length;
+  const pendingSentCount = sentOffers.filter((o) => o.status === 'pending').length;
+  const totalMatchesCount = receivedOffers.filter((o) => o.status === 'accepted').length + sentOffers.filter((o) => o.status === 'accepted').length;
+
   return (
-    <motion.div
-      className="flex-1 flex flex-col space-y-8 min-h-full"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* HEADER SECTION */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <motion.h1
-            className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-emerald-600 to-primary/80"
-            initial={{ backgroundPosition: '0% 50%' }}
-            animate={{ backgroundPosition: '100% 50%' }}
-            style={{ backgroundSize: '200% auto' }}
-            transition={{ duration: 5, repeat: Infinity, repeatType: 'reverse' }}
-          >
-            Welcome back, {user.fullName || 'Member'}!
-          </motion.h1>
-          <p className="text-muted-foreground text-sm font-medium">
-            Track and manage your borrowing and lending matches in real-time.
+    <div className="flex-1 flex flex-col space-y-6 w-full min-h-full">
+      {/* ── TOP EXECUTIVE HEADER ────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Dashboard Overview
+            </h1>
+            {user.identityVerified ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                <ShieldCheck size={13} /> Verified Member
+              </span>
+            ) : (
+              <Link
+                to="/dashboard/settings"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-full transition-colors"
+              >
+                <ShieldAlert size={13} /> Complete KYC
+              </Link>
+            )}
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
+            Welcome back, <span className="text-foreground font-bold">{user.fullName || 'Member'}</span>. Monitor your active loan proposals, matches, and messaging in real time.
           </p>
         </div>
 
-        {/* Notifications */}
-        <NotificationDrawer accessToken={accessToken} />
-      </motion.div>
+        <div className="flex items-center gap-3 self-start sm:self-center">
+          <Link
+            to="/marketplace"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/95 shadow-xs transition-colors cursor-pointer"
+          >
+            <Search size={14} />
+            <span>Explore Marketplace</span>
+          </Link>
+          <NotificationDrawer accessToken={accessToken} />
+        </div>
+      </div>
 
-      {/* New offers info banner */}
-      {receivedOffers.filter((o) => o.status === 'pending').length > 0 && (
+      {/* ── KPI METRICS CARDS ────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Active Requests</span>
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Banknote size={16} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-foreground">{myLoans.length}</span>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Borrowing listings posted</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Pending Proposals</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+              <TrendingUp size={16} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-foreground">
+              {isBorrower ? pendingReceivedCount : pendingSentCount}
+            </span>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {isBorrower ? `${pendingReceivedCount} awaiting your review` : `${pendingSentCount} sent to borrowers`}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Accepted Matches</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+              <Handshake size={16} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-foreground">{totalMatchesCount}</span>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Active lending agreements</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Account Role</span>
+            <div className="w-8 h-8 rounded-xl bg-muted text-foreground flex items-center justify-center">
+              <UserIcon size={16} />
+            </div>
+          </div>
+          <div>
+            <span className="text-lg font-black text-foreground capitalize">{user.role}</span>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              <Link to="/dashboard/settings" className="text-primary hover:underline font-bold">
+                Manage Profile →
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* New offers notification banner */}
+      {pendingReceivedCount > 0 && (
         <InfoBanner variant="info" dismissible={true}>
-          You have <strong>{receivedOffers.filter((o) => o.status === 'pending').length} new offer{receivedOffers.filter((o) => o.status === 'pending').length > 1 ? 's' : ''}</strong> — review them below.
+          You have <strong>{pendingReceivedCount} new offer{pendingReceivedCount > 1 ? 's' : ''}</strong> on your active requests. Review terms and connect with lenders below.
         </InfoBanner>
       )}
 
-      {/* OFFERS MONOLITHIC CARD VIEW */}
-      <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-8 shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5 mb-6">
+      {/* ── ACTIVE PROPOSALS & MATCHES SECTION ──────────────────────── */}
+      <div className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
           <div className="flex items-center gap-2.5">
-            <Handshake className="text-primary h-6 w-6" />
-            <h2 className="font-extrabold text-2xl text-foreground tracking-tight">Active Proposals & Matches</h2>
+            <Handshake className="text-primary h-5 w-5" />
+            <div>
+              <h2 className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight">Active Proposals &amp; Matches</h2>
+              <p className="text-xs text-muted-foreground">Manage your incoming and outgoing loan negotiations</p>
+            </div>
           </div>
 
-          {/* Sliding 3-way toggle: Pending / Accepted / Rejected */}
-          <div className="relative flex rounded-xl border border-border p-1 bg-muted/40 self-start">
+          {/* 3-way toggle pill */}
+          <div className="flex rounded-xl border border-border/80 p-1 bg-muted/40 self-start sm:self-auto">
             {OFFER_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setOffersTab(tab.value)}
-                className={`relative z-10 px-5 py-2 text-sm font-bold rounded-lg transition-colors cursor-pointer ${
-                  offersTab === tab.value ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                className={`relative px-4 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                  offersTab === tab.value ? 'text-primary-foreground bg-primary shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tab.label}
-                {offersTab === tab.value && (
-                  <motion.span
-                    layoutId="offers-tab-pill-dash"
-                    className="absolute inset-0 -z-10 rounded-lg bg-primary"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Both, Single Lender, Single Borrower Lists */}
+        {/* Proposals content */}
         <div className="space-y-8">
           {/* LENDER MODE SECTION */}
           {isLender && (
             <div>
               {isBorrower && (
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                  Offers Sent (As Lender) — {offersTab} status
-                </h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Offers Sent (As Lender)
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase">
+                    {offersTab}
+                  </span>
+                </div>
               )}
               
               <OffersGrid
@@ -245,68 +303,66 @@ export default function Dashboard() {
                   return (
                     <div
                       key={o.offerId}
-                      className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md hover:border-primary/10 transition-all flex flex-col justify-between"
+                      className="rounded-xl border border-border/80 bg-background/50 p-4 hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between"
                     >
                       <div>
-                        {/* Header */}
+                        {/* Card Header */}
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                              <CategoryIcon size={18} />
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                              <CategoryIcon size={16} />
                             </div>
                             <div>
-                              <h4 className="text-base font-extrabold text-foreground tracking-tight">
-                                ₹{o.amount.toLocaleString()}
+                              <h4 className="text-sm font-bold text-foreground">
+                                ₹{o.amount?.toLocaleString()}
                               </h4>
-                              <p className="text-xs text-muted-foreground font-semibold">
-                                {CATEGORY_LABELS[o.category] || o.category} Request
+                              <p className="text-[11px] text-muted-foreground font-semibold">
+                                {CATEGORY_LABELS[o.category] || o.category} Loan
                               </p>
                             </div>
                           </div>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
                             o.loanRequestStatus === 'open' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'
                           }`}>
                             {o.loanRequestStatus}
                           </span>
                         </div>
 
-                        <Separator className="my-3.5" />
-
                         {/* Middle body */}
-                        <div className="space-y-1.5 text-sm font-medium">
-                          <p className="text-muted-foreground">
-                            Borrower:{' '}
+                        <div className="space-y-1 text-xs font-medium bg-card p-3 rounded-lg border border-border/50 mb-3">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Borrower:</span>
                             <button
                               onClick={() => setPreviewContext({
                                 userId: o.borrower?._id,
                                 loanRequestId: o.loanRequestId,
-                                lenderId: user.id, // we're the lender in this thread
+                                lenderId: user.id,
                               })}
                               className="text-primary hover:underline font-bold cursor-pointer"
                             >
                               {o.borrower?.fullName || 'View Profile'}
                             </button>
-                          </p>
-                          <p className="text-muted-foreground">
-                            Offered Rate: <span className="text-foreground font-bold">{o.offeredRate}%</span>
-                          </p>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Offered Rate:</span>
+                            <span className="text-foreground font-bold">{o.offeredRate}%</span>
+                          </div>
                           {o.message && (
-                            <p className="text-xs text-muted-foreground italic mt-2 line-clamp-2">
+                            <p className="text-[11px] text-muted-foreground italic pt-1 border-t border-border/40 mt-1 line-clamp-2">
                               "{o.message}"
                             </p>
                           )}
                         </div>
                       </div>
 
-                      {/* Footer */}
+                      {/* Footer Actions */}
                       <div>
-                        <Separator className="my-3.5" />
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          <MessageButton loanRequestId={o.loanRequestId} lenderId={user.id} />
+                        <div className="mb-2">
+                          <MessageButton loanRequestId={o.loanRequestId} lenderId={user.id} className="w-full justify-center h-8 text-xs" />
                         </div>
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                        <div className="flex justify-between items-center text-[10px] text-muted-foreground font-medium pt-1">
                           <span>Sent {new Date(o.createdAt).toLocaleDateString()}</span>
-                          <span className="capitalize text-foreground font-bold">{o.status}</span>
+                          <span className="capitalize font-bold text-foreground">{o.status}</span>
                         </div>
                       </div>
                     </div>
@@ -316,15 +372,20 @@ export default function Dashboard() {
             </div>
           )}
 
-          {isLender && isBorrower && <Separator className="my-8" />}
+          {isLender && isBorrower && <Separator className="my-6" />}
 
           {/* BORROWER MODE SECTION */}
           {isBorrower && (
             <div>
               {isLender && (
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                  Offers Received (As Borrower) — {offersTab} status
-                </h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Offers Received (As Borrower)
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase">
+                    {offersTab}
+                  </span>
+                </div>
               )}
 
               <OffersGrid
@@ -342,35 +403,33 @@ export default function Dashboard() {
                   return (
                     <div
                       key={o._id}
-                      className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md hover:border-primary/10 transition-all flex flex-col justify-between"
+                      className="rounded-xl border border-border/80 bg-background/50 p-4 hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between"
                     >
                       <div>
                         {/* Header */}
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                              <CategoryIcon size={18} />
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                              <CategoryIcon size={16} />
                             </div>
                             <div>
-                              <h4 className="text-base font-extrabold text-foreground tracking-tight">
-                                ₹{o.loanRequest.amount.toLocaleString()}
+                              <h4 className="text-sm font-bold text-foreground">
+                                ₹{o.loanRequest.amount?.toLocaleString()}
                               </h4>
-                              <p className="text-xs text-muted-foreground font-semibold">
+                              <p className="text-[11px] text-muted-foreground font-semibold">
                                 {CATEGORY_LABELS[o.loanRequest.category] || o.loanRequest.category}
                               </p>
                             </div>
                           </div>
-                          <span className="text-[10px] font-bold bg-primary/5 text-primary px-2 py-0.5 rounded-full capitalize">
+                          <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-md capitalize">
                             {o.loanRequest.status}
                           </span>
                         </div>
 
-                        <Separator className="my-3.5" />
-
-                        {/* Bid Proposal Details */}
-                        <div className="space-y-1.5 text-sm font-medium">
-                          <p className="text-muted-foreground">
-                            Lender:{' '}
+                        {/* Details */}
+                        <div className="space-y-1 text-xs font-medium bg-card p-3 rounded-lg border border-border/50 mb-3">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Lender:</span>
                             {lId ? (
                               <button
                                 onClick={() => setPreviewContext({
@@ -385,12 +444,13 @@ export default function Dashboard() {
                             ) : (
                               <span className="text-foreground font-bold">Anonymous</span>
                             )}
-                          </p>
-                          <p className="text-muted-foreground">
-                            Offered Rate: <span className="text-foreground font-bold">{o.offeredRate}%</span>
-                          </p>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Offered Rate:</span>
+                            <span className="text-foreground font-bold">{o.offeredRate}%</span>
+                          </div>
                           {o.message && (
-                            <p className="text-xs text-muted-foreground italic mt-2 line-clamp-2">
+                            <p className="text-[11px] text-muted-foreground italic pt-1 border-t border-border/40 mt-1 line-clamp-2">
                               "{o.message}"
                             </p>
                           )}
@@ -399,33 +459,32 @@ export default function Dashboard() {
 
                       {/* Footer Actions */}
                       <div>
-                        <Separator className="my-3.5" />
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          {lId && <MessageButton loanRequestId={o.loanRequest._id} lenderId={lId} />}
+                        <div className="flex items-center gap-2 mb-2">
+                          {lId && <MessageButton loanRequestId={o.loanRequest._id} lenderId={lId} className="flex-1 justify-center h-8 text-xs" />}
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Received {new Date(o.createdAt).toLocaleDateString()}
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(o.createdAt).toLocaleDateString()}
                           </span>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             {o.status === 'pending' ? (
                               <>
                                 <button
                                   onClick={() => setPendingAccept({ loanRequestId: o.loanRequest._id, offerId: o._id })}
-                                  className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors cursor-pointer"
                                 >
                                   Accept
                                 </button>
                                 <button
                                   onClick={() => setPendingReject({ loanRequestId: o.loanRequest._id, offerId: o._id })}
-                                  className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors cursor-pointer"
                                 >
                                   Decline
                                 </button>
                               </>
                             ) : (
-                              <span className="text-xs capitalize text-muted-foreground font-bold">{o.status}</span>
+                              <span className="text-[10px] capitalize text-muted-foreground font-bold">{o.status}</span>
                             )}
                           </div>
                         </div>
@@ -437,24 +496,17 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
-      {/* SECURITY / ADVISORY CARD */}
-      <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-6 shadow-md">
-        <div className="flex items-start gap-4">
-          <span className="flex items-center justify-center w-9 h-9 rounded-full bg-muted text-muted-foreground shrink-0 mt-0.5">
-            <Info size={18} />
-          </span>
-          <div>
-            <h4 className="font-extrabold text-foreground text-sm">Escrow matching advisory note</h4>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              Always negotiate loan repayments and agreement parameters securely within the application parameters. MT Pocket handles location searches, risk-mitigation data, and match logging. Remember to manually examine verified IDs when confirming transfers.
-            </p>
-          </div>
-        </div>
-      </motion.div>
+      {/* ── SECURITY / ADVISORY FOOTNOTE ─────────────────────────────── */}
+      <div className="rounded-xl border border-border/70 bg-card p-4 flex items-start gap-3 text-xs text-muted-foreground">
+        <Info size={16} className="text-primary shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          <strong className="text-foreground font-semibold">Security Note:</strong> Always verify identity credentials and agree on repayment terms securely. MT Pocket facilitates peer connections and matches but never holds funds or enforces payments directly.
+        </p>
+      </div>
 
-      {/* USER PROFILE DETAILS MODAL (INSTEAD OF NAVIGATION) */}
+      {/* ── USER PROFILE PREVIEW MODAL ───────────────────────────────── */}
       <AnimatePresence>
         {previewContext && (
           <ProfilePreviewModal
@@ -465,7 +517,7 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* ⚠️ Offer Accept Dialog — highest-stakes alert in the app */}
+      {/* Offer Accept Dialog */}
       <OfferAcceptDialog
         open={!!pendingAccept}
         variant="accept"
@@ -488,33 +540,32 @@ export default function Dashboard() {
         }}
         onCancel={() => setPendingReject(null)}
       />
-    </motion.div>
+    </div>
   );
 }
 
-// Grid helper component
 function OffersGrid({ loading, items, renderCard, emptyLabel }) {
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 size={32} className="animate-spin text-muted-foreground" />
+      <div className="flex justify-center py-12">
+        <Loader2 size={24} className="animate-spin text-primary" />
       </div>
     );
   }
   if (items.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-10 font-medium">{emptyLabel}</p>;
+    return (
+      <div className="text-center py-8 px-4 rounded-xl border border-dashed border-border/70 bg-muted/20 text-muted-foreground text-xs font-medium">
+        {emptyLabel}
+      </div>
+    );
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {items.map(renderCard)}
     </div>
   );
 }
 
-// Profile Preview Modal
-// context = { userId, loanRequestId, lenderId } — loanRequestId/lenderId
-// are what the Message button below needs to open the right chat thread;
-// userId is who the profile itself belongs to.
 function ProfilePreviewModal({ context, onClose, accessToken }) {
   const { userId, loanRequestId, lenderId } = context;
 
@@ -524,7 +575,7 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
 
   // Safety actions state
   const [showSafety, setShowSafety] = useState(false);
-  const [safetyMode, setSafetyMode] = useState('report'); // 'report' | 'block'
+  const [safetyMode, setSafetyMode] = useState('report');
   const [reportReason, setReportReason] = useState('fake_identity');
   const [reportDetails, setReportDetails] = useState('');
   const [submittingSafety, setSubmittingSafety] = useState(false);
@@ -564,7 +615,7 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
         { reportedUserId: userId, reason: reportReason, details: reportDetails.trim() || undefined, reportContext: 'profile' },
         accessToken
       );
-      setSafetyMessage('Report submitted successfully to the administrators.');
+      setSafetyMessage('Report submitted successfully.');
       setReportDetails('');
       setTimeout(() => setShowSafety(false), 2000);
     } catch (err) {
@@ -580,7 +631,7 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
     setSafetyMessage('');
     try {
       await api.blockUser(userId, accessToken);
-      setSafetyMessage('User has been blocked. Reloading matching items…');
+      setSafetyMessage('User has been blocked. Reloading…');
       setTimeout(() => {
         setShowSafety(false);
         onClose();
@@ -603,76 +654,70 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
       <motion.div
-        variants={modalVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-xl overflow-hidden flex flex-col"
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-          <span className="font-extrabold text-foreground text-base">User Profile Overview</span>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+          <span className="font-bold text-foreground text-sm">Member Profile Overview</span>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[75vh]">
+        <div className="p-5 overflow-y-auto max-h-[75vh]">
           {loading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 size={32} className="animate-spin text-primary" />
+            <div className="flex justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-primary" />
             </div>
           ) : error ? (
             <div className="text-center py-6 text-destructive flex flex-col items-center gap-2">
-              <ShieldAlert size={28} />
-              <p className="font-bold">{error}</p>
+              <ShieldAlert size={24} />
+              <p className="font-bold text-xs">{error}</p>
             </div>
           ) : profile ? (
-            <div className="space-y-6">
-              {/* Profile Card Basic info */}
-              <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-xl overflow-hidden border-2 flex items-center justify-center ${profile.identityVerified ? 'border-emerald-500' : 'border-muted'}`}>
+            <div className="space-y-5">
+              <div className="flex items-center gap-3.5">
+                <div className={`w-14 h-14 rounded-xl overflow-hidden border-2 flex items-center justify-center ${profile.identityVerified ? 'border-emerald-500' : 'border-border'}`}>
                   {profile.avatarUrl ? (
                     <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xl">
+                    <div className="w-full h-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg">
                       {profile.fullName ? profile.fullName[0].toUpperCase() : '?'}
                     </div>
                   )}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-lg text-foreground tracking-tight">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-base text-foreground tracking-tight">
                       {profile.fullName || 'Unnamed Member'}
                     </h3>
-                    {/* Separate green check vs grey shield logo */}
                     {profile.identityVerified ? (
-                      <ShieldCheck size={18} className="text-emerald-500 shrink-0" title="Verified Identity" />
+                      <ShieldCheck size={16} className="text-emerald-500 shrink-0" title="Verified Identity" />
                     ) : (
-                      <Shield size={18} className="text-muted-foreground/50 shrink-0" title="Unverified Identity" />
+                      <Shield size={16} className="text-muted-foreground/50 shrink-0" title="Unverified Identity" />
                     )}
                   </div>
-                  <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase mt-0.5">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
                     {ROLE_LABELS[profile.role] || 'Member'}
                   </p>
                 </div>
               </div>
 
-              {/* Location and Member date */}
-              <div className="space-y-2 text-sm text-muted-foreground font-semibold">
+              <div className="space-y-1.5 text-xs text-muted-foreground font-medium bg-muted/30 p-3 rounded-xl">
                 {(profile.city || profile.state) && (
-                  <p className="inline-flex items-center gap-2 w-full">
-                    <MapPin size={15} />
+                  <p className="flex items-center gap-2">
+                    <MapPin size={14} className="text-primary shrink-0" />
                     <span className="text-foreground">{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
                   </p>
                 )}
                 {profile.createdAt && (
-                  <p className="inline-flex items-center gap-2 w-full">
-                    <CalendarDays size={15} />
+                  <p className="flex items-center gap-2">
+                    <CalendarDays size={14} className="text-primary shrink-0" />
                     <span className="text-foreground">
                       Member since {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                     </span>
@@ -680,43 +725,29 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
                 )}
               </div>
 
-              {!profile.identityVerified && (
-                <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3 text-xs text-amber-700 font-semibold">
-                  This member has not verified their identity records yet. Exercise caution.
-                </div>
-              )}
-
-              <Separator />
-
-              {/* Actions row: Message, Block & Report */}
-              <div className="flex items-center justify-between gap-3">
-                {/* Message — opens/creates the chat thread tied to this
-                    offer relationship, then navigates to /dashboard/messages */}
-                <MessageButton loanRequestId={loanRequestId} lenderId={lenderId} className="flex-1 justify-center" />
-
-                {/* Safety options trigger */}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <MessageButton loanRequestId={loanRequestId} lenderId={lenderId} className="flex-1 justify-center text-xs h-9" />
                 <button
                   onClick={() => setShowSafety(!showSafety)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-destructive/20 text-destructive text-sm font-bold hover:bg-destructive/10 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-destructive/20 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors cursor-pointer"
                 >
-                  <ShieldAlert size={16} />
+                  <ShieldAlert size={14} />
                   <span>Report / Block</span>
                 </button>
               </div>
 
-              {/* Block & Report forms wrapper */}
               <AnimatePresence>
                 {showSafety && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="rounded-xl border border-border bg-muted/30 p-4 space-y-4 overflow-hidden"
+                    className="rounded-xl border border-border bg-muted/30 p-4 space-y-3 overflow-hidden text-xs"
                   >
                     <div className="flex border-b border-border gap-4 pb-2">
                       <button
                         onClick={() => { setSafetyMode('report'); setSafetyMessage(''); }}
-                        className={`text-xs font-extrabold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
+                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
                           safetyMode === 'report' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -724,7 +755,7 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
                       </button>
                       <button
                         onClick={() => { setSafetyMode('block'); setSafetyMessage(''); }}
-                        className={`text-xs font-extrabold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
+                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
                           safetyMode === 'block' ? 'text-destructive border-b-2 border-destructive' : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -733,16 +764,13 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
                     </div>
 
                     {safetyMessage && (
-                      <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
                         {safetyMessage}
                       </div>
                     )}
 
                     {safetyMode === 'report' ? (
-                      <form onSubmit={handleReport} className="space-y-3.5">
-                        <InfoBanner variant="warning" dismissible={false} className="!py-2 !px-3 !text-xs">
-                          False reports may result in action against your account.
-                        </InfoBanner>
+                      <form onSubmit={handleReport} className="space-y-3">
                         <div>
                           <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Reason</label>
                           <select
@@ -768,22 +796,22 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
                         <button
                           type="submit"
                           disabled={submittingSafety}
-                          className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-all cursor-pointer"
+                          className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors cursor-pointer"
                         >
                           {submittingSafety && <Loader2 size={12} className="animate-spin" />}
-                          <span>Submit Abuse Report</span>
+                          <span>Submit Report</span>
                         </button>
                       </form>
                     ) : (
-                      <div className="space-y-3 text-center">
-                        <p className="text-xs text-muted-foreground leading-normal">
-                          Blocking this member hides their loan requests and proposals from your feeds and prevents future interaction.
+                      <div className="space-y-2.5 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          Blocking this member hides their loan requests and prevents further messaging.
                         </p>
                         <button
                           type="button"
                           onClick={handleBlock}
                           disabled={submittingSafety}
-                          className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-all cursor-pointer"
+                          className="w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors cursor-pointer"
                         >
                           {submittingSafety && <Loader2 size={12} className="animate-spin" />}
                           <span>Block {profile.fullName || 'Member'}</span>

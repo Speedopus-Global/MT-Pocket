@@ -19,6 +19,7 @@ import {
   X,
   FileText,
   XCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 import InfoBanner from '../components/ui/InfoBanner';
@@ -472,6 +473,26 @@ function GeneralSettingsPage({
                 onClick={onOpenKyc}
               />
             </ul>
+          </motion.div>
+
+          {/* Help & Support Card */}
+          <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-6 shadow-md">
+            <h3 className="font-extrabold text-muted-foreground text-xs tracking-wider uppercase mb-3">
+              Need Assistance?
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+              Have questions about verification, loan safety, or platform policies?
+            </p>
+            <Link
+              to="/dashboard/support"
+              className="inline-flex items-center justify-between w-full p-3 rounded-xl bg-muted/40 hover:bg-muted text-foreground text-xs font-bold transition-colors group cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <HelpCircle size={16} className="text-primary" />
+                <span>Help &amp; Support Center</span>
+              </div>
+              <ChevronRight size={15} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+            </Link>
           </motion.div>
         </div>
 

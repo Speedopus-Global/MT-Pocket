@@ -1,4 +1,8 @@
-import { Controller, Get, Post, Param, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller, Get, Post, Delete, Param, Body, Query, Req, UseGuards,
+  UseInterceptors, UploadedFile, BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { ChatService } from './chat.service';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
@@ -15,10 +19,6 @@ export class ChatController {
   }
 
   // GET /chat/conversations/for-offer/:loanRequestId/:lenderId
-  // Opens (or fetches) the thread tied to one lender's offer on one
-  // request. REST rather than a socket event so it also works as a plain
-  // page navigation / deep link (e.g. clicking "Message lender" from the
-  // offers list before the socket has even connected).
   @Get('conversations/for-offer/:loanRequestId/:lenderId')
   getOrCreate(
     @Param('loanRequestId') loanRequestId: string,
@@ -40,10 +40,52 @@ export class ChatController {
   }
 
   // POST /chat/conversations/:id/read
-  // REST fallback for the socket's 'mark_read' event — covers opening a
-  // thread before the socket has finished connecting.
   @Post('conversations/:id/read')
   markRead(@Param('id') id: string, @Req() req: Request) {
     return this.chatService.markRead(id, (req.user as any).sub);
+  }
+
+  // POST /chat/upload — upload chat media (photo/document) to Cloudinary
+  @Post('upload')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 15 * 1024 * 1024 }, // 15MB max
+    }),
+  )
+  uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    if (!file) throw new BadRequestException('No file provided');
+    return this.chatService.uploadMedia(file, (req.user as any).sub);
+  }
+
+  // POST /chat/messages/:id/edit — edit own message within 15 minutes
+  @Post('messages/:id/edit')
+  editMessage(
+    @Param('id') id: string,
+    @Body('text') text: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.editMessage(id, (req.user as any).sub, text);
+  }
+
+  // POST /chat/messages/:id/react — emoji reactions
+  @Post('messages/:id/react')
+  reactMessage(
+    @Param('id') id: string,
+    @Body('emoji') emoji: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.reactMessage(id, (req.user as any).sub, emoji);
+  }
+
+  // DELETE /chat/messages/:id/for-me — delete message for myself only
+  @Delete('messages/:id/for-me')
+  deleteForMe(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.deleteForMe(id, (req.user as any).sub);
   }
 }
