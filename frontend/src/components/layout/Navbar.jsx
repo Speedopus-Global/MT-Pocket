@@ -1,7 +1,8 @@
 import { useLocation } from 'react-router-dom';
 import PillNav from './PillNav';
-import logo from '@/assets/image.png';
 import { useAuth } from '../../context/AuthContext';
+
+const logo = 'https://res.cloudinary.com/hyztwkou/image/upload/v1787051289/image_dqvclu.png';
 
 export default function Navbar() {
   const { user } = useAuth();

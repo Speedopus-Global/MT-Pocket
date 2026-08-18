@@ -29,7 +29,8 @@ import {
 import { Checkbox } from '../components/ui/checkbox';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/logo.png';
+
+const logo = 'https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png';
 
 const CONSENT_SUMMARY = [
   'MT Pocket is a peer-to-peer technology matching platform and never handles, holds, or transmits money between users.',

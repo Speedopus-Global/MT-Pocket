@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import LoginPromptModal from '../components/ui/LoginPromptModal';
 import InfoBanner from '../components/ui/InfoBanner';
 import { VerificationBanner, useVerificationBanner } from '../components/VerificationBanner';
-import logo from '@/assets/logo.png';
+const logo = 'https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png';
 import { CanvasText } from '@/components/ui/canvas-text';
 import { UserAvatarMarquee } from '@/components/ui/user-avatar-marquee';
 import {

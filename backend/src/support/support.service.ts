@@ -122,7 +122,7 @@ export class SupportService {
     const adminEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+          <img src="https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
         </div>
         <h2 style="color: #059669; text-align: center; margin-top: 0;">New Support Ticket Received</h2>
         <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
@@ -140,7 +140,7 @@ export class SupportService {
     const userEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+          <img src="https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
         </div>
         <h2 style="color: #059669; text-align: center; margin-top: 0;">We Received Your Support Request</h2>
         <p>Hello <strong>${ticket.senderName}</strong>,</p>

@@ -9,7 +9,7 @@ export class EmailService {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e9e9e9; border-radius: 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+          <img src="https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
         </div>
         <h2 style="color: #0F7A53; text-align: center; margin-top: 0;">MT Pocket Verification</h2>
         <p>Hello,</p>
@@ -30,7 +30,7 @@ export class EmailService {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e9e9e9; border-radius: 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/src/assets/logo.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
+          <img src="https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png" alt="MT Pocket Logo" style="height: 48px; width: auto; display: inline-block;" />
         </div>
         <h2 style="color: #0F7A53; text-align: center; margin-top: 0;">MT Pocket Password Reset</h2>
         <p>Hello,</p>

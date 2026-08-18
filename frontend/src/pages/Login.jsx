@@ -9,7 +9,8 @@ import { ShieldCheck, Loader2, ArrowLeft, KeyRound, Lock, Smartphone, AlertCircl
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/logo.png';
+
+const logo = 'https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png';
 
 // Roles that should land on /admin after login — keep this in sync with
 // RequireAdmin.jsx's check, since a mismatch here means "logged in fine,
