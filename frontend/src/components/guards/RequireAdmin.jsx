@@ -1,15 +1,4 @@
-/**
- * RequireAdmin.jsx — route-level admin guard
- * Suggested path: src/components/guards/RequireAdmin.jsx
- *
- * Usage in App.jsx:
- *   <Route element={<RequireAdmin />}>
- *     <Route path="/admin/*" element={<AdminDashboard />} />
- *   </Route>
- *
- * Renders nothing (redirect) while auth is still loading so there's no
- * flash of the "unauthorized" screen on page refresh.
- */
+
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 

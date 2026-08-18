@@ -1,22 +1,3 @@
-/**
- * useTheme.js — dark/light toggle
- * -----------------------------------------------------------------------
- * Suggested path: src/hooks/useTheme.js
- *
- * Works with your index.css as-is — it defines :root (light) and .dark
- * (dark) token sets already; this just toggles the .dark class on <html>
- * and remembers the choice.
- *
- * Wrap your app once:
- *   // main.jsx
- *   import { ThemeProvider } from './hooks/useTheme';
- *   <ThemeProvider><App /></ThemeProvider>
- *
- * Use anywhere:
- *   import { useTheme } from './hooks/useTheme';
- *   const { theme, toggleTheme } = useTheme();
- * ----------------------------------------------------------------------- */
-
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext(null);
