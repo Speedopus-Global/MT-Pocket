@@ -460,9 +460,7 @@ export class AuthService {
   // each other the way a second hand-copied field list would.
   private toPublicUser(user: UserDocument) {
     const fullyVerified =
-      !!user.phone &&
       !!user.email &&
-      !!user.phoneVerified &&
       !!user.emailVerified;
 
     return {

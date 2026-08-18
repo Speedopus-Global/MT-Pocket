@@ -88,11 +88,10 @@ export function VerificationBanner({ isOpen, verificationStatus, onClose }) {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground leading-snug">
-                  Complete your verification first
+                  Email Verification Required
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  For the safety of all users, loan-related actions require both
-                  your phone number and email to be verified.
+                  For platform safety, loan-related actions require a verified email address. Phone verification is optional.
                 </p>
               </div>
               <button
@@ -106,18 +105,18 @@ export function VerificationBanner({ isOpen, verificationStatus, onClose }) {
             {/* Status items */}
             <div className="mt-4 space-y-2">
               <StatusRow
-                icon={<Phone size={14} />}
-                label="Phone number"
-                done={!missingPhone}
-                missing={missingPhone}
-                missingText={!hasPhone ? 'Not added yet' : 'Not verified'}
-              />
-              <StatusRow
                 icon={<Mail size={14} />}
-                label="Email address"
+                label="Email address (Required)"
                 done={!missingEmail}
                 missing={missingEmail}
                 missingText={!hasEmail ? 'Not added yet' : 'Not verified'}
+              />
+              <StatusRow
+                icon={<Phone size={14} />}
+                label="Phone number (Optional)"
+                done={!missingPhone}
+                missing={false}
+                missingText={!hasPhone ? 'Optional — not added' : (phoneVerified ? 'Verified ✓' : 'Added (Optional)')}
               />
             </div>
 
@@ -126,8 +125,9 @@ export function VerificationBanner({ isOpen, verificationStatus, onClose }) {
               onClick={() => { onClose(); navigate('/dashboard/settings'); }}
               className="mt-5 w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              Go to Settings to complete verification
+              Go to Settings to verify email
             </button>
+
           </motion.div>
         </>
       )}

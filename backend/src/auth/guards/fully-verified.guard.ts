@@ -45,21 +45,19 @@ export class FullyVerifiedGuard implements CanActivate {
       .lean();
 
     const fullyVerified =
-      !!user?.phone &&
       !!user?.email &&
-      !!user?.phoneVerified &&
       !!user?.emailVerified;
 
     if (!fullyVerified) {
       throw new ForbiddenException({
         message:
-          'Please verify both your phone number and email address before performing loan-related actions.',
+          'Please verify your email address before performing loan-related actions.',
         requiresFullVerification: true,
         verificationStatus: {
-          hasPhone: !!user?.phone,
           hasEmail: !!user?.email,
-          phoneVerified: !!user?.phoneVerified,
           emailVerified: !!user?.emailVerified,
+          hasPhone: !!user?.phone,
+          phoneVerified: !!user?.phoneVerified,
         },
       });
     }

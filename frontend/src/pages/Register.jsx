@@ -29,6 +29,7 @@ import {
 import { Checkbox } from '../components/ui/checkbox';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { StickyBanner } from '../components/ui/sticky-banner';
 
 const logo = 'https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png';
 
@@ -209,24 +210,35 @@ export default function Register() {
   const isEmail = identifier.includes('@');
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10 bg-background font-sans relative overflow-hidden">
-      {/* Ambient background decoration */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-80 w-96 rounded-full bg-primary/10 blur-[100px]" />
-      
-      <div className="w-full max-w-md relative z-10">
-        
-        {/* Brand Header */}
-        <div className="flex flex-col items-center mb-6 text-center">
-          <Link to="/" className="inline-flex items-center gap-2.5 group mb-2">
-            <img src={logo} alt="MT Pocket Logo" className="w-12 h-12 object-contain group-hover:scale-105 transition-transform" />
-            <span className="text-2xl font-black tracking-tight text-foreground">
-              MT <span className="text-primary">Pocket</span>
-            </span>
-          </Link>
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Direct Peer-to-Peer Financial Platform
+    <div className="min-h-screen flex flex-col bg-background font-sans relative overflow-hidden">
+      {/* Sticky Banner - only on Registration page */}
+      <StickyBanner>
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+         
+          <span className="text-white/95 text-xs sm:text-sm">
+            Phone OTP is currently touching grass while telecom clearance is cooking . Use <strong className="text-white font-bold underline decoration-emerald-300/80 underline-offset-2">Email Verification</strong> for instant green flags & zero delays! 
           </span>
         </div>
+      </StickyBanner>
+
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+        {/* Ambient background decoration */}
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-80 w-96 rounded-full bg-primary/10 blur-[100px]" />
+        
+        <div className="w-full max-w-md relative z-10">
+          
+          {/* Brand Header */}
+          <div className="flex flex-col items-center mb-6 text-center">
+            <Link to="/" className="inline-flex items-center gap-2.5 group mb-2">
+              <img src={logo} alt="MT Pocket Logo" className="w-12 h-12 object-contain group-hover:scale-105 transition-transform" />
+              <span className="text-2xl font-black tracking-tight text-foreground">
+                MT <span className="text-primary">Pocket</span>
+              </span>
+            </Link>
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Direct Peer-to-Peer Financial Platform
+            </span>
+          </div>
 
         {/* ── Interactive Progress Stepper ─────────────────────────────── */}
         <div className="mb-6 rounded-2xl border border-border/80 bg-card/80 backdrop-blur-md p-3.5 shadow-sm">
@@ -507,6 +519,7 @@ export default function Register() {
         </p>
 
       </div>
+    </div>
 
       {/* ── Standard Terms & Legal Consent Modal Popup ────────────────── */}
       <AnimatePresence>
