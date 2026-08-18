@@ -360,26 +360,26 @@ export default function Settings() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full max-w-lg rounded-lg border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
+              className="w-full max-w-3xl sm:max-w-4xl max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col my-auto"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-border bg-muted/20 shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shadow-2xs shrink-0">
                     <Fingerprint size={18} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-foreground text-base leading-none">Identity Verification</h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Upload a valid government-issued photo ID</p>
+                    <h3 className="font-extrabold text-foreground text-sm sm:text-base leading-tight">Identity Verification (KYC)</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Upload a valid government-issued ID & verification selfie</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setKycModalOpen(false)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
                   <X size={17} />
                 </button>
               </div>
-              <div className="p-5">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 <IdentityUploadForm
                   accessToken={accessToken}
                   onSubmitted={onKycSubmitted}
@@ -1106,225 +1106,241 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
   useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      {/* 1. Document Type Grid (Interactive Square Cards) */}
-      <div>
-        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-          1. Select ID Document Type
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {DOCUMENT_OPTIONS.map((opt) => {
-            const Icon = opt.icon;
-            const isSelected = documentType === opt.value;
-            return (
-              <button
-                type="button"
-                key={opt.value}
-                onClick={() => setDocumentType(opt.value)}
-                className={`relative flex flex-col items-center justify-center p-3 rounded-lg border text-center transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary shadow-xs'
-                    : 'border-border/80 bg-background/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Icon size={18} className={isSelected ? 'text-primary' : 'text-muted-foreground'} />
-                <span className="text-xs font-bold mt-1.5 leading-tight">{opt.label}</span>
-                {isSelected && (
-                  <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[9px]">
-                    <Check size={9} strokeWidth={3} />
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <form onSubmit={submit} className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+        
+        {/* ── Left Column: ID Document Type & File Upload ──────── */}
+        <div className="space-y-4">
+          
+          {/* 1. Document Type Grid */}
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+              1. Select ID Document Type
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {DOCUMENT_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = documentType === opt.value;
+                return (
+                  <button
+                    type="button"
+                    key={opt.value}
+                    onClick={() => setDocumentType(opt.value)}
+                    className={`relative flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary shadow-2xs font-semibold'
+                        : 'border-border/80 bg-background/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                      <Icon size={14} />
+                    </div>
+                    <span className="text-xs truncate">{opt.label}</span>
+                    {isSelected && (
+                      <span className="absolute top-2 right-2 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[9px]">
+                        <Check size={9} strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* 2. Drag & Drop File Zone (Square with Preview) */}
-      <div>
-        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-          2. Upload ID File
-        </label>
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`relative rounded-lg border-2 border-dashed transition-all p-6 text-center cursor-pointer ${
-            dragOver
-              ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-              : 'border-border/80 hover:border-primary/50 bg-background/40 hover:bg-muted/20'
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-            className="hidden"
-          />
+          {/* 2. Drag & Drop File Zone */}
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+              2. Upload ID Document Photo / PDF
+            </label>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative rounded-xl border-2 border-dashed transition-all p-5 text-center cursor-pointer min-h-[140px] flex flex-col items-center justify-center ${
+                dragOver
+                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                  : 'border-border/80 hover:border-primary/50 bg-background/40 hover:bg-muted/20'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
 
-          {file ? (
-            <div className="flex items-center gap-3 p-2 bg-card rounded-md border border-border/80 text-left">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-12 h-12 object-cover rounded-md border border-border" />
+              {file ? (
+                <div className="w-full flex items-center gap-3 p-2 bg-card rounded-lg border border-border/80 text-left">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Preview" className="w-11 h-11 object-cover rounded-lg border border-border shrink-0" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <FileText size={20} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-foreground truncate">{file.name}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{(file.size / (1024 * 1024)).toFixed(2)} MB • Ready</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                    title="Remove file"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
               ) : (
-                <div className="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <FileText size={22} />
+                <div className="py-1">
+                  <UploadCloud size={28} className={`mx-auto mb-1.5 transition-colors ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <p className="text-xs font-bold text-foreground">Click to browse or drop ID document</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WEBP or PDF (Max 8MB)</p>
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-foreground truncate">{file.name}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{(file.size / (1024 * 1024)).toFixed(2)} MB • Ready</p>
-              </div>
-              <button
-                type="button"
-                onClick={removeFile}
-                className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                title="Remove file"
-              >
-                <X size={15} />
-              </button>
             </div>
-          ) : (
-            <div className="py-2">
-              <UploadCloud size={32} className={`mx-auto mb-2 transition-colors ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-              <p className="text-xs font-bold text-foreground">Click to browse or drag & drop document</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Supports PDF, JPG, PNG or WEBP (Max 8MB)</p>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
 
-      {/* 3. Selfie Capture (Square with live camera preview) */}
-      <div>
-        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-          3. Take a Selfie
-        </label>
+        {/* ── Right Column: Selfie Capture & Guidelines ──────── */}
+        <div className="space-y-4">
+          
+          {/* 3. Selfie Capture */}
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+              3. Verification Selfie (Face Match)
+            </label>
 
-        <input
-          ref={selfieInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          capture="user"
-          onChange={(e) => handleSelfieFileChange(e.target.files?.[0] ?? null)}
-          className="hidden"
-        />
-        <canvas ref={canvasRef} className="hidden" />
-
-        {selfieFile ? (
-          <div className="flex items-center gap-3 p-2 bg-card rounded-md border border-border/80 text-left">
-            <img src={selfiePreview} alt="Selfie preview" className="w-12 h-12 object-cover rounded-full border border-border shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-foreground truncate">{selfieFile.name}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{(selfieFile.size / (1024 * 1024)).toFixed(2)} MB • Ready</p>
-            </div>
-            <button
-              type="button"
-              onClick={retakeSelfie}
-              className="inline-flex items-center gap-1 p-1.5 px-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-[11px] font-semibold"
-              title="Retake selfie"
-            >
-              <RotateCcw size={13} /> Retake
-            </button>
-          </div>
-        ) : cameraOn ? (
-          <div className="rounded-lg border border-border/80 bg-background/40 p-3 flex flex-col items-center gap-3">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              onLoadedMetadata={() => setVideoReady(true)}
-              className="w-full max-w-[280px] aspect-square object-cover rounded-full border border-border scale-x-[-1] bg-muted"
+            <input
+              ref={selfieInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="user"
+              onChange={(e) => handleSelfieFileChange(e.target.files?.[0] ?? null)}
+              className="hidden"
             />
-            {!videoReady && (
-              <p className="text-[11px] text-muted-foreground -mt-1">Starting camera…</p>
-            )}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={captureSelfie}
-                disabled={!videoReady}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {videoReady ? <Camera size={13} /> : <Loader2 size={13} className="animate-spin" />}
-                Capture
-              </button>
-              <button
-                type="button"
-                onClick={stopCamera}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-md border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-lg border-2 border-dashed border-border/80 bg-background/40 p-6 text-center">
-            <Camera size={32} className="mx-auto mb-2 text-muted-foreground" />
-            <p className="text-xs font-bold text-foreground mb-1">Take a live selfie for face match</p>
-            <p className="text-[11px] text-muted-foreground mb-3">Look straight at the camera in good lighting</p>
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={startCamera}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
-              >
-                <Video size={13} /> Use Camera
-              </button>
-              <button
-                type="button"
-                onClick={() => selfieInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-md border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
-              >
-                <UploadCloud size={13} /> Upload Photo
-              </button>
-            </div>
-            {cameraError && (
-              <p className="text-[11px] text-destructive mt-2">{cameraError}</p>
-            )}
-          </div>
-        )}
-      </div>
+            <canvas ref={canvasRef} className="hidden" />
 
-      {/* Verification Guidelines Box */}
-      <div className="rounded-lg bg-muted/30 border border-border/60 p-3 text-[11px] text-muted-foreground space-y-1">
-        <p className="font-bold text-foreground">Document Requirements:</p>
-        <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 list-disc list-inside">
-          <li>Must be officially issued</li>
-          <li>All 4 corners visible</li>
-          <li>No glare or blur</li>
-          <li>Full name must match</li>
-          <li>Selfie face clearly visible</li>
-          <li>Matches document photo</li>
-        </ul>
+            {selfieFile ? (
+              <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border/80 text-left">
+                <img src={selfiePreview} alt="Selfie preview" className="w-12 h-12 object-cover rounded-full border-2 border-primary/30 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">{selfieFile.name}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{(selfieFile.size / (1024 * 1024)).toFixed(2)} MB • Ready</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={retakeSelfie}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xs font-semibold"
+                  title="Retake selfie"
+                >
+                  <RotateCcw size={12} /> Retake
+                </button>
+              </div>
+            ) : cameraOn ? (
+              <div className="rounded-xl border border-border/80 bg-background/50 p-3.5 flex flex-col items-center gap-3">
+                <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden border-2 border-primary shadow-inner bg-muted">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={() => setVideoReady(true)}
+                    className="w-full h-full object-cover scale-x-[-1]"
+                  />
+                  {!videoReady && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 text-muted-foreground gap-1">
+                      <Loader2 size={18} className="animate-spin text-primary" />
+                      <p className="text-[10px] font-semibold">Starting camera…</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={captureSelfie}
+                    disabled={!videoReady}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <Camera size={13} /> Capture
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border-2 border-dashed border-border/80 bg-background/40 p-4 text-center min-h-[140px] flex flex-col items-center justify-center">
+                <Camera size={26} className="mx-auto mb-1 text-muted-foreground" />
+                <p className="text-xs font-bold text-foreground">Take a quick selfie</p>
+                <p className="text-[10px] text-muted-foreground mb-3">Ensure your face is well-lit and unobstructed</p>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Video size={13} /> Use Camera
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selfieInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    <UploadCloud size={13} /> Upload
+                  </button>
+                </div>
+                {cameraError && (
+                  <p className="text-[10px] text-destructive mt-1.5 font-medium">{cameraError}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Verification Guidelines Box */}
+          <div className="rounded-xl bg-muted/30 border border-border/60 p-3 text-[10px] text-muted-foreground space-y-1">
+            <p className="font-bold text-foreground">Document Checklist:</p>
+            <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 list-disc list-inside">
+              <li>Official government ID</li>
+              <li>All 4 corners visible</li>
+              <li>Clear, no blur or glare</li>
+              <li>Face matches ID photo</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-          <AlertCircle size={14} className="shrink-0" />
+        <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3.5 py-2.5">
+          <AlertCircle size={15} className="shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Shadcn Square Action Buttons */}
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/70">
         <button
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="px-4 py-2 text-xs font-semibold rounded-md border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+          className="px-4 py-2 text-xs font-semibold rounded-xl border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting || !file || !selfieFile}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+          className="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
         >
           {submitting ? <Loader2 size={13} className="animate-spin" /> : <FileCheck size={13} />}
-          <span>{submitting ? 'Submitting...' : 'Submit Verification ID'}</span>
+          <span>{submitting ? 'Submitting ID...' : 'Submit Verification ID'}</span>
         </button>
       </div>
     </form>
