@@ -207,6 +207,15 @@ export const api = {
   // GET /chat/conversations/for-offer/:loanRequestId/:lenderId — get-or-create
   getOrCreateChatConversation: (loanRequestId, lenderId, accessToken) =>
     request(`/chat/conversations/for-offer/${loanRequestId}/${lenderId}`, { accessToken }),
+  // POST /chat/conversations/inquire/:loanId — initiate inquiry message request from marketplace
+  createChatInquiry: (loanId, initialMessage, accessToken) =>
+    request(`/chat/conversations/inquire/${loanId}`, { method: 'POST', body: { initialMessage }, accessToken }),
+  // POST /chat/conversations/:id/accept-request — accept message request
+  acceptChatRequest: (conversationId, accessToken) =>
+    request(`/chat/conversations/${conversationId}/accept-request`, { method: 'POST', accessToken }),
+  // POST /chat/conversations/:id/decline-request — decline message request
+  declineChatRequest: (conversationId, accessToken) =>
+    request(`/chat/conversations/${conversationId}/decline-request`, { method: 'POST', accessToken }),
   // GET /chat/conversations/:id/messages?before=&limit=
   getChatMessages: (conversationId, { before, limit = 30 } = {}, accessToken) => {
     const q = new URLSearchParams({ limit: String(limit) });

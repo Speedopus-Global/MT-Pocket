@@ -31,6 +31,21 @@ export class Conversation {
 
   @Prop({ type: Types.ObjectId, default: null })
   lastMessageSenderId: Types.ObjectId | null;
+
+  // ── Message Request / Marketplace Inquiry ─────────────────────────────────
+  @Prop({ type: Boolean, default: false, index: true })
+  isRequest: boolean;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  requestedBy: Types.ObjectId | null;
+
+  @Prop({
+    type: String,
+    enum: ['pending', 'accepted', 'declined'],
+    default: 'accepted',
+    index: true,
+  })
+  requestStatus: 'pending' | 'accepted' | 'declined';
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

@@ -16,10 +16,11 @@ export class LoanRequestsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  // ── Borrower: create a request ────────────────────────────────────────────
+  // ── Borrower / Lender: create a request or offer ─────────────────────────
   async create(borrowerId: string, dto: CreateLoanRequestDto) {
     const doc: Partial<LoanRequest> = {
       borrowerId:        new Types.ObjectId(borrowerId),
+      listingType:       (dto.listingType as any) ?? 'borrow',
       amount:            dto.amount,
       category:          dto.category as any,
       description:       dto.description,
@@ -45,13 +46,14 @@ export class LoanRequestsService {
     return this.loanModel.create(doc);
   }
 
-  // ── Borrower: edit own request ────────────────────────────────────────────
+  // ── Borrower / Lender: edit own listing ──────────────────────────────────
   async update(requestId: string, borrowerId: string, dto: Partial<CreateLoanRequestDto>) {
     const req = await this.loanModel.findById(requestId);
     if (!req) throw new NotFoundException('Loan request not found');
     if (req.borrowerId.toString() !== borrowerId) throw new ForbiddenException('Not your request');
     if (req.status !== 'open') throw new BadRequestException('Only open requests can be edited');
 
+    if (dto.listingType) req.listingType = dto.listingType as any;
     if (dto.amount)      req.amount      = dto.amount;
     if (dto.category)    req.category    = dto.category as any;
     if (dto.description) req.description = dto.description;
@@ -268,6 +270,7 @@ export class LoanRequestsService {
 
     const filter: Record<string, any> = { status: 'open' };
 
+    if (dto.listingType) filter.listingType = dto.listingType;
     if (dto.category) filter.category = dto.category;
 
     if (requesterId) {

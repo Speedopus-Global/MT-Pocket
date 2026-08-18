@@ -62,14 +62,82 @@ export class ChatService {
     });
   }
 
+  // ── Create Inquiry Conversation (from Marketplace listing) ───────────
+  async createInquiryConversation(requesterId: string, loanId: string, initialMessage?: string) {
+    const req = await this.loanModel.findById(loanId).select('borrowerId amount category listingType status').lean();
+    if (!req) throw new NotFoundException('Loan listing not found');
+
+    const creatorId = req.borrowerId.toString();
+    if (requesterId === creatorId) {
+      throw new BadRequestException('You cannot message yourself on your own listing');
+    }
+
+    const blocked = await this.blocksService.isBlockedEitherWay(requesterId, creatorId);
+    if (blocked) throw new ForbiddenException('Chat unavailable between these users');
+
+    let convo = await this.conversationModel.findOne({
+      loanRequestId: new Types.ObjectId(loanId),
+      participantIds: { $all: [new Types.ObjectId(requesterId), new Types.ObjectId(creatorId)] },
+    });
+
+    if (!convo) {
+      const defaultText = initialMessage?.trim() ||
+        `Hi! I saw your ${req.listingType === 'lend' ? 'loan offer' : 'loan request'} for ₹${req.amount.toLocaleString('en-IN')} (${req.category}) and would like to connect.`;
+
+      convo = await this.conversationModel.create({
+        participantIds: [new Types.ObjectId(creatorId), new Types.ObjectId(requesterId)],
+        loanRequestId: new Types.ObjectId(loanId),
+        borrowerId: new Types.ObjectId(creatorId),
+        lenderId: new Types.ObjectId(requesterId),
+        isRequest: true,
+        requestedBy: new Types.ObjectId(requesterId),
+        requestStatus: 'pending',
+        lastMessagePreview: defaultText,
+        lastMessageAt: new Date(),
+        lastMessageSenderId: new Types.ObjectId(requesterId),
+      });
+
+      await this.messageModel.create({
+        conversationId: convo._id,
+        senderId: new Types.ObjectId(requesterId),
+        text: defaultText,
+        status: 'sent',
+      });
+
+      await this.notifService.create(
+        creatorId,
+        'new_message',
+        `You have a new message request regarding your ₹${req.amount.toLocaleString('en-IN')} ${req.category} ${req.listingType === 'lend' ? 'loan offer' : 'listing'}.`,
+        { relatedId: convo._id.toString(), relatedModel: 'Conversation' },
+      );
+    }
+
+    return convo;
+  }
+
+  // ── Accept Message Request ─────────────────────────────────────────────
+  async acceptMessageRequest(conversationId: string, userId: string) {
+    const convo = await this.assertMember(conversationId, userId);
+    convo.isRequest = false;
+    convo.requestStatus = 'accepted';
+    return convo.save();
+  }
+
+  // ── Decline Message Request ────────────────────────────────────────────
+  async declineMessageRequest(conversationId: string, userId: string) {
+    const convo = await this.assertMember(conversationId, userId);
+    convo.requestStatus = 'declined';
+    return convo.save();
+  }
+
   // ── List threads for the logged-in user, most recent activity first ────
   async listConversations(userId: string) {
     const uid = new Types.ObjectId(userId);
     const conversations = await this.conversationModel
-      .find({ participantIds: uid })
+      .find({ participantIds: uid, requestStatus: { $ne: 'declined' } })
       .populate('borrowerId', 'fullName avatarUrl lastActiveAt')
       .populate('lenderId', 'fullName avatarUrl lastActiveAt')
-      .populate('loanRequestId', 'amount category status')
+      .populate('loanRequestId', 'amount category status listingType')
       .sort({ lastMessageAt: -1, createdAt: -1 })
       .lean();
 
@@ -89,7 +157,8 @@ export class ChatService {
     const unreadMap = new Map(unreadCounts.map((u: any) => [u._id.toString(), u.count]));
 
     return conversations.map((c: any) => {
-      const other = c.borrowerId._id.toString() === userId ? c.lenderId : c.borrowerId;
+      const bId = (c.borrowerId?._id || c.borrowerId)?.toString();
+      const other = (bId === userId.toString() ? c.lenderId : c.borrowerId) || null;
       return {
         conversationId: c._id,
         loanRequest: c.loanRequestId,
@@ -97,6 +166,9 @@ export class ChatService {
         lastMessagePreview: c.lastMessagePreview,
         lastMessageAt: c.lastMessageAt,
         unreadCount: unreadMap.get(c._id.toString()) ?? 0,
+        isRequest: !!c.isRequest,
+        requestedBy: c.requestedBy?.toString() || null,
+        requestStatus: c.requestStatus || 'accepted',
       };
     });
   }

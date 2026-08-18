@@ -13,6 +13,10 @@ import {
 } from 'class-validator';
 
 export class CreateLoanRequestDto {
+  @IsOptional()
+  @IsIn(['borrow', 'lend'])
+  listingType?: string;
+
   @Type(() => Number)
   @IsNumber()
   @Min(1)
@@ -80,6 +84,10 @@ export class SendOfferDto {
 }
 
 export class SearchLoanRequestsDto {
+  @IsOptional()
+  @IsIn(['borrow', 'lend', ''])
+  listingType?: string;
+
   @IsOptional()
   @IsString()
   keyword?: string;

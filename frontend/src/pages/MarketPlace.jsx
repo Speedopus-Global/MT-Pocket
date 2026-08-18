@@ -53,6 +53,8 @@ import {
   Layers,
   CalendarDays,
   Shield,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
@@ -84,6 +86,7 @@ export default function Marketplace() {
   const isLender = user?.role === 'lender' || user?.role === 'both';
 
   const [keyword, setKeyword] = useState('');
+  const [listingTypeTab, setListingTypeTab] = useState('all'); // 'all' | 'borrow' | 'lend'
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [amountRange, setAmountRange] = useState([AMOUNT_MIN, AMOUNT_MAX]);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -97,6 +100,7 @@ export default function Marketplace() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [offerLoan, setOfferLoan] = useState(null);
+  const [inquiryLoan, setInquiryLoan] = useState(null);
   const [blockedIds, setBlockedIds] = useState([]);
   const [safetyLoan, setSafetyLoan] = useState(null);
   const [loginPrompt, setLoginPrompt] = useState(null);
@@ -157,6 +161,25 @@ export default function Marketplace() {
     setOfferLoan(loan);
   };
 
+  const [enquiringLoanId, setEnquiringLoanId] = useState(null);
+
+  const requestMessage = async (loan) => {
+    if (!isLoggedIn) {
+      setLoginPrompt('Please log in to message this user.');
+      return;
+    }
+    setEnquiringLoanId(loan._id);
+    try {
+      const res = await api.createChatInquiry(loan._id, undefined, accessToken);
+      const convId = res.conversationId || res._id || res;
+      navigate(`/dashboard/messages?conversationId=${convId}`);
+    } catch (err) {
+      alert(err.message || 'Failed to open chat');
+    } finally {
+      setEnquiringLoanId(null);
+    }
+  };
+
   const requestSafety = (loan) => {
     if (!isLoggedIn) {
       setLoginPrompt('Please log in to report or block a user.');
@@ -183,7 +206,7 @@ export default function Marketplace() {
     api
       .getMyBlockedUserIds(accessToken)
       .then(setBlockedIds)
-      .catch(() => {});
+      .catch(() => { });
   }, [accessToken]);
 
   useEffect(() => {
@@ -197,17 +220,18 @@ export default function Marketplace() {
       .then((offers) =>
         setSentOfferIds(new Set(offers.map((o) => o.loanRequestId)))
       )
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setSentOfferIdsLoading(false));
   }, [isLender, accessToken]);
 
   const load = useCallback(
-    async (p = page, kw = keyword, cats = selectedCategories) => {
+    async (p = page, kw = keyword, cats = selectedCategories, lType = listingTypeTab) => {
       setLoading(true);
       try {
         const res = await api.searchLoanRequests({
           keyword: kw || undefined,
           category: cats.length ? cats.join(',') : undefined,
+          listingType: lType !== 'all' ? lType : undefined,
           page: p,
           limit: PAGE_SIZE,
         });
@@ -220,13 +244,13 @@ export default function Marketplace() {
         setLoading(false);
       }
     },
-    [page, keyword, selectedCategories]
+    [page, keyword, selectedCategories, listingTypeTab]
   );
 
   useEffect(() => {
-    load(1, keyword, selectedCategories);
+    load(1, keyword, selectedCategories, listingTypeTab);
     setPage(1);
-  }, [selectedCategories]);
+  }, [selectedCategories, listingTypeTab]);
 
   // Filtered & Sorted Results
   const visibleResults = useMemo(() => {
@@ -399,11 +423,10 @@ export default function Marketplace() {
                           <div
                             key={cat.value}
                             onClick={() => toggleCategory(cat.value)}
-                            className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${
-                              isChecked
+                            className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${isChecked
                                 ? 'bg-primary/10 border-primary/40 text-foreground font-semibold'
                                 : 'border-transparent hover:bg-muted/40 text-muted-foreground'
-                            }`}
+                              }`}
                           >
                             <Checkbox
                               id={`filter-cat-${cat.value}`}
@@ -504,12 +527,41 @@ export default function Marketplace() {
         </div>
       </section>
 
-      {/* ── EXPANDED CATEGORY FILTER BUTTONS ──────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-8 sm:my-12">
+      {/* ── LISTING TYPE & CATEGORY FILTER BUTTONS ───────────────────────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6 sm:my-10 space-y-6">
+        {/* 3-way Listing Type Filter Pills */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Layers size={16} className="text-primary" /> Listing Type
+            </span>
+          </div>
+
+          <div className="inline-flex rounded-2xl bg-card border border-border p-1 shadow-2xs">
+            {[
+              { key: 'all', label: 'All Opportunities' },
+              { key: 'borrow', label: 'Borrower Requests' },
+              { key: 'lend', label: 'Lender Loan Offers' },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setListingTypeTab(tab.key)}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${listingTypeTab === tab.key
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Layers size={16} className="text-primary" /> Filter Category
+              <Tag size={16} className="text-primary" /> Filter Category
             </span>
             {selectedCategories.length > 0 && (
               <button
@@ -525,11 +577,10 @@ export default function Marketplace() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 w-full">
             <button
               onClick={() => setSelectedCategories([])}
-              className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${
-                selectedCategories.length === 0
+              className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${selectedCategories.length === 0
                   ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20'
                   : 'bg-card/80 backdrop-blur-md text-foreground border-border/80 hover:bg-muted/70 hover:border-primary/40'
-              }`}
+                }`}
             >
               <Layers size={18} />
               <span>All Opportunities</span>
@@ -542,11 +593,10 @@ export default function Marketplace() {
                 <button
                   key={cat.value}
                   onClick={() => toggleCategory(cat.value)}
-                  className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${
-                    active
+                  className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${active
                       ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20'
                       : 'bg-card/80 backdrop-blur-md text-foreground border-border/80 hover:bg-muted/70 hover:border-primary/40'
-                  }`}
+                    }`}
                 >
                   <Icon size={18} className={active ? 'text-primary-foreground' : 'text-primary'} />
                   <span>{cat.label}</span>
@@ -640,10 +690,12 @@ export default function Marketplace() {
                     loan={loan}
                     isLoggedIn={isLoggedIn}
                     isLender={isLender}
-                    isOwnRequest={user && loan.borrowerId?._id === user.id}
+                    isOwnRequest={user && String(loan.borrowerId?._id || loan.borrowerId) === String(user.id || user._id)}
                     hasSentOffer={sentOfferIds.has(loan._id)}
                     sentOfferIdsLoading={sentOfferIdsLoading}
+                    isEnquiring={enquiringLoanId === loan._id}
                     onOffer={() => requestOffer(loan)}
+                    onMessage={() => requestMessage(loan)}
                     onSafety={() => requestSafety(loan)}
                     onProfile={() => requestProfile(loan.borrowerId?._id)}
                   />
@@ -690,7 +742,9 @@ export default function Marketplace() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20 shrink-0">
                 <div className="flex items-center gap-2">
                   <Handshake size={18} className="text-primary" />
-                  <h3 className="font-bold text-foreground text-sm">Send Funding Offer</h3>
+                  <h3 className="font-bold text-foreground text-sm">
+                    {offerLoan.listingType === 'lend' ? 'Apply / Request Loan' : 'Send Funding Offer'}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setOfferLoan(null)}
@@ -708,6 +762,20 @@ export default function Marketplace() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {inquiryLoan && (
+          <InquiryModal
+            loan={inquiryLoan}
+            accessToken={accessToken}
+            onClose={() => setInquiryLoan(null)}
+            onSent={(conversationId) => {
+              setInquiryLoan(null);
+              navigate(`/dashboard/messages?conversationId=${conversationId}`);
+            }}
+          />
         )}
       </AnimatePresence>
 
@@ -774,21 +842,41 @@ function LoanItem({
   isOwnRequest,
   hasSentOffer,
   sentOfferIdsLoading,
+  isEnquiring,
   onOffer,
+  onMessage,
   onSafety,
   onProfile,
 }) {
+  const isLenderOffer = loan.listingType === 'lend';
   const fullLocation = [loan.city, loan.state].filter(Boolean).join(', ') || 'India';
 
   return (
-    <div className="group relative rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:border-primary/40 hover:bg-primary/[0.02] hover:shadow-lg cursor-pointer">
+    <div
+      className={`group relative rounded-3xl border bg-card p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:shadow-lg cursor-pointer ${
+        isLenderOffer
+          ? 'border-blue-500/20 hover:border-blue-500/60 hover:bg-blue-500/[0.02]'
+          : 'border-border hover:border-primary/50 hover:bg-primary/[0.02]'
+      }`}
+    >
       <div>
-        {/* Header: Amount & Category Badge */}
+        {/* Header: Amount & Distinct Category Badge */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <span className="text-xs font-black tracking-widest uppercase text-muted-foreground block mb-1">
-              Capital Required
-            </span>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-[11px] font-black tracking-widest uppercase text-muted-foreground">
+                {isLenderOffer ? 'Capital Available' : 'Capital Required'}
+              </span>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border shadow-2xs ${
+                  isLenderOffer
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                }`}
+              >
+                {isLenderOffer ? 'Lender Offer' : 'Borrow Request'}
+              </span>
+            </div>
             <p className="text-3xl sm:text-4xl font-black text-foreground tracking-tight group-hover:text-primary transition-colors">
               ₹{Number(loan.amount).toLocaleString('en-IN')}
             </p>
@@ -814,14 +902,14 @@ function LoanItem({
           </div>
         </div>
 
-        {/* Formatted Purpose Description Box */}
+        {/* Formatted Purpose / Terms Description Box */}
         <div className="mt-4 p-4 rounded-2xl bg-muted/40 border border-border/60 text-xs sm:text-sm font-medium text-foreground/90 leading-relaxed min-h-[4.5rem] flex items-center">
           <p className="line-clamp-2">
-            {loan.description || 'No detailed description provided by the borrower.'}
+            {loan.description || (isLenderOffer ? 'Verified loan offer available for eligible borrowers.' : 'Loan request posted by verified borrower.')}
           </p>
         </div>
 
-        {/* Borrower Profile Information Bar */}
+        {/* Borrower / Lender Profile Information Bar */}
         {loan.borrowerId?._id && (
           <button
             type="button"
@@ -836,7 +924,7 @@ function LoanItem({
                 {loan.borrowerId.avatarUrl ? (
                   <img
                     src={loan.borrowerId.avatarUrl}
-                    alt={loan.borrowerId.fullName || 'Borrower'}
+                    alt={loan.borrowerId.fullName || 'Member'}
                     className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/20 group-hover/borrower:ring-primary/60 transition-all"
                   />
                 ) : (
@@ -856,7 +944,7 @@ function LoanItem({
                   {loan.borrowerId.fullName || 'Anonymous User'}
                 </span>
                 <span className="text-xs text-muted-foreground font-medium">
-                  {loan.borrowerId.identityVerified ? 'Verified Account' : 'Standard Member'}
+                  {isLenderOffer ? 'Verified Lender' : loan.borrowerId.identityVerified ? 'Verified Borrower' : 'Standard Member'}
                 </span>
               </div>
             </div>
@@ -877,7 +965,7 @@ function LoanItem({
             </p>
           </div>
 
-          <div className="flex flex-col truncate border-l border-primary/15 pl-2.5 sm:pl-3" title="Expected Rate">
+          <div className="flex flex-col truncate border-l border-primary/15 pl-2.5 sm:pl-3" title="Interest Rate">
             <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-muted-foreground">
               <Percent size={13} className="text-primary shrink-0" />
               <span className="truncate">Interest</span>
@@ -887,7 +975,7 @@ function LoanItem({
             </p>
           </div>
 
-          <div className="flex flex-col truncate border-l border-primary/15 pl-2.5 sm:pl-3" title="Tenure">
+          <div className="flex flex-col truncate border-l border-primary/15 pl-2.5 sm:pl-3" title="Duration">
             <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-muted-foreground">
               <Clock size={13} className="text-primary shrink-0" />
               <span className="truncate">Duration</span>
@@ -899,8 +987,8 @@ function LoanItem({
         </div>
       </div>
 
-      {/* Action CTA Button */}
-      <div className="mt-6 pt-4 border-t border-border/60">
+      {/* Action CTA Buttons (Offer / Apply + Enquire Message) */}
+      <div className="mt-6 pt-4 border-t border-border/60 flex items-center gap-2">
         {!isLoggedIn ? (
           <button
             onClick={(e) => {
@@ -909,29 +997,66 @@ function LoanItem({
             }}
             className="w-full text-xs sm:text-sm font-extrabold border border-border bg-background hover:bg-muted text-foreground py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-98"
           >
-            <Handshake size={18} /> Log in to offer
+            <Handshake size={18} /> {isLenderOffer ? 'Log in to Apply' : 'Log in to Offer'}
           </button>
-        ) : isLender ? (
-          hasSentOffer ? (
-            <div className="w-full text-xs sm:text-sm font-extrabold text-emerald-600 bg-emerald-500/10 border border-emerald-500/30 py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-2xs">
-              <CheckCircle2 size={18} /> Offer Submitted
-            </div>
-          ) : (
+        ) : isOwnRequest ? (
+          <div className="w-full text-xs font-bold text-muted-foreground text-center py-3 bg-muted/40 rounded-2xl border border-border/60">
+            Your Listing
+          </div>
+        ) : (
+          <>
+            {/* Primary Action Button */}
+            {isLenderOffer ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOffer();
+                }}
+                className="flex-1 text-xs sm:text-sm font-extrabold bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg active:scale-98"
+              >
+                <Handshake size={17} /> Apply for Loan
+              </button>
+            ) : isLender ? (
+              hasSentOffer ? (
+                <div className="flex-1 text-xs sm:text-sm font-extrabold text-emerald-600 bg-emerald-500/10 border border-emerald-500/30 py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-2xs">
+                  <CheckCircle2 size={18} /> Offer Submitted
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOffer();
+                  }}
+                  disabled={sentOfferIdsLoading}
+                  className="flex-1 text-xs sm:text-sm font-extrabold bg-primary text-primary-foreground hover:bg-primary/90 py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-98"
+                >
+                  <Handshake size={17} /> Send Funding Offer
+                </button>
+              )
+            ) : (
+              <p className="flex-1 text-xs font-semibold text-muted-foreground text-center py-2.5 bg-muted/30 rounded-xl border border-border/60">
+                Lender account required
+              </p>
+            )}
+
+            {/* Direct Message / Enquire Button on Every Card */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onOffer();
+                onMessage();
               }}
-              disabled={sentOfferIdsLoading}
-              className="w-full text-xs sm:text-sm font-extrabold bg-primary text-primary-foreground hover:bg-primary/90 py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-98"
+              disabled={isEnquiring}
+              title="Message and chat directly regarding this listing"
+              className="px-3.5 sm:px-4 py-3.5 rounded-2xl border border-border bg-background hover:bg-muted text-foreground text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs hover:border-primary/50 disabled:opacity-50"
             >
-              <Handshake size={18} /> Send Funding Offer
+              {isEnquiring ? (
+                <Loader2 size={16} className="animate-spin text-primary shrink-0" />
+              ) : (
+                <MessageSquare size={16} className="text-primary shrink-0" />
+              )}
+              <span>{isEnquiring ? 'Opening…' : 'Enquire'}</span>
             </button>
-          )
-        ) : (
-          <p className="text-xs font-semibold text-muted-foreground text-center py-2.5 bg-muted/30 rounded-xl border border-border/60">
-            Lender account required
-          </p>
+          </>
         )}
       </div>
     </div>
@@ -975,60 +1100,60 @@ function OfferForm({ loan, accessToken, onSent }) {
     <>
       <VerificationBanner {...verificationBannerProps} />
       <form onSubmit={submit} className="flex flex-col gap-4">
-      {/* 🔵 Step 6 Disclaimer — one-time lender alert */}
-      <InfoBanner variant="info" dismissible={true} storageKey="mt_lender_disclaimer_seen">
-        You're responsible for verifying repayment terms directly with the borrower.
-      </InfoBanner>
+        {/* 🔵 Step 6 Disclaimer — one-time lender alert */}
+        <InfoBanner variant="info" dismissible={true} storageKey="mt_lender_disclaimer_seen">
+          You're responsible for verifying repayment terms directly with the borrower.
+        </InfoBanner>
 
-      <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground leading-relaxed">
-        Offering capital funding on a <strong className="text-foreground font-bold">₹{Number(loan.amount).toLocaleString('en-IN')}</strong> loan request.
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold text-foreground block">
-          Offered Interest Rate (% p.a.)
-        </label>
-        <input
-          type="number"
-          min="0"
-          max="100"
-          step="0.1"
-          value={offeredRate}
-          onChange={(e) => setOfferedRate(e.target.value)}
-          placeholder="Enter proposed interest rate %"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium focus:outline-none focus:border-primary shadow-xs"
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold text-foreground block">
-          Message to Borrower
-        </label>
-        <textarea
-          rows={3}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Enter repayment terms or message to borrower…"
-          maxLength={1000}
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium resize-none focus:outline-none focus:border-primary shadow-xs leading-relaxed"
-        />
-      </div>
-
-      {error && (
-        <div className="text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-xl p-3">
-          {error}
+        <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground leading-relaxed">
+          Offering capital funding on a <strong className="text-foreground font-bold">₹{Number(loan.amount).toLocaleString('en-IN')}</strong> loan request.
         </div>
-      )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full text-xs font-bold bg-primary text-primary-foreground py-2.5 rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-xs active:scale-98 mt-1"
-      >
-        {submitting ? <Loader2 size={16} className="animate-spin" /> : <Handshake size={16} />}
-        {submitting ? 'Submitting...' : 'Confirm & Send Offer'}
-      </button>
-    </form>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground block">
+            Offered Interest Rate (% p.a.)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={offeredRate}
+            onChange={(e) => setOfferedRate(e.target.value)}
+            placeholder="Enter proposed interest rate %"
+            className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium focus:outline-none focus:border-primary shadow-xs"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground block">
+            Message to Borrower
+          </label>
+          <textarea
+            rows={3}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Enter repayment terms or message to borrower…"
+            maxLength={1000}
+            className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium resize-none focus:outline-none focus:border-primary shadow-xs leading-relaxed"
+          />
+        </div>
+
+        {error && (
+          <div className="text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-xl p-3">
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full text-xs font-bold bg-primary text-primary-foreground py-2.5 rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-xs active:scale-98 mt-1"
+        >
+          {submitting ? <Loader2 size={16} className="animate-spin" /> : <Handshake size={16} />}
+          {submitting ? 'Submitting...' : 'Confirm & Send Offer'}
+        </button>
+      </form>
     </>
   );
 }
@@ -1118,9 +1243,8 @@ function SafetyForm({ loan, accessToken, onDone }) {
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
-              mode === m ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${mode === m ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             {m}
           </button>
@@ -1213,13 +1337,13 @@ function MarketplaceProfileModal({ userId, onClose, accessToken }) {
   }, [userId, accessToken]);
 
   const REPORT_REASONS = [
-    { value: 'fake_identity',     label: 'Fake Identity' },
-    { value: 'fraud_attempt',     label: 'Fraud Attempt' },
-    { value: 'harassment',        label: 'Harassment' },
-    { value: 'impersonation',     label: 'Impersonation' },
-    { value: 'spam',              label: 'Spam' },
+    { value: 'fake_identity', label: 'Fake Identity' },
+    { value: 'fraud_attempt', label: 'Fraud Attempt' },
+    { value: 'harassment', label: 'Harassment' },
+    { value: 'impersonation', label: 'Impersonation' },
+    { value: 'spam', label: 'Spam' },
     { value: 'abusive_behaviour', label: 'Abusive Behaviour' },
-    { value: 'other',             label: 'Other' },
+    { value: 'other', label: 'Other' },
   ];
 
   const handleReport = async (e) => {
@@ -1372,17 +1496,15 @@ function MarketplaceProfileModal({ userId, onClose, accessToken }) {
                     <div className="flex border-b border-border gap-4 pb-2">
                       <button
                         onClick={() => { setSafetyMode('report'); setSafetyMessage(''); }}
-                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
-                          safetyMode === 'report' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${safetyMode === 'report' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
+                          }`}
                       >
                         Report
                       </button>
                       <button
                         onClick={() => { setSafetyMode('block'); setSafetyMessage(''); }}
-                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${
-                          safetyMode === 'block' ? 'text-destructive border-b-2 border-destructive' : 'text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`text-xs font-bold uppercase tracking-wider pb-1 transition-colors cursor-pointer ${safetyMode === 'block' ? 'text-destructive border-b-2 border-destructive' : 'text-muted-foreground hover:text-foreground'
+                          }`}
                       >
                         Block
                       </button>
@@ -1449,6 +1571,103 @@ function MarketplaceProfileModal({ userId, onClose, accessToken }) {
             </div>
           ) : null}
         </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── MARKETPLACE INQUIRY MODAL ───────────────────────────────────────────
+function InquiryModal({ loan, accessToken, onClose, onSent }) {
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const isLenderOffer = loan.listingType === 'lend';
+  const targetName = loan.borrowerId?.fullName || (isLenderOffer ? 'Lender' : 'Borrower');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await api.createChatInquiry(loan._id, message.trim() || undefined, accessToken);
+      onSent(res._id || res.conversationId || res);
+    } catch (err) {
+      setError(err.message || 'Failed to send inquiry');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={18} className="text-primary" />
+            <h3 className="font-bold text-foreground text-sm">Send Inquiry to {targetName}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/15 text-xs text-foreground space-y-1">
+            <div className="font-bold flex items-center justify-between">
+              <span>{isLenderOffer ? 'Lender Loan Offer' : 'Borrower Request'}</span>
+              <span className="text-primary font-black">₹{Number(loan.amount).toLocaleString('en-IN')}</span>
+            </div>
+            <p className="text-muted-foreground text-[11px] line-clamp-1">{loan.description || loan.category}</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground block">
+              Your Message
+            </label>
+            <textarea
+              rows={4}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={`Hi! I saw your ${isLenderOffer ? 'loan offer' : 'loan request'} for ₹${Number(loan.amount).toLocaleString('en-IN')} and would like to connect…`}
+              maxLength={1000}
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-medium resize-none focus:outline-none focus:border-primary shadow-xs leading-relaxed"
+            />
+            <p className="text-[10px] text-muted-foreground text-right">{message.length}/1000</p>
+          </div>
+
+          {error && (
+            <div className="text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-xl p-3">
+              {error}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 text-xs font-bold bg-primary text-primary-foreground py-2.5 rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
+            >
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              <span>{submitting ? 'Sending…' : 'Send Inquiry'}</span>
+            </button>
+          </div>
+        </form>
       </motion.div>
     </div>
   );

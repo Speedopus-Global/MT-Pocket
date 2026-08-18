@@ -28,6 +28,34 @@ export class ChatController {
     return this.chatService.getOrCreateConversation((req.user as any).sub, loanRequestId, lenderId);
   }
 
+  // POST /chat/conversations/inquire/:loanId
+  @Post('conversations/inquire/:loanId')
+  inquire(
+    @Param('loanId') loanId: string,
+    @Body('initialMessage') initialMessage: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.createInquiryConversation((req.user as any).sub, loanId, initialMessage);
+  }
+
+  // POST /chat/conversations/:id/accept-request
+  @Post('conversations/:id/accept-request')
+  acceptRequest(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.acceptMessageRequest(id, (req.user as any).sub);
+  }
+
+  // POST /chat/conversations/:id/decline-request
+  @Post('conversations/:id/decline-request')
+  declineRequest(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.declineMessageRequest(id, (req.user as any).sub);
+  }
+
   // GET /chat/conversations/:id/messages?before=<messageId>&limit=30
   @Get('conversations/:id/messages')
   getMessages(

@@ -5,12 +5,21 @@ export type LoanRequestDocument = HydratedDocument<LoanRequest>;
 
 export type LoanCategory = 'medical' | 'education' | 'business' | 'personal' | 'other';
 export type LoanRequestStatus = 'open' | 'in_progress' | 'closed' | 'cancelled';
+export type ListingType = 'borrow' | 'lend';
 export type OfferStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
 @Schema({ timestamps: true })
 export class LoanRequest {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  borrowerId: Types.ObjectId;
+  borrowerId: Types.ObjectId; // Creator of the listing (borrower for 'borrow', lender for 'lend')
+
+  @Prop({
+    type: String,
+    enum: ['borrow', 'lend'],
+    default: 'borrow',
+    index: true,
+  })
+  listingType: ListingType;
 
   @Prop({ type: Number, required: true, min: 1 })
   amount: number; // in INR
@@ -114,7 +123,7 @@ export class LoanRequest {
 
 export const LoanRequestSchema = SchemaFactory.createForClass(LoanRequest);
 LoanRequestSchema.index({ location: '2dsphere' });
-LoanRequestSchema.index({ status: 1, category: 1, createdAt: -1 });
+LoanRequestSchema.index({ status: 1, listingType: 1, category: 1, createdAt: -1 });
 
 // Needed for `search()`'s $text query on `keyword`. `description` is
 // weighted highest since that's usually what a keyword search is after;

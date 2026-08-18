@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/layout/layout.jsx';
 import DashboardLayout from './components/layout/DashboardLayout.jsx';
@@ -47,6 +47,8 @@ function App() {
               <Route path="messages" element={<Chat />} />
               <Route path="support" element={<HelpAndSupport />} />
             </Route>
+            <Route path="/chat" element={<Navigate to="/dashboard/messages" replace />} />
+            <Route path="/messages" element={<Navigate to="/dashboard/messages" replace />} />
           </Route>
 
           {/* Unauthorized access fallback */}

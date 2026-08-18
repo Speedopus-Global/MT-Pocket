@@ -5,7 +5,7 @@ import { api } from '../lib/api';
 import { connectChatSocket, getChatSocket } from '../lib/Socket';
 import {
   Send, Loader2, Check, CheckCheck, RefreshCw, MessageCircle, ChevronLeft,
-  Paperclip, Image as ImageIcon, FileText, MoreVertical, Edit2, Trash2, Smile, X, Download, AlertCircle
+  Paperclip, Image as ImageIcon, FileText, MoreVertical, Edit2, Trash2, Smile, X, Download, AlertCircle, MessageSquare
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Button } from '../components/ui/button';
@@ -15,9 +15,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 const PAGE_SIZE = 30;
 const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+function getSenderId(sender) {
+  if (!sender) return '';
+  if (typeof sender === 'object') {
+    return String(sender._id || sender.id || '');
+  }
+  return String(sender);
+}
+
 function formatChatDay(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -34,6 +43,7 @@ function formatChatDay(dateString) {
 function formatConversationListTime(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -52,6 +62,7 @@ function formatConversationListTime(dateString) {
 function formatLastSeenWhatsApp(lastActiveAt) {
   if (!lastActiveAt) return 'offline';
   const date = new Date(lastActiveAt);
+  if (isNaN(date.getTime())) return 'offline';
   const now = new Date();
   const diffMin = (now.getTime() - date.getTime()) / 60000;
   if (diffMin < 1) return 'last seen just now';
@@ -77,12 +88,15 @@ function formatFileSize(bytes) {
 
 export default function Chat({ initialConversationId = null }) {
   const { user, accessToken } = useAuth();
+  const currentUserId = String(user?.id || user?._id || '');
+
   const [searchParams, setSearchParams] = useSearchParams();
   const urlConversationId = initialConversationId ?? searchParams.get('conversationId');
 
   const [conversations, setConversations] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [activeId, setActiveId] = useState(urlConversationId);
+  const [activeTab, setActiveTab] = useState('direct'); // 'direct' | 'requests'
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -98,6 +112,7 @@ export default function Chat({ initialConversationId = null }) {
   const [activeMenuMessageId, setActiveMenuMessageId] = useState(null);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [selectedMobileMsg, setSelectedMobileMsg] = useState(null);
+  const [deleteWarningMsgId, setDeleteWarningMsgId] = useState(null);
 
   // Image preview modal
   const [previewImage, setPreviewImage] = useState(null);
@@ -107,16 +122,59 @@ export default function Chat({ initialConversationId = null }) {
   const typingTimeoutRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const socketRef = useRef(null);
-  // IMPORTANT: must start as null, NOT `activeId`/`urlConversationId`.
-  // The mount-time effect below only calls openConversation() (which
-  // fetches history from MongoDB) when urlConversationId !== activeIdRef.current.
-  // If this ref started pre-equal to urlConversationId, that check would
-  // silently pass on refresh and the message list would never be re-fetched.
   const activeIdRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  const isPendingRequest = useCallback((c) => {
+    return Boolean(c.isRequest && String(c.requestedBy) !== currentUserId && c.requestStatus === 'pending');
+  }, [currentUserId]);
+
+  const directList = conversations.filter((c) => !isPendingRequest(c));
+  const requestsList = conversations.filter(isPendingRequest);
+  const pendingRequestsCount = requestsList.length;
+
+  const displayList = activeTab === 'requests' ? requestsList : directList;
+
+  useEffect(() => {
+    if (urlConversationId && conversations.length) {
+      const found = conversations.find((c) => String(c.conversationId) === String(urlConversationId));
+      if (found && isPendingRequest(found)) {
+        setActiveTab('requests');
+      }
+    }
+  }, [urlConversationId, conversations, isPendingRequest]);
+
+  const handleAcceptRequest = async (conversationId) => {
+    try {
+      await api.acceptChatRequest(conversationId, accessToken);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversationId === conversationId
+            ? { ...c, isRequest: false, requestStatus: 'accepted' }
+            : c
+        )
+      );
+      setActiveTab('direct');
+    } catch (err) {
+      console.error('Failed to accept request', err);
+    }
+  };
+
+  const handleDeclineRequest = async (conversationId) => {
+    try {
+      await api.declineChatRequest(conversationId, accessToken);
+      setConversations((prev) => prev.filter((c) => c.conversationId !== conversationId));
+      if (activeId === conversationId) {
+        setActiveId(null);
+        setSearchParams({}, { replace: true });
+      }
+    } catch (err) {
+      console.error('Failed to decline request', err);
+    }
+  };
 
   const activeConversation = conversations.find((c) => c.conversationId === activeId);
 
@@ -128,8 +186,8 @@ export default function Chat({ initialConversationId = null }) {
     socketRef.current = socket;
 
     const onNewMessage = (msg) => {
-      const senderId = typeof msg.senderId === 'object' ? msg.senderId?._id || String(msg.senderId) : msg.senderId;
-      const msgNormalized = { ...msg, senderId: String(senderId) };
+      const msgSenderId = getSenderId(msg.senderId);
+      const msgNormalized = { ...msg, senderId: msgSenderId };
 
       let preview = msg.text;
       if (!preview && msg.mediaUrl) {
@@ -144,17 +202,15 @@ export default function Chat({ initialConversationId = null }) {
 
       if (String(msg.conversationId) === activeIdRef.current) {
         setMessages((prev) => {
-          // Replace matching temp message — match on tempId embedded in the message or fallback dedup by _id
           const realId = String(msg._id);
-          if (prev.some((m) => String(m._id) === realId)) return prev; // already have it (from ack)
-          // Remove any temp message with same text if still pending
+          if (prev.some((m) => String(m._id) === realId)) return prev;
           const withoutTemp = prev.filter((m) => {
             if (!String(m._id).startsWith('temp-')) return true;
-            return m.text !== msg.text || String(m.senderId) !== String(senderId);
+            return m.text !== msg.text || getSenderId(m.senderId) !== msgSenderId;
           });
           return [...withoutTemp, msgNormalized];
         });
-        if (String(senderId) !== String(user?.id)) {
+        if (msgSenderId !== currentUserId) {
           socket?.emit('mark_read', { conversationId: msg.conversationId });
         }
       }
@@ -186,20 +242,21 @@ export default function Chat({ initialConversationId = null }) {
     };
 
     const onPresence = ({ userId, online, lastActiveAt }) => {
+      const uid = String(userId);
       setPresence((prev) => ({
         ...prev,
-        [userId]: { online, lastActiveAt: lastActiveAt ?? prev[userId]?.lastActiveAt ?? null },
+        [uid]: { online, lastActiveAt: lastActiveAt ?? prev[uid]?.lastActiveAt ?? null },
       }));
     };
 
     const onTyping = ({ userId, isTyping }) => {
-      if (String(userId) !== String(user?.id)) setOtherTyping(isTyping);
+      if (String(userId) !== currentUserId) setOtherTyping(isTyping);
     };
 
     const onReadReceipt = ({ conversationId, readAt }) => {
       if (String(conversationId) !== activeIdRef.current) return;
       setMessages((prev) => prev.map((m) => (
-        String(m.senderId) === String(user?.id) ? { ...m, status: 'read', readAt } : m
+        getSenderId(m.senderId) === currentUserId ? { ...m, status: 'read', readAt } : m
       )));
     };
 
@@ -229,7 +286,7 @@ export default function Chat({ initialConversationId = null }) {
       socket?.off('read_receipt', onReadReceipt);
       socket?.off('connect', onReconnect);
     };
-  }, [accessToken, user?.id]);
+  }, [accessToken, currentUserId]);
 
   // ── Conversation list ────────────────────────────────────────────────
   useEffect(() => {
@@ -249,6 +306,7 @@ export default function Chat({ initialConversationId = null }) {
     setEditingMessage(null);
     setActiveMenuMessageId(null);
     setReactionPickerMessageId(null);
+    setDeleteWarningMsgId(null);
     setLoadingMessages(true);
 
     if (updateUrl) setSearchParams({ conversationId }, { replace: true });
@@ -341,7 +399,7 @@ export default function Chat({ initialConversationId = null }) {
     const optimisticMsg = {
       _id: tempId,
       conversationId: activeId,
-      senderId: String(user?.id),
+      senderId: currentUserId,
       text,
       status: 'sent',
       createdAt: new Date().toISOString(),
@@ -349,16 +407,11 @@ export default function Chat({ initialConversationId = null }) {
       deletedFor: [],
     };
 
-    // Instant local append so there's zero lag/buffering
     setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
       const socket = socketRef.current;
       if (socket && socket.connected) {
-        // Use socket.io acknowledgement — server returns the saved message.
-        // Guard against the ack never arriving (dropped connection, or the
-        // gateway throwing before it can reply) with a timeout that falls
-        // back to REST instead of leaving the optimistic bubble stranded.
         let settled = false;
         const ackTimeout = setTimeout(async () => {
           if (settled) return;
@@ -378,20 +431,17 @@ export default function Chat({ initialConversationId = null }) {
           clearTimeout(ackTimeout);
 
           if (ack?.error) {
-            // Server explicitly rejected it (blocked user, validation, etc.)
             setMessages((prev) => prev.filter((m) => m._id !== tempId));
             alert('Failed to deliver message: ' + ack.error);
             return;
           }
           if (ack?.message) {
-            // Replace temp with the real persisted message from the server
             setMessages((prev) => prev.map((m) => m._id === tempId ? ack.message : m));
           } else if (ack?.messageId) {
             setMessages((prev) => prev.map((m) => m._id === tempId ? { ...m, _id: ack.messageId } : m));
           }
         });
       } else {
-        // Direct REST fallback if socket connection is pending or offline
         const saved = await api.sendChatMessage(activeId, { text }, accessToken);
         setMessages((prev) => prev.map((m) => m._id === tempId ? saved : m));
       }
@@ -483,8 +533,8 @@ export default function Chat({ initialConversationId = null }) {
   };
 
   // ── Delete for me Handler ────────────────────────────────────────────
-  const handleDeleteForMe = async (messageId, e) => {
-    e?.stopPropagation();
+  const confirmDeleteForMe = async (messageId) => {
+    if (!messageId) return;
     try {
       const socket = socketRef.current;
       if (socket && socket.connected) {
@@ -492,11 +542,14 @@ export default function Chat({ initialConversationId = null }) {
       } else {
         await api.deleteChatMessageForMe(messageId, accessToken);
       }
-      setMessages((prev) => prev.filter((m) => m._id !== messageId));
+      setMessages((prev) => prev.filter((m) => String(m._id) !== String(messageId)));
     } catch (err) {
       console.error('Failed to delete for me:', err);
+    } finally {
+      setDeleteWarningMsgId(null);
+      setActiveMenuMessageId(null);
+      setSelectedMobileMsg(null);
     }
-    setActiveMenuMessageId(null);
   };
 
   // ── Long Press Mobile Handlers ─────────────────────────────────────────
@@ -545,25 +598,62 @@ export default function Chat({ initialConversationId = null }) {
 
       {/* ── Conversation list (Fixed column with internal scrolling) ── */}
       <div className={`w-full sm:w-80 md:w-96 shrink-0 border-r border-border/70 flex flex-col h-full overflow-hidden bg-card/60 ${activeId ? 'hidden sm:flex' : 'flex'}`}>
-        <div className="px-5 py-4 border-b border-border/70 bg-card shrink-0">
-          <h2 className="font-extrabold text-lg text-foreground tracking-tight">Messages</h2>
+        <div className="p-3.5 border-b border-border/70 bg-card shrink-0 space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-extrabold text-lg text-foreground tracking-tight">Messages</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-1 p-1 bg-muted/40 rounded-xl border border-border/60">
+            <button
+              onClick={() => setActiveTab('direct')}
+              className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                activeTab === 'direct'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Direct</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                activeTab === 'requests'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Requests</span>
+              {pendingRequestsCount > 0 && (
+                <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[10px] font-extrabold rounded-full">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+
         <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-border/30">
           {loadingList ? (
             <div className="flex justify-center py-12">
               <Loader2 className="animate-spin text-primary" size={22} />
             </div>
-          ) : conversations.length === 0 ? (
+          ) : displayList.length === 0 ? (
             <div className="text-center py-16 px-4 text-muted-foreground">
               <MessageCircle size={32} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm font-semibold">No active conversations.</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Connect with borrowers or lenders from the Marketplace.</p>
+              <p className="text-sm font-semibold">
+                {activeTab === 'requests' ? 'No pending message requests' : 'No active conversations.'}
+              </p>
+              <p className="text-xs text-muted-foreground/70 mt-1">
+                {activeTab === 'requests'
+                  ? 'Inquiries from the marketplace will appear here.'
+                  : 'Connect with borrowers or lenders from the Marketplace.'}
+              </p>
             </div>
           ) : (
             <div>
-              {conversations.map((c) => {
+              {displayList.map((c) => {
                 const other = c.otherParticipant;
-                const isOnline = presence[other._id]?.online ?? false;
+                const otherId = getSenderId(other);
+                const isOnline = otherId ? (presence[otherId]?.online ?? false) : false;
                 const isSelected = activeId === c.conversationId;
                 return (
                   <button
@@ -575,9 +665,9 @@ export default function Chat({ initialConversationId = null }) {
                   >
                     <div className="relative shrink-0">
                       <Avatar className="w-12 h-12 border border-border">
-                        <AvatarImage src={other.avatarUrl} className="object-cover" />
+                        <AvatarImage src={other?.avatarUrl} className="object-cover" />
                         <AvatarFallback className="font-bold text-sm bg-primary/10 text-primary">
-                          {other.fullName?.[0]?.toUpperCase() ?? 'U'}
+                          {other?.fullName?.[0]?.toUpperCase() ?? 'U'}
                         </AvatarFallback>
                       </Avatar>
                       {isOnline && (
@@ -586,7 +676,7 @@ export default function Chat({ initialConversationId = null }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-sm text-foreground truncate">{other.fullName || 'User'}</span>
+                        <span className="font-bold text-sm text-foreground truncate">{other?.fullName || 'User'}</span>
                         {c.lastMessageAt && (
                           <span className="text-[11px] text-muted-foreground shrink-0 font-medium">
                             {formatConversationListTime(c.lastMessageAt)}
@@ -636,37 +726,41 @@ export default function Chat({ initialConversationId = null }) {
                 </button>
                 <div className="relative shrink-0">
                   <Avatar className="w-10 h-10 border border-border">
-                    <AvatarImage src={activeConversation.otherParticipant.avatarUrl} className="object-cover" />
+                    <AvatarImage src={activeConversation.otherParticipant?.avatarUrl} className="object-cover" />
                     <AvatarFallback className="font-bold bg-primary/10 text-primary">
-                      {activeConversation.otherParticipant.fullName?.[0]?.toUpperCase() ?? 'U'}
+                      {activeConversation.otherParticipant?.fullName?.[0]?.toUpperCase() ?? 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  {presence[activeConversation.otherParticipant._id]?.online && (
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
-                  )}
+                  {(() => {
+                    const otherUid = getSenderId(activeConversation.otherParticipant);
+                    return otherUid && presence[otherUid]?.online ? (
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
+                    ) : null;
+                  })()}
                 </div>
                 <div className="min-w-0">
                   <p className="font-bold text-sm text-foreground truncate">
-                    {activeConversation.otherParticipant.fullName || 'User'}
+                    {activeConversation.otherParticipant?.fullName || 'User'}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {otherTyping ? (
-                      <span className="text-primary font-semibold animate-pulse">typing…</span>
-                    ) : presence[activeConversation.otherParticipant._id]?.online ? (
-                      <span className="text-emerald-600 font-semibold">online</span>
-                    ) : (
-                      formatLastSeenWhatsApp(
-                        presence[activeConversation.otherParticipant._id]?.lastActiveAt
-                          ?? activeConversation.otherParticipant.lastActiveAt,
-                      )
-                    )}
+                    {(() => {
+                      const otherUid = getSenderId(activeConversation.otherParticipant);
+                      if (otherTyping) {
+                        return <span className="text-primary font-semibold animate-pulse">typing…</span>;
+                      }
+                      if (otherUid && presence[otherUid]?.online) {
+                        return <span className="text-emerald-600 font-semibold">online</span>;
+                      }
+                      const lastActive = (otherUid && presence[otherUid]?.lastActiveAt) ?? activeConversation.otherParticipant?.lastActiveAt;
+                      return formatLastSeenWhatsApp(lastActive);
+                    })()}
                   </p>
                 </div>
               </div>
 
               {activeConversation.loanRequest && (
                 <div className="hidden md:flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-xl text-xs text-muted-foreground border border-border/50">
-                  <span>Loan Match:</span>
+                  <span>{activeConversation.loanRequest.listingType === 'lend' ? 'Loan Offer:' : 'Loan Request:'}</span>
                   <span className="font-bold text-foreground">₹{activeConversation.loanRequest.amount?.toLocaleString()}</span>
                   <span className="capitalize px-1.5 py-0.2 bg-primary/10 text-primary rounded-md text-[10px] font-bold">
                     {activeConversation.loanRequest.category}
@@ -674,6 +768,45 @@ export default function Chat({ initialConversationId = null }) {
                 </div>
               )}
             </div>
+
+            {/* Inquiry Request Action Banner */}
+            {isPendingRequest(activeConversation) && (
+              <div className="bg-primary/5 border-b border-primary/20 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <span>Marketplace Inquiry Request</span>
+                      {activeConversation.loanRequest && (
+                        <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-extrabold">
+                          ₹{activeConversation.loanRequest.amount?.toLocaleString()} · {activeConversation.loanRequest.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      This user inquired about your listing. Accept to enable direct messaging.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => handleDeclineRequest(activeConversation.conversationId)}
+                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl border border-destructive/30 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors cursor-pointer"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => handleAcceptRequest(activeConversation.conversationId)}
+                    className="flex-1 sm:flex-initial px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+                  >
+                    Accept
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Dedicated Isolated Message History Scroll Area */}
             <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-6 py-4 space-y-3" ref={scrollRef}>
@@ -703,7 +836,8 @@ export default function Chat({ initialConversationId = null }) {
               ) : (
                 <div className="flex flex-col gap-3">
                   {messages.map((m, idx) => {
-                    const isMine = String(m.senderId) === String(user?.id);
+                    const msgSenderId = getSenderId(m.senderId);
+                    const isMine = currentUserId && msgSenderId === currentUserId;
                     const canEdit = isMine && (Date.now() - new Date(m.createdAt).getTime()) <= 15 * 60 * 1000;
 
                     // Day Divider Logic
@@ -795,7 +929,11 @@ export default function Chat({ initialConversationId = null }) {
                                     </button>
                                   )}
                                   <button
-                                    onClick={(e) => handleDeleteForMe(m._id, e)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveMenuMessageId(null);
+                                      setDeleteWarningMsgId(m._id);
+                                    }}
                                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 font-medium transition-colors cursor-pointer"
                                   >
                                     <Trash2 size={13} />
@@ -985,6 +1123,55 @@ export default function Chat({ initialConversationId = null }) {
         )}
       </div>
 
+      {/* Warning Confirmation Modal for "Delete for me" */}
+      <AnimatePresence>
+        {deleteWarningMsgId && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+            onClick={() => setDeleteWarningMsgId(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-destructive/10 text-destructive">
+                  <AlertCircle size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground text-base">Delete message?</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Delete for you only</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This message will be removed from your chat view. Other participants in this conversation will still be able to see it.
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteWarningMsgId(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirmDeleteForMe(deleteWarningMsgId)}
+                  className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors cursor-pointer shadow-xs"
+                >
+                  Delete for me
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Image Preview Lightbox */}
       <AnimatePresence>
         {previewImage && (
@@ -1060,7 +1247,7 @@ export default function Chat({ initialConversationId = null }) {
 
               {/* Actions list */}
               <div className="space-y-1.5 pt-1">
-                {String(selectedMobileMsg.senderId) === String(user?.id) &&
+                {currentUserId && getSenderId(selectedMobileMsg.senderId) === currentUserId &&
                   (Date.now() - new Date(selectedMobileMsg.createdAt).getTime()) <= 15 * 60 * 1000 && (
                     <button
                       onClick={(e) => {
@@ -1076,8 +1263,10 @@ export default function Chat({ initialConversationId = null }) {
 
                 <button
                   onClick={(e) => {
-                    handleDeleteForMe(selectedMobileMsg._id, e);
+                    e.stopPropagation();
+                    const id = selectedMobileMsg._id;
                     setSelectedMobileMsg(null);
+                    setDeleteWarningMsgId(id);
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 text-destructive font-semibold text-sm transition-colors cursor-pointer"
                 >
