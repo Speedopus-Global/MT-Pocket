@@ -140,13 +140,26 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:py-12 bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:py-12 bg-background relative">
+      {/* Back to Home Button */}
+      <div className="w-full max-w-sm mb-4">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+        >
+          <ArrowLeft size={15} className="transition-transform group-hover:-translate-x-1" />
+          <span>Back to Home</span>
+        </Link>
+      </div>
+
       <div className="w-full max-w-sm">
 
         {/* Logo and Brand Heading */}
         <div className="flex flex-col items-center mb-6">
-          <img src={logo} alt="MT Pocket Logo" className="w-14 h-14 sm:w-16 sm:h-16 object-contain mb-2" />
-          <span className="text-xl font-bold tracking-tight text-primary">MT Pocket</span>
+          <Link to="/" className="flex flex-col items-center group cursor-pointer">
+            <img src={logo} alt="MT Pocket Logo" className="w-14 h-14 sm:w-16 sm:h-16 object-contain mb-2 group-hover:scale-105 transition-transform" />
+            <span className="text-xl font-bold tracking-tight text-primary">MT Pocket</span>
+          </Link>
         </div>
 
         {/* Card wrapper */}

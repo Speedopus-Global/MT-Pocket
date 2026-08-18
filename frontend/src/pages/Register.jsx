@@ -221,11 +221,21 @@ export default function Register() {
         </div>
       </StickyBanner>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 sm:py-8">
         {/* Ambient background decoration */}
         <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-80 w-96 rounded-full bg-primary/10 blur-[100px]" />
         
         <div className="w-full max-w-md relative z-10">
+          {/* Back to Home Button */}
+          <div className="mb-4">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+            >
+              <ArrowLeft size={15} className="transition-transform group-hover:-translate-x-1" />
+              <span>Back to Home</span>
+            </Link>
+          </div>
           
           {/* Brand Header */}
           <div className="flex flex-col items-center mb-6 text-center">

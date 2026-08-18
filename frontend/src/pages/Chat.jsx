@@ -97,6 +97,7 @@ export default function Chat({ initialConversationId = null }) {
   const [editingMessage, setEditingMessage] = useState(null);
   const [activeMenuMessageId, setActiveMenuMessageId] = useState(null);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
+  const [selectedMobileMsg, setSelectedMobileMsg] = useState(null);
 
   // Image preview modal
   const [previewImage, setPreviewImage] = useState(null);
@@ -104,6 +105,7 @@ export default function Chat({ initialConversationId = null }) {
   const scrollRef = useRef(null);
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const longPressTimerRef = useRef(null);
   const socketRef = useRef(null);
   // IMPORTANT: must start as null, NOT `activeId`/`urlConversationId`.
   // The mount-time effect below only calls openConversation() (which
@@ -497,6 +499,26 @@ export default function Chat({ initialConversationId = null }) {
     setActiveMenuMessageId(null);
   };
 
+  // ── Long Press Mobile Handlers ─────────────────────────────────────────
+  const handleTouchStart = (msg) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+    longPressTimerRef.current = setTimeout(() => {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(40); } catch (_) {}
+      }
+      setSelectedMobileMsg(msg);
+    }, 450);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
   // Mobile back button
   const backToList = () => {
     setActiveId(null);
@@ -786,7 +808,17 @@ export default function Chat({ initialConversationId = null }) {
 
                           {/* Message Bubble Container */}
                           <div
-                            className={`relative max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-2xs ${
+                            onTouchStart={() => handleTouchStart(m)}
+                            onTouchEnd={handleTouchEnd}
+                            onTouchMove={handleTouchEnd}
+                            onTouchCancel={handleTouchEnd}
+                            onContextMenu={(e) => {
+                              if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                                e.preventDefault();
+                                setSelectedMobileMsg(m);
+                              }
+                            }}
+                            className={`relative max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-2xs select-none sm:select-text ${
                               isMine
                                 ? 'bg-primary text-primary-foreground rounded-br-xs'
                                 : 'bg-card text-foreground rounded-bl-xs border border-border/60'
@@ -974,6 +1006,85 @@ export default function Chat({ initialConversationId = null }) {
                 <X size={20} />
               </button>
               <img src={previewImage} alt="Enlarged preview" className="max-h-[85vh] w-auto object-contain rounded-2xl" />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Long-Press Message Action Drawer / Sheet */}
+      <AnimatePresence>
+        {selectedMobileMsg && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-xs"
+            onClick={() => setSelectedMobileMsg(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl border border-border bg-card shadow-2xl p-5 space-y-4"
+            >
+              {/* Grab bar on mobile */}
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto sm:hidden" />
+
+              <div className="flex items-center justify-between border-b border-border/70 pb-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Message Actions</p>
+                <button
+                  onClick={() => setSelectedMobileMsg(null)}
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Emoji Reaction Bar */}
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2">React with emoji</p>
+                <div className="flex items-center justify-around bg-muted/40 p-2 rounded-2xl border border-border/60">
+                  {COMMON_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={(e) => {
+                        handleReact(selectedMobileMsg._id, emoji, e);
+                        setSelectedMobileMsg(null);
+                      }}
+                      className="text-2xl hover:scale-125 active:scale-95 transition-transform p-1 cursor-pointer"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions list */}
+              <div className="space-y-1.5 pt-1">
+                {String(selectedMobileMsg.senderId) === String(user?.id) &&
+                  (Date.now() - new Date(selectedMobileMsg.createdAt).getTime()) <= 15 * 60 * 1000 && (
+                    <button
+                      onClick={(e) => {
+                        startEdit(selectedMobileMsg, e);
+                        setSelectedMobileMsg(null);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/80 text-foreground font-semibold text-sm transition-colors cursor-pointer"
+                    >
+                      <Edit2 size={16} className="text-primary" />
+                      <span>Edit message (within 15m)</span>
+                    </button>
+                  )}
+
+                <button
+                  onClick={(e) => {
+                    handleDeleteForMe(selectedMobileMsg._id, e);
+                    setSelectedMobileMsg(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 text-destructive font-semibold text-sm transition-colors cursor-pointer"
+                >
+                  <Trash2 size={16} />
+                  <span>Delete for me</span>
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

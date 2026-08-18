@@ -1,7 +1,7 @@
-import { Link, useLocation, useNavigate} from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowRight, ArrowUp, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import ConsentCheckpointModal from '../components/ui/ConsentCheckpointModal';
 import WhyTrust from "./TrustStripe";
 import HowItWorks from './HowitWorks';
@@ -40,6 +40,19 @@ export default function Home() {
   const location = useLocation();
   const navigate = useNavigate();
   const [consentOpen, setConsentOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (!location.hash) return;
@@ -157,6 +170,25 @@ export default function Home() {
         }}
         onCancel={() => setConsentOpen(false)}
       />
+
+      {/* Floating Scroll to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.7, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.7, y: 8 }}
+            transition={{ duration: 0.2 }}
+            type="button"
+            onClick={scrollToTop}
+            aria-label="Scroll to top"
+            title="Scroll to top"
+            className="fixed bottom-16 right-4 z-[1000] inline-flex items-center justify-center w-9 h-9 rounded-full border border-border bg-background text-foreground shadow-md hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors cursor-pointer active:scale-95"
+          >
+            <ArrowUp size={16} />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
