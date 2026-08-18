@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowLeft, Home, Compass, HelpCircle } from 'lucide-react';
+import { Menu, X, ArrowRight, Home, Compass, HelpCircle } from 'lucide-react';
 import MtPocketLogo from '../components/ui/MtPocketLogo';
 
 export default function NotFound() {
@@ -10,7 +10,7 @@ export default function NotFound() {
   const rightEyeRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Default resting position looking up and slightly to the right (like in the picture)
+  // Default resting position looking up and slightly to the right
   const [leftPupil, setLeftPupil] = useState({ x: 8, y: -16 });
   const [rightPupil, setRightPupil] = useState({ x: 8, y: -16 });
   const [isBlinking, setIsBlinking] = useState(false);
@@ -124,17 +124,20 @@ export default function NotFound() {
       </motion.header>
 
       {/* ── Main Canvas ─────────────────────────────────────────────── */}
-      <main className="w-full max-w-7xl mx-auto px-6 sm:px-12 flex-1 flex flex-col justify-center py-10">
+      <main className="w-full max-w-7xl mx-auto px-6 sm:px-12 flex-1 flex flex-col justify-center py-8 sm:py-12">
         
-        {/* Left-Aligned Headline Quote matching reference */}
+        {/* Left-Aligned Headline Quote */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="max-w-xl text-left"
+          className="max-w-2xl text-left space-y-2"
         >
-          <h1 className="text-2xl sm:text-4xl md:text-[42px] font-medium tracking-[-0.03em] text-foreground leading-[1.25]">
-            Uh oh, the page you’re looking for can’t be found.
+          <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+            Error 404
+          </span>
+          <h1 className="text-2xl sm:text-4xl md:text-[38px] font-medium tracking-[-0.03em] text-foreground leading-[1.25]">
+            We checked every pocket. Found a few loose coins, but not this page.
           </h1>
         </motion.div>
 
@@ -143,7 +146,7 @@ export default function NotFound() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
-          className="my-16 sm:my-24 flex items-center justify-center gap-6 sm:gap-10 select-none cursor-pointer self-center"
+          className="my-12 sm:my-20 flex items-center justify-center gap-6 sm:gap-10 select-none cursor-pointer self-center"
           onClick={() => {
             setIsBlinking(true);
             setTimeout(() => setIsBlinking(false), 200);
@@ -205,40 +208,32 @@ export default function NotFound() {
           </div>
         </motion.div>
 
-        {/* Minimal Bottom Quick Actions */}
+        {/* ── Cute & Impressive Quote + "Let's take you home" button ──── */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.35 }}
-          className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-muted-foreground"
+          transition={{ duration: 0.6, delay: 0.35 }}
+          className="flex flex-col items-center justify-center gap-5 text-center max-w-md mx-auto"
         >
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer underline underline-offset-4"
-          >
-            <ArrowLeft size={13} />
-            <span>Go back to previous page</span>
-          </button>
-          <span>·</span>
-          <Link
-            to="/marketplace"
-            className="hover:text-primary transition-colors cursor-pointer underline underline-offset-4"
-          >
-            Explore marketplace
-          </Link>
-          <span>·</span>
+          <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-relaxed italic">
+            “Not all who wander are lost, but this page definitely is. Don’t worry, safe harbor is right here.”
+          </p>
+
           <Link
             to="/"
-            className="hover:text-primary transition-colors cursor-pointer underline underline-offset-4"
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-primary text-primary-foreground text-xs sm:text-sm font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all duration-200 hover:scale-[1.03] cursor-pointer"
           >
-            Return to homepage
+            <Home size={16} />
+            <span>Let’s take you home</span>
+            <ArrowRight size={15} />
           </Link>
         </motion.div>
       </main>
 
       {/* ── Minimal Footer ──────────────────────────────────────────── */}
-      <footer className="w-full max-w-7xl mx-auto px-6 sm:px-12 py-6 text-xs text-muted-foreground/60">
+      <footer className="w-full max-w-7xl mx-auto px-6 sm:px-12 py-6 text-xs text-muted-foreground/60 flex items-center justify-between">
         <p>© {new Date().getFullYear()} MT Pocket</p>
+       
       </footer>
     </div>
   );
