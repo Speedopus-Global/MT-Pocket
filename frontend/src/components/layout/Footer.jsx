@@ -70,9 +70,7 @@ export default function Footer() {
               <Link to="/#contact" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
                 <span className="hover-line text-sm">Contact Us</span>
               </Link>
-              <Link to="/support" className="group text-muted-foreground hover:text-primary transition-colors duration-200">
-                <span className="hover-line text-sm">Help &amp; Support</span>
-              </Link>
+             
             </div>
           </div>
 

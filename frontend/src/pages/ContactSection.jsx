@@ -2,7 +2,7 @@
 
 import { useState, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, CheckCircle2, AlertCircle, Loader2, Sparkles, Send } from "lucide-react";
+import { Mail, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import DottedMap from "dotted-map";
 import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
@@ -10,21 +10,18 @@ import { useAuth } from "@/context/AuthContext";
 
 function DottedWorldMapWithPin() {
   const { theme } = useTheme();
-  const isDark = theme !== "light";
+  const isDark = theme === "dark";
 
-  // Create a clean dotted map
-  const map = new DottedMap({ height: 50, grid: "diagonal" });
+  // Create a clean dotted map matching MT Pocket's exact palette
+  const map = new DottedMap({ height: 52, grid: "diagonal" });
   const svgMap = map.getSVG({
     radius: 0.24,
-    color: isDark ? "rgba(255, 255, 255, 0.22)" : "rgba(15, 23, 42, 0.22)",
+    color: isDark ? "rgba(161, 188, 152, 0.35)" : "rgba(15, 122, 83, 0.25)",
     shape: "circle",
     backgroundColor: "transparent",
   });
 
-  // Pin coordinates (approx. India / South Asia region or central hub matching reference)
-  // Standard equirectangular projection mapping to percentage:
-  // x% = ((lng + 180) / 360) * 100
-  // y% = ((90 - lat) / 180) * 100
+  // Pin coordinates (central global hub / India coordinate)
   const pinLat = 22.5937;
   const pinLng = 78.9629;
   const pinX = ((pinLng + 180) / 360) * 100;
@@ -32,11 +29,11 @@ function DottedWorldMapWithPin() {
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl pt-2 pb-4 select-none">
-      {/* Background radial glow behind map */}
-      <div className="pointer-events-none absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-48 bg-sky-500/10 blur-[60px] rounded-full" />
+      {/* Background radial glow behind map matching brand forest/sage */}
+      <div className="pointer-events-none absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-44 bg-primary/10 blur-[60px] rounded-full" />
 
-      {/* Dotted Map SVG representation */}
-      <div className="relative w-full aspect-[2.1/1] opacity-75">
+      {/* Dotted Map SVG */}
+      <div className="relative w-full aspect-[2.1/1] opacity-80">
         <img
           src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMap)}`}
           alt="World Map"
@@ -54,34 +51,34 @@ function DottedWorldMapWithPin() {
             initial={{ opacity: 0, y: 8, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-900/95 border border-cyan-500/40 text-[11px] font-medium text-neutral-100 shadow-[0_0_20px_rgba(6,182,212,0.35)] backdrop-blur-md whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-primary-foreground border border-accent/40 text-[11px] font-bold shadow-[0_0_20px_rgba(15,122,83,0.4)] backdrop-blur-md whitespace-nowrap"
           >
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
             <span>We are here</span>
           </motion.div>
 
           {/* Tooltip Pointer Triangle */}
-          <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-cyan-500/40 -mt-[1px]" />
+          <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-primary -mt-[1px]" />
 
           {/* Vertical Glowing Light Beam */}
           <div className="relative h-14 w-[2px] flex items-center justify-center my-0.5">
-            <div className="absolute inset-0 bg-gradient-to-b from-cyan-400 via-sky-500 to-transparent" />
-            <div className="absolute w-4 h-full bg-gradient-to-b from-cyan-400/40 via-sky-500/20 to-transparent blur-sm" />
+            <div className="absolute inset-0 bg-gradient-to-b from-primary via-accent to-transparent" />
+            <div className="absolute w-4 h-full bg-gradient-to-b from-primary/50 via-accent/30 to-transparent blur-sm" />
           </div>
 
           {/* Pinpoint Dot & Concentric Radar Waves */}
           <div className="relative flex items-center justify-center -mt-1">
             {/* Core glowing dot */}
-            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 ring-2 ring-white/80 shadow-[0_0_12px_#38bdf8] z-10" />
+            <div className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary-foreground shadow-[0_0_12px_var(--primary)] z-10" />
 
             {/* Radar Wave 1 */}
-            <span className="absolute w-6 h-6 rounded-full border border-cyan-400/80 animate-ping" />
+            <span className="absolute w-6 h-6 rounded-full border border-primary/80 animate-ping" />
 
             {/* Radar Wave 2 */}
-            <span className="absolute w-10 h-10 rounded-full border border-sky-400/40 animate-pulse" />
+            <span className="absolute w-10 h-10 rounded-full border border-accent/60 animate-pulse" />
 
             {/* Ground Glow */}
-            <div className="absolute w-14 h-4 bg-cyan-500/30 blur-md rounded-full -bottom-1" />
+            <div className="absolute w-14 h-4 bg-primary/30 blur-md rounded-full -bottom-1" />
           </div>
         </div>
       </div>
@@ -105,8 +102,6 @@ export default function ContactSection() {
     error: null,
     ticketId: null,
   });
-
-  const gridId = useId();
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -170,56 +165,56 @@ export default function ContactSection() {
 
   return (
     <section className="relative px-4 py-20 md:py-28 overflow-hidden bg-background">
-      {/* Background ambient lighting */}
-      <div className="pointer-events-none absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-sky-500/10 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 right-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-[120px]" />
+      {/* Ambient background lighting */}
+      <div className="pointer-events-none absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-primary/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-40 right-1/4 h-96 w-96 rounded-full bg-accent/10 blur-[120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         viewport={{ once: true }}
-        className="relative mx-auto max-w-7xl rounded-[32px] md:rounded-[40px] border border-neutral-800 bg-[#080d19]/90 p-6 sm:p-10 lg:p-14 shadow-2xl backdrop-blur-2xl"
+        className="relative mx-auto max-w-7xl rounded-[32px] md:rounded-[40px] border border-border bg-card p-6 sm:p-10 lg:p-14 shadow-2xl backdrop-blur-2xl"
       >
         {/* Subtle decorative inner border highlight */}
-        <div className="pointer-events-none absolute inset-0 rounded-[32px] md:rounded-[40px] border border-white/5" />
+        <div className="pointer-events-none absolute inset-0 rounded-[32px] md:rounded-[40px] border border-primary/10" />
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14 items-center">
           {/* ── LEFT COLUMN: Text Info & Dotted World Map with Pin ── */}
           <div className="flex flex-col justify-between h-full lg:col-span-6 xl:col-span-7">
             <div>
               {/* Mail Icon Badge */}
-              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-700/60 bg-neutral-900/90 text-sky-400 shadow-lg shadow-sky-500/10 backdrop-blur-md">
+              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/10 backdrop-blur-md">
                 <Mail className="h-5 w-5" />
               </div>
 
               {/* Title */}
-              <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              <h2 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
                 Contact us
               </h2>
 
               {/* Subheading */}
-              <p className="mt-4 max-w-xl text-base sm:text-lg leading-relaxed text-neutral-400">
+              <p className="mt-4 max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
                 We are always looking for ways to improve our products and services.
                 Contact us and let us know how we can help you.
               </p>
 
               {/* Contact direct metadata */}
-              <div className="mt-6 flex flex-wrap items-center gap-y-2 gap-x-3 text-xs sm:text-sm font-mono text-neutral-400">
+              <div className="mt-6 flex flex-wrap items-center gap-y-2 gap-x-3 text-xs sm:text-sm font-mono text-muted-foreground">
                 <a
-                  href="mailto:contact@mtpocket.app"
-                  className="hover:text-sky-400 transition-colors"
+                  href="mailto:contact@mtpocket.com"
+                  className="hover:text-primary font-semibold transition-colors"
                 >
-                  contact@mtpocket.app
+                  contact@mtpocket.com
                 </a>
-                <span className="text-neutral-600">•</span>
-                <span className="text-neutral-300">+1 (800) 123 XX21</span>
-                <span className="text-neutral-600">•</span>
+                <span className="text-muted-foreground/40">•</span>
+                <span className="text-foreground font-semibold">+1 (800) 123 XX21</span>
+                <span className="text-muted-foreground/40">•</span>
                 <a
-                  href="mailto:support@mtpocket.app"
-                  className="hover:text-sky-400 transition-colors"
+                  href="mailto:support@mtpocket.com"
+                  className="hover:text-primary font-semibold transition-colors"
                 >
-                  support@mtpocket.app
+                  support@mtpocket.com
                 </a>
               </div>
             </div>
@@ -232,13 +227,13 @@ export default function ContactSection() {
 
           {/* ── RIGHT COLUMN: Contact Us Card Form ── */}
           <div className="lg:col-span-6 xl:col-span-5">
-            <div className="relative overflow-hidden rounded-[28px] border border-neutral-800 bg-[#0d1322]/80 p-6 sm:p-8 md:p-10 shadow-2xl backdrop-blur-xl">
-              {/* Subtle Grid Pattern Overlay */}
+            <div className="relative overflow-hidden rounded-[28px] border border-border bg-card p-6 sm:p-8 md:p-10 shadow-2xl">
+              {/* Subtle Dot Grid Pattern */}
               <div
-                className="pointer-events-none absolute inset-0 opacity-[0.03]"
+                className="pointer-events-none absolute inset-0 opacity-[0.05]"
                 style={{
-                  backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-                  backgroundSize: "24px 24px",
+                  backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
+                  backgroundSize: "20px 20px",
                 }}
               />
 
@@ -247,7 +242,7 @@ export default function ContactSection() {
                 <div>
                   <label
                     htmlFor="fullName"
-                    className="mb-2 block text-sm font-medium text-neutral-300"
+                    className="mb-2 block text-xs font-bold uppercase tracking-wider text-foreground"
                   >
                     Full name
                   </label>
@@ -257,8 +252,8 @@ export default function ContactSection() {
                     type="text"
                     value={formData.fullName}
                     onChange={handleChange}
-                    placeholder="Manu Arora"
-                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950/70 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-inner transition-all duration-200 focus:border-sky-500/60 focus:bg-neutral-950 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
 
@@ -266,9 +261,9 @@ export default function ContactSection() {
                 <div>
                   <label
                     htmlFor="email"
-                    className="mb-2 block text-sm font-medium text-neutral-300"
+                    className="mb-2 block text-xs font-bold uppercase tracking-wider text-foreground"
                   >
-                    Email Address
+                    Email Address <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="email"
@@ -277,8 +272,8 @@ export default function ContactSection() {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="support@mtpocket.app"
-                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950/70 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-inner transition-all duration-200 focus:border-sky-500/60 focus:bg-neutral-950 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    placeholder="support@mtpocket.com"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
 
@@ -286,9 +281,9 @@ export default function ContactSection() {
                 <div>
                   <label
                     htmlFor="company"
-                    className="mb-2 block text-sm font-medium text-neutral-300"
+                    className="mb-2 block text-xs font-bold uppercase tracking-wider text-foreground"
                   >
-                    Company
+                    Company / Organization
                   </label>
                   <input
                     id="company"
@@ -297,7 +292,7 @@ export default function ContactSection() {
                     value={formData.company}
                     onChange={handleChange}
                     placeholder="MT Pocket Labs LLC"
-                    className="w-full rounded-xl border border-neutral-800 bg-neutral-950/70 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-inner transition-all duration-200 focus:border-sky-500/60 focus:bg-neutral-950 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
 
@@ -305,9 +300,9 @@ export default function ContactSection() {
                 <div>
                   <label
                     htmlFor="message"
-                    className="mb-2 block text-sm font-medium text-neutral-300"
+                    className="mb-2 block text-xs font-bold uppercase tracking-wider text-foreground"
                   >
-                    Message
+                    Message <span className="text-destructive">*</span>
                   </label>
                   <textarea
                     id="message"
@@ -316,8 +311,8 @@ export default function ContactSection() {
                     required
                     value={formData.message}
                     onChange={handleChange}
-                    placeholder="Type your message here"
-                    className="w-full resize-none rounded-xl border border-neutral-800 bg-neutral-950/70 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-inner transition-all duration-200 focus:border-sky-500/60 focus:bg-neutral-950 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    placeholder="Type your message here..."
+                    className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
 
@@ -328,7 +323,7 @@ export default function ContactSection() {
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-400"
+                      className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive"
                     >
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       <span>{status.error}</span>
@@ -340,14 +335,14 @@ export default function ContactSection() {
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="flex flex-col gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-400"
+                      className="flex flex-col gap-1 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-xs text-success"
                     >
-                      <div className="flex items-center gap-2 font-medium text-emerald-300">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                      <div className="flex items-center gap-2 font-bold text-success">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
                         <span>Message sent successfully!</span>
                       </div>
-                      <p className="text-emerald-400/80 pl-6 text-[11px]">
-                        Ticket reference: <strong className="font-mono text-emerald-300">{status.ticketId}</strong>. A confirmation email has been dispatched to your inbox.
+                      <p className="text-muted-foreground pl-6 text-[11px]">
+                        Ticket reference: <strong className="font-mono text-primary font-bold">{status.ticketId}</strong>. A confirmation email has been dispatched to your inbox.
                       </p>
                     </motion.div>
                   )}
@@ -358,12 +353,12 @@ export default function ContactSection() {
                   <button
                     type="submit"
                     disabled={status.submitting}
-                    className="group relative flex items-center justify-center gap-2 rounded-xl border border-neutral-700/80 bg-neutral-800/90 px-6 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:bg-neutral-700/90 hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="group relative flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/95 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {status.submitting ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
-                        <span>Sending...</span>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Sending message...</span>
                       </>
                     ) : (
                       <>

@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import {
   Search, ChevronDown, CheckCircle2, Mail, ShieldAlert, FileText, Database,
-  ArrowRight, HelpCircle, ThumbsUp, ThumbsDown, Copy, Check, Sparkles,
-  LifeBuoy, MessageSquare, Send, BookOpen, AlertCircle, Clock, Tag
+  ArrowRight, ThumbsUp, ThumbsDown, Copy, Check,
+  LifeBuoy, Send, BookOpen, AlertCircle, Clock,
+  ShieldCheck, RefreshCw
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -16,22 +17,22 @@ const FAQ_GROUPS = [
   {
     id: "account",
     group: "Account & Verification",
-    icon: ShieldAlert,
+    icon: ShieldCheck,
     items: [
       {
-        id: "faq-1",
-        q: "How do I get verified?",
-        a: "Upload a government-issued ID (Aadhaar, PAN, Passport, or Driving License) from Settings → Identity Verification. Reviews are completed within 1–2 business days.",
+        id: "faq-acc-1",
+        q: "How does identity verification work on MT Pocket?",
+        a: "Before creating or funding loans, members upload a government-issued ID and verification photo. This confirms real identities and protects all participants. Raw ID files are retained for 90 days then securely deleted, as outlined in our KYC Consent Notice.",
       },
       {
-        id: "faq-2",
-        q: "Why was my document rejected?",
-        a: "Common causes are blurry images, glare, cropped corners, or name mismatch with registered profile. You can view the specific rejection note on your Settings dashboard and re-upload.",
+        id: "faq-acc-2",
+        q: "Why was my identity verification rejected?",
+        a: "Common reasons include blurry photos, glare, cropped edges, or a name mismatch with your profile. You can check the specific note in Settings → Identity Verification and upload a clear document.",
       },
       {
-        id: "faq-3",
-        q: "Why do I need to verify my email again after updating it?",
-        a: "To protect your account integrity, any change to your registered email address requires immediate one-time verification before the new email becomes active.",
+        id: "faq-acc-3",
+        q: "How do I request account deletion or withdraw KYC consent?",
+        a: "Submit a support ticket below selecting 'Account & KYC Inquiry' or email support@mtpocket.com. Our compliance team will process your data removal within standard regulatory timelines.",
       },
     ],
   },
@@ -41,73 +42,91 @@ const FAQ_GROUPS = [
     icon: BookOpen,
     items: [
       {
-        id: "faq-4",
-        q: "Does MT Pocket handle or hold funds?",
-        a: "No. MT Pocket operates on a pure peer-to-peer connection model. We never touch, process, or escrow your money. All transfers occur directly between the borrower and lender via UPI, IMPS, or bank transfer.",
+        id: "faq-lending-1",
+        q: "Does MT Pocket handle or escrow loan funds?",
+        a: "No. MT Pocket is a peer-to-peer facilitator platform. We never hold, touch, or process your money. All payments occur directly between borrower and lender via UPI, IMPS, or bank transfer.",
       },
       {
-        id: "faq-5",
-        q: "Who determines the loan interest rate and repayment timeline?",
-        a: "Borrowers propose their desired rate and tenure, and lenders submit counter-proposals or accept. Both parties negotiate and agree directly through chat without platform fee deductions.",
+        id: "faq-lending-2",
+        q: "Who determines interest rates and repayment schedules?",
+        a: "Borrowers propose desired amounts and terms, and lenders accept or counter-offer. Both parties negotiate directly in chat without platform commission fees.",
       },
       {
-        id: "faq-6",
-        q: "What happens if a loan repayment is delayed?",
-        a: "Loan terms are private peer contracts between borrower and lender. We strongly advise examining KYC identity proofs and entering written terms. You can also file reports to alert administrators of defaults.",
+        id: "faq-lending-3",
+        q: "What happens if a repayment is delayed?",
+        a: "Loan terms are private peer contracts between users. We advise reviewing member verification proofs before agreeing. You can report defaults or bad-faith actors directly to our moderation team.",
       },
     ],
   },
   {
     id: "safety",
-    group: "Safety & Community",
+    group: "Safety & Reporting",
     icon: LifeBuoy,
     items: [
       {
-        id: "faq-7",
-        q: "How do I report or block suspicious users?",
-        a: "Tap the Report/Block button directly on any loan request card, profile popup, or in the chat options menu. Blocked members are instantly hidden from your marketplace feeds.",
+        id: "faq-safety-1",
+        q: "How do I report a suspicious user or scam?",
+        a: "Click 'Report' on any loan request, user profile, or chat conversation. Select the issue category (Fraud, Fake Profile, Harassment) and submit details for swift review.",
       },
       {
-        id: "faq-8",
-        q: "What measures protect my personal data?",
-        a: "Your sensitive identity documents are stored in secure cloud storage with restricted administrative access. We never sell your data or expose raw ID numbers to other platform members.",
+        id: "faq-safety-2",
+        q: "What happens when I block another user?",
+        a: "Blocking immediately hides that member's loan requests, offers, and chat messages from your view, preventing further contact.",
+      },
+    ],
+  },
+  {
+    id: "privacy",
+    group: "Privacy & Data",
+    icon: Database,
+    items: [
+      {
+        id: "faq-priv-1",
+        q: "Who can see my uploaded documents and personal information?",
+        a: "Other users only see your verified status badge — never your raw document files or identity numbers. Documents are encrypted and restricted to authorized compliance reviews.",
       },
       {
-        id: "faq-9",
-        q: "How can I delete my account and data?",
-        a: "Go to Settings → Manage Data or submit a deletion request through the contact form below. Our compliance team will permanently purge your data within 30 days.",
+        id: "faq-priv-2",
+        q: "Why is email verification required when updating contact info?",
+        a: "To prevent unauthorized account takeovers, any updated email requires a one-time OTP verification before it becomes active.",
       },
     ],
   },
 ];
 
-const QUICK_ACTIONS = [
+const QUICK_LINKS = [
   {
-    title: "Report an Issue",
-    description: "Submit a report against a user, fraud attempt, or platform bug.",
-    action: "report",
+    title: "KYC Consent Notice",
+    description: "ID storage rules, 90-day retention & data protection.",
+    href: "/kyc-consent",
+    icon: ShieldCheck,
+    tag: "Notice",
+  },
+  {
+    title: "Community Guidelines",
+    description: "Rules for safe borrowing, respectful conduct & fraud safety.",
+    href: "/community-guidelines",
     icon: ShieldAlert,
     tag: "Safety",
   },
   {
-    title: "Terms & Guidelines",
-    description: "Review peer lending terms, rules, and community standards.",
-    action: "legal",
+    title: "Terms & Conditions",
+    description: "Facilitator platform policies & peer agreement terms.",
+    href: "/terms",
     icon: FileText,
-    tag: "Policies",
+    tag: "Legal",
   },
   {
-    title: "Privacy & Data",
-    description: "Control your identity logs, session devices, and GDPR data rights.",
-    action: "data",
+    title: "Privacy Policy",
+    description: "Information collection, cookie usage & user data rights.",
+    href: "/privacy",
     icon: Database,
     tag: "Privacy",
   },
 ];
 
-export default function HelpAndSupport({ onNavigate }) {
+export default function HelpAndSupport() {
   const { user, accessToken } = useAuth();
-  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -115,7 +134,7 @@ export default function HelpAndSupport({ onNavigate }) {
   const [copiedFaqId, setCopiedFaqId] = useState(null);
   const [feedback, setFeedback] = useState({});
 
-  // Contact Form State
+  // Ticket Form
   const [category, setCategory] = useState("General Inquiry");
   const [guestEmail, setGuestEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -124,7 +143,7 @@ export default function HelpAndSupport({ onNavigate }) {
   const [sentTicket, setSentTicket] = useState(null);
   const [error, setError] = useState(null);
 
-  // My Submitted Tickets
+  // Tickets List
   const [myTickets, setMyTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
 
@@ -132,7 +151,7 @@ export default function HelpAndSupport({ onNavigate }) {
     if (!accessToken) return;
     setLoadingTickets(true);
     api.getMySupportTickets(accessToken)
-      .then(setMyTickets)
+      .then((res) => setMyTickets(Array.isArray(res) ? res : res?.tickets || []))
       .catch(() => {})
       .finally(() => setLoadingTickets(false));
   };
@@ -146,6 +165,7 @@ export default function HelpAndSupport({ onNavigate }) {
     { id: "account", label: "Account & KYC" },
     { id: "lending", label: "Borrowing & Lending" },
     { id: "safety", label: "Safety & Reports" },
+    { id: "privacy", label: "Privacy & Data" },
   ];
 
   const filteredGroups = useMemo(() => {
@@ -183,7 +203,7 @@ export default function HelpAndSupport({ onNavigate }) {
     e.preventDefault();
     const email = user?.email || guestEmail.trim();
     if (!email) {
-      setError("Please provide your email address so we can reply.");
+      setError("Please enter a valid email address.");
       return;
     }
     if (!message.trim()) return;
@@ -194,7 +214,7 @@ export default function HelpAndSupport({ onNavigate }) {
       const ticketData = {
         userId: user?.id,
         senderEmail: email,
-        senderName: user?.fullName || 'MT Pocket Member',
+        senderName: user?.fullName || "MT Pocket Member",
         category,
         subject: subject.trim() || category,
         message: message.trim(),
@@ -206,64 +226,38 @@ export default function HelpAndSupport({ onNavigate }) {
       setMessage("");
       fetchMyTickets();
     } catch (err) {
-      setError(err.message || "Failed to submit your inquiry. Please reach out to support@mtpocket.com directly.");
+      setError(err.message || "Failed to submit inquiry. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleQuickAction = (action) => {
-    if (onNavigate) {
-      onNavigate(action);
-      return;
-    }
-    if (action === "report") navigate("/community-guidelines");
-    else if (action === "legal") navigate("/terms");
-    else if (action === "data") navigate("/privacy");
-  };
-
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 pb-12">
-      {/* ── HEADER BANNER ────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="space-y-1.5 max-w-xl">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-              <HelpCircle size={13} />
-              <span>Customer Support Hub</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              How can we assist you today?
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Search verified guides on peer lending, account verification, and security, or submit a support ticket directly to our compliance team.
-            </p>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-3">
-            <a
-              href="#contact-support"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/95 shadow-xs transition-colors"
-            >
-              <MessageSquare size={15} />
-              <span>Open Support Ticket</span>
-            </a>
-          </div>
+    <div className="w-full max-w-5xl mx-auto space-y-8 px-4 py-8">
+      {/* ── HEADER ───────────────────────────────────────────────────── */}
+      <div className="border-b border-border pb-6 space-y-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Help &amp; Support
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Find answers to common questions about peer lending, KYC verification, and platform safety.
+          </p>
         </div>
 
-        {/* Live Search Bar */}
-        <div className="relative mt-6">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={17} />
+        {/* Search Bar */}
+        <div className="relative max-w-2xl pt-2">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search keywords (e.g. KYC verification, loan repayment, blocking)..."
-            className="w-full rounded-lg bg-background border-border/80 pl-10 pr-4 py-5 text-sm focus:ring-primary shadow-2xs"
+            placeholder="Search help articles (e.g. KYC verification, repayment, report user)..."
+            className="w-full rounded-xl bg-background border border-border pl-10 pr-16 py-2.5 text-sm focus:ring-1 focus:ring-primary"
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
             >
               Clear
             </button>
@@ -271,63 +265,72 @@ export default function HelpAndSupport({ onNavigate }) {
         </div>
       </div>
 
-      {/* ── QUICK ACTION CARDS ────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {QUICK_ACTIONS.map((a) => {
-          const Icon = a.icon;
+      {/* ── QUICK RESOURCE LINKS ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {QUICK_LINKS.map((item) => {
+          const Icon = item.icon;
           return (
-            <button
-              key={a.action}
-              onClick={() => handleQuickAction(a.action)}
-              className="text-left rounded-xl border border-border/80 bg-card p-5 hover:border-primary/40 hover:shadow-xs transition-all group cursor-pointer flex flex-col justify-between"
+            <Link
+              key={item.title}
+              to={item.href}
+              className="rounded-xl border border-border bg-card p-4 hover:border-primary/50 transition-colors group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <Icon size={18} />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Icon size={16} />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                    {a.tag}
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                    {item.tag}
                   </span>
                 </div>
-                <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
-                  <span>{a.title}</span>
-                  <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-primary" />
+                <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                  <span>{item.title}</span>
+                  <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-primary" />
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  {a.description}
+                  {item.description}
                 </p>
               </div>
-            </button>
+            </Link>
           );
         })}
       </div>
 
-      {/* ── MY TICKETS OVERVIEW (IF LOGGED IN) ───────────────────────── */}
+      {/* ── MY TICKETS (LOGGED IN ONLY) ──────────────────────────────── */}
       {user && myTickets.length > 0 && (
-        <div className="rounded-xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-border/70 pb-3">
+        <div className="border border-border rounded-xl bg-card p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-primary" />
-              <h2 className="text-sm sm:text-base font-bold text-foreground">Your Submitted Tickets ({myTickets.length})</h2>
+              <h2 className="text-sm font-semibold text-foreground">
+                Your Support Tickets ({myTickets.length})
+              </h2>
             </div>
-            <span className="text-xs text-muted-foreground font-semibold">Live Database Tracking</span>
+            <button
+              onClick={fetchMyTickets}
+              disabled={loadingTickets}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary font-medium transition-colors cursor-pointer"
+            >
+              <RefreshCw size={12} className={loadingTickets ? "animate-spin" : ""} />
+              <span>Refresh</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {myTickets.map((t) => (
-              <div key={t._id || t.ticketId} className="rounded-lg border border-border/70 bg-background/50 p-3.5 space-y-2">
+              <div key={t._id || t.ticketId} className="border border-border/80 rounded-lg bg-background/50 p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-primary">{t.ticketId}</span>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${
-                    t.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-600' :
-                    t.status === 'in_progress' ? 'bg-sky-500/10 text-sky-600' :
-                    'bg-amber-500/10 text-amber-600'
+                  <span className="font-mono text-xs font-semibold text-primary">{t.ticketId}</span>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                    t.status === "resolved" ? "bg-success/15 text-success" :
+                    t.status === "in_progress" ? "bg-info/15 text-info" :
+                    "bg-warning/15 text-warning"
                   }`}>
-                    {t.status.replace('_', ' ')}
+                    {t.status.replace("_", " ")}
                   </span>
                 </div>
-                <p className="text-xs font-bold text-foreground truncate">{t.subject}</p>
+                <p className="text-xs font-medium text-foreground truncate">{t.subject}</p>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40">
                   <span>{t.category}</span>
                   <span>{new Date(t.createdAt).toLocaleDateString()}</span>
@@ -338,24 +341,24 @@ export default function HelpAndSupport({ onNavigate }) {
         </div>
       )}
 
-      {/* ── INTERACTIVE FAQ SECTION ──────────────────────────────────── */}
-      <div className="rounded-xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
+      {/* ── FREQUENTLY ASKED QUESTIONS ───────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Frequently Asked Questions</h2>
-            <p className="text-xs text-muted-foreground">Instant answers categorized by platform feature</p>
+            <h2 className="text-base font-semibold text-foreground">Frequently Asked Questions</h2>
+            <p className="text-xs text-muted-foreground">Select a category to filter common questions</p>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-1">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   selectedCategory === cat.id
-                    ? "bg-primary text-primary-foreground shadow-2xs"
-                    : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 {cat.label}
@@ -366,38 +369,37 @@ export default function HelpAndSupport({ onNavigate }) {
 
         {/* FAQs List */}
         {filteredGroups.length === 0 ? (
-          <div className="text-center py-12 px-4 rounded-lg border border-dashed border-border/70 bg-muted/20 text-muted-foreground">
-            <AlertCircle size={28} className="mx-auto mb-2 opacity-50" />
-            <p className="text-sm font-semibold">No matching questions found for "{query}".</p>
-            <p className="text-xs mt-1">Please try different keywords or submit an inquiry in the form below.</p>
+          <div className="text-center py-8 px-4 rounded-xl border border-dashed border-border text-muted-foreground text-xs">
+            <AlertCircle size={22} className="mx-auto mb-1.5 opacity-50" />
+            <p>No questions found matching "{query}".</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {filteredGroups.map((group) => {
               const GroupIcon = group.icon;
               return (
-                <div key={group.id} className="space-y-2.5">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <div key={group.id} className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <GroupIcon size={14} className="text-primary" />
                     <span>{group.group}</span>
                   </div>
 
-                  <div className="divide-y divide-border/60 rounded-lg border border-border/70 bg-background/60 overflow-hidden">
+                  <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden">
                     {group.items.map((item) => {
                       const isOpen = openFaqId === item.id;
                       const userFeedback = feedback[item.id];
                       return (
-                        <div key={item.id} className="transition-colors">
+                        <div key={item.id}>
                           <button
                             type="button"
                             onClick={() => setOpenFaqId(isOpen ? null : item.id)}
-                            className="w-full flex items-center justify-between gap-4 p-4 text-left cursor-pointer group hover:bg-muted/30 transition-colors"
+                            className="w-full flex items-center justify-between gap-3 p-4 text-left cursor-pointer hover:bg-muted/20 transition-colors"
                           >
-                            <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                            <span className="text-xs sm:text-sm font-medium text-foreground">
                               {item.q}
                             </span>
                             <ChevronDown
-                              size={16}
+                              size={15}
                               className={`text-muted-foreground transition-transform duration-200 shrink-0 ${
                                 isOpen ? "rotate-180 text-primary" : ""
                               }`}
@@ -410,55 +412,50 @@ export default function HelpAndSupport({ onNavigate }) {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="px-4 pb-4 text-xs sm:text-sm text-muted-foreground leading-relaxed space-y-3"
+                                className="px-4 pb-4 text-xs text-muted-foreground leading-relaxed space-y-2.5"
                               >
-                                <p className="pt-1">{item.a}</p>
+                                <p>{item.a}</p>
 
-                                {/* Action & Feedback Bar */}
-                                <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
+                                <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[11px]">
                                   <button
                                     type="button"
                                     onClick={(e) => handleCopyFaq(item.id, `${item.q}\n\n${item.a}`, e)}
-                                    className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer font-medium"
+                                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer font-medium"
                                   >
                                     {copiedFaqId === item.id ? (
                                       <>
-                                        <Check size={13} className="text-emerald-600" />
-                                        <span className="text-emerald-600">Copied</span>
+                                        <Check size={12} className="text-primary" />
+                                        <span className="text-primary">Copied</span>
                                       </>
                                     ) : (
                                       <>
-                                        <Copy size={13} />
-                                        <span>Copy answer</span>
+                                        <Copy size={12} />
+                                        <span>Copy</span>
                                       </>
                                     )}
                                   </button>
 
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[11px] text-muted-foreground">Was this helpful?</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span>Helpful?</span>
                                     <button
                                       type="button"
                                       onClick={(e) => handleFeedback(item.id, true, e)}
-                                      className={`p-1 rounded-md transition-colors cursor-pointer ${
-                                        userFeedback === true
-                                          ? "bg-emerald-500/10 text-emerald-600 font-bold"
-                                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                      className={`p-1 rounded transition-colors cursor-pointer ${
+                                        userFeedback === true ? "text-success font-bold" : "text-muted-foreground hover:text-foreground"
                                       }`}
-                                      title="Yes, helpful"
+                                      title="Yes"
                                     >
-                                      <ThumbsUp size={13} />
+                                      <ThumbsUp size={12} />
                                     </button>
                                     <button
                                       type="button"
                                       onClick={(e) => handleFeedback(item.id, false, e)}
-                                      className={`p-1 rounded-md transition-colors cursor-pointer ${
-                                        userFeedback === false
-                                          ? "bg-destructive/10 text-destructive font-bold"
-                                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                      className={`p-1 rounded transition-colors cursor-pointer ${
+                                        userFeedback === false ? "text-destructive font-bold" : "text-muted-foreground hover:text-foreground"
                                       }`}
-                                      title="No, need more details"
+                                      title="No"
                                     >
-                                      <ThumbsDown size={13} />
+                                      <ThumbsDown size={12} />
                                     </button>
                                   </div>
                                 </div>
@@ -476,75 +473,75 @@ export default function HelpAndSupport({ onNavigate }) {
         )}
       </div>
 
-      {/* ── CONTACT SUPPORT FORM ─────────────────────────────────────── */}
-      <div id="contact-support" className="rounded-xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xs space-y-6">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Mail size={20} />
+      {/* ── SUPPORT TICKET FORM ──────────────────────────────────────── */}
+      <div className="border border-border rounded-xl bg-card p-5 sm:p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Mail size={16} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">Open a Support Ticket</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Need assistance with an active negotiation, verification inquiry, or fraud prevention? Our support representatives will respond within 24 hours.
+            <h2 className="text-sm sm:text-base font-semibold text-foreground">Open a Support Ticket</h2>
+            <p className="text-xs text-muted-foreground">
+              Have a specific account question or need moderation assistance? Our team replies within 24 hours.
             </p>
           </div>
         </div>
 
         {sentTicket ? (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center space-y-3">
-            <CheckCircle2 size={36} className="text-emerald-600 mx-auto" />
-            <h3 className="font-bold text-foreground text-base">Support Ticket Created Successfully</h3>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Your ticket reference <span className="font-mono font-bold text-primary">{sentTicket.ticketId || sentTicket.id}</span> has been logged. An email confirmation has been sent via Resend to <strong>{sentTicket.senderEmail || user?.email}</strong>.
+          <div className="border border-success/30 bg-success/10 rounded-xl p-5 text-center space-y-2">
+            <CheckCircle2 size={32} className="text-success mx-auto" />
+            <h3 className="font-semibold text-sm text-foreground">Support Ticket Submitted</h3>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              Reference: <span className="font-mono font-bold text-primary">{sentTicket.ticketId || sentTicket.id}</span>. A confirmation has been sent to <strong>{sentTicket.senderEmail || user?.email}</strong>.
             </p>
-            <div className="pt-2">
+            <div className="pt-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setSentTicket(null)}
-                className="text-xs rounded-lg cursor-pointer"
+                className="text-xs rounded-lg cursor-pointer h-8"
               >
                 Submit another inquiry
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                  Inquiry Topic
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Topic
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer h-10"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer h-9"
                 >
                   <option value="General Inquiry">General Inquiry</option>
-                  <option value="KYC & Identity Verification">KYC &amp; Identity Verification</option>
-                  <option value="Lending & Proposal Issues">Lending &amp; Proposal Issues</option>
+                  <option value="Account & KYC Inquiry">Account &amp; KYC Inquiry</option>
+                  <option value="Borrowing & Lending Issue">Borrowing &amp; Lending Issue</option>
                   <option value="Report User or Scam">Report User or Scam</option>
                   <option value="Data & Privacy Request">Data &amp; Privacy Request</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
                   Subject (Optional)
                 </label>
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. Identity status question"
-                  className="rounded-lg bg-background border-border/80 text-xs h-10"
+                  placeholder="Brief summary of inquiry"
+                  className="rounded-lg bg-background border-border text-xs h-9"
                 />
               </div>
             </div>
 
             {!user && (
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                  Your Email Address <span className="text-destructive">*</span>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
+                  Your Email <span className="text-destructive">*</span>
                 </label>
                 <Input
                   type="email"
@@ -552,55 +549,52 @@ export default function HelpAndSupport({ onNavigate }) {
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="rounded-lg bg-background border-border/80 text-xs h-10"
+                  className="rounded-lg bg-background border-border text-xs h-9"
                 />
               </div>
             )}
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Message Details <span className="text-destructive">*</span>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Message <span className="text-destructive">*</span>
                 </label>
-                <span className="text-[11px] text-muted-foreground">{message.length} / 1000</span>
+                <span className="text-[10px] text-muted-foreground">{message.length} / 1000</span>
               </div>
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, 1000))}
-                rows={4}
+                rows={3}
                 required
-                placeholder="Explain the specific issue or question in detail..."
-                className="rounded-lg bg-background border-border/80 text-xs leading-relaxed"
+                placeholder="Please describe your question or issue in detail..."
+                className="rounded-lg bg-background border-border text-xs leading-relaxed"
               />
             </div>
 
             {error && (
-              <p className="text-xs text-destructive font-semibold">{error}</p>
+              <p className="text-xs text-destructive">{error}</p>
             )}
 
-            <Button
-              type="submit"
-              disabled={submitting || !message.trim()}
-              className="w-full sm:w-auto px-6 rounded-lg text-xs font-bold cursor-pointer"
-            >
-              {submitting ? (
-                <>Submitting ticket...</>
-              ) : (
-                <>
-                  <Send size={13} className="mr-1.5" />
-                  Submit Support Ticket
-                </>
-              )}
-            </Button>
+            <div className="flex items-center justify-between pt-1">
+              <Button
+                type="submit"
+                disabled={submitting || !message.trim()}
+                className="px-5 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/95 cursor-pointer h-9"
+              >
+                {submitting ? "Submitting..." : (
+                  <>
+                    <Send size={12} className="mr-1" />
+                    Submit Ticket
+                  </>
+                )}
+              </Button>
+
+              <span className="text-[11px] text-muted-foreground">
+                or email <a href="mailto:support@mtpocket.com" className="text-primary font-medium hover:underline">support@mtpocket.com</a>
+              </span>
+            </div>
           </form>
         )}
-
-        <div className="pt-3 border-t border-border/60 text-center sm:text-left text-xs text-muted-foreground">
-          <span>Official Support Email: </span>
-          <a href="mailto:support@mtpocket.com" className="text-primary font-bold hover:underline">
-            support@mtpocket.com
-          </a>
-        </div>
       </div>
     </div>
   );
