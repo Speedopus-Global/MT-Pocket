@@ -230,7 +230,7 @@ export default function Login() {
                       id="forgot-identifier"
                       type="text"
                       required
-                      placeholder="Enter your phone number or Email"
+                      placeholder="Enter your email or mobile number"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="form-input"
@@ -255,7 +255,7 @@ export default function Login() {
                       inputMode="numeric"
                       maxLength={6}
                       required
-                      placeholder="123456"
+                      placeholder="Enter 6-digit code"
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
                       style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.125rem' }}
@@ -268,7 +268,7 @@ export default function Login() {
                       id="forgot-new-password"
                       type="password"
                       required
-                      placeholder="••••••••"
+                      placeholder="Enter new password (min 6 characters)"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="form-input"
@@ -296,7 +296,7 @@ export default function Login() {
                   id="login-identifier"
                   type="text"
                   required
-                  placeholder="Enter Your phone number or Email"
+                  placeholder="Enter your email or mobile number"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="form-input"
@@ -317,7 +317,7 @@ export default function Login() {
                   id="login-password"
                   type="password"
                   required
-                  placeholder="••••••••"
+                  placeholder="Enter your account password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="form-input"
@@ -345,7 +345,7 @@ export default function Login() {
                       id="otp-identifier"
                       type="text"
                       required
-                      placeholder="Enter Your phone number or Email"
+                      placeholder="Enter your email or mobile number"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="form-input"
@@ -369,7 +369,7 @@ export default function Login() {
                       inputMode="numeric"
                       maxLength={6}
                       required
-                      placeholder="123456"
+                      placeholder="Enter 6-digit code"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                       style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.125rem' }}
@@ -388,6 +388,7 @@ export default function Login() {
               )}
             </div>
           )}
+
 
         </div>
 

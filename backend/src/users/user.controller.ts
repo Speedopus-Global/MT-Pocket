@@ -66,6 +66,15 @@ export class UserController {
       // if dto.email === user.email, we do nothing — verified status preserved
     }
 
+    // ── PHONE: only touch if the value is actually changing ──────────────
+    if (dto.phone !== undefined) {
+      const user = await this.usersService.findById(userId);
+      if (user && dto.phone !== user.phone) {
+        updateData.phone = dto.phone;
+        updateData.phoneVerified = false; // reset only on actual change
+      }
+    }
+
     // ── LOCATION: only set when both coords are present ──────────────────
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       updateData.location = {

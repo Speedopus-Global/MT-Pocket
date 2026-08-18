@@ -251,7 +251,7 @@ export default function HelpAndSupport() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search help articles (e.g. KYC verification, repayment, report user)..."
+            placeholder="Search help articles, topics and FAQs…"
             className="w-full rounded-xl bg-background border border-border pl-10 pr-16 py-2.5 text-sm focus:ring-1 focus:ring-primary"
           />
           {query && (
@@ -532,7 +532,7 @@ export default function HelpAndSupport() {
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Brief summary of inquiry"
+                  placeholder="Enter inquiry subject"
                   className="rounded-lg bg-background border-border text-xs h-9"
                 />
               </div>
@@ -548,7 +548,7 @@ export default function HelpAndSupport() {
                   required
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="Enter your email address"
                   className="rounded-lg bg-background border-border text-xs h-9"
                 />
               </div>
@@ -566,7 +566,7 @@ export default function HelpAndSupport() {
                 onChange={(e) => setMessage(e.target.value.slice(0, 1000))}
                 rows={3}
                 required
-                placeholder="Please describe your question or issue in detail..."
+                placeholder="Enter your question or issue in detail…"
                 className="rounded-lg bg-background border-border text-xs leading-relaxed"
               />
             </div>

@@ -12,8 +12,9 @@ const SENSITIVE_FIELDS =
   '-passwordHash -refreshTokenHash ' +
   '-otpHash -otpExpiresAt -otpAttempts ' +
   '-emailOtpHash -emailOtpExpiresAt -emailOtpAttempts ' +
+  '-phoneOtpHash -phoneOtpExpiresAt -phoneOtpAttempts ' +
   '-passwordResetOtpHash -passwordResetOtpExpiresAt -passwordResetOtpAttempts ' +
-  '-idDocumentPublicId'; // internal Cloudinary handle, no reason to expose it
+  '-idDocumentPublicId';
 
 // What a STRANGER is allowed to see (GET /users/:id/public). Much narrower
 // than SENSITIVE_FIELDS above — that list only strips auth secrets and still
@@ -80,10 +81,21 @@ export class UsersService {
     return publicUser;
   }
 
+  async findOrCreateByEmail(email: string): Promise<UserDocument> {
+    const existing = await this.findByEmail(email);
+    if (existing) return existing;
+    return this.userModel.create({ email });
+  }
+
   async findOrCreateByPhone(phone: string): Promise<UserDocument> {
     const existing = await this.findByPhone(phone);
     if (existing) return existing;
     return this.userModel.create({ phone });
+  }
+
+  async findOrCreateByIdentifier(identifier: string): Promise<UserDocument> {
+    if (identifier.includes('@')) return this.findOrCreateByEmail(identifier);
+    return this.findOrCreateByPhone(identifier);
   }
 
   updateById(id: string, update: Partial<User>) {

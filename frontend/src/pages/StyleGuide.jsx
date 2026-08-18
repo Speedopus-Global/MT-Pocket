@@ -538,7 +538,7 @@ export default function StyleGuide() {
             <CardContent className="pt-6 grid gap-6 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Phone number</Label>
-                <Input id="phone" placeholder="98765 43210" />
+                <Input id="phone" placeholder="Enter mobile number" />
                 <p className="text-xs text-muted-foreground">We'll send an OTP to confirm.</p>
               </div>
 
@@ -566,13 +566,13 @@ export default function StyleGuide() {
                 <Label htmlFor="city">City</Label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                  <Input id="city" placeholder="Search your city…" className="pl-8" />
+                  <Input id="city" placeholder="Enter your city…" className="pl-8" />
                 </div>
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="note">Purpose of loan</Label>
-                <Textarea id="note" placeholder="Tell us what this is for…" />
+                <Textarea id="note" placeholder="Enter loan purpose or note…" />
               </div>
 
               <div className="flex items-start gap-2 sm:col-span-2">

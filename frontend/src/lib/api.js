@@ -11,9 +11,18 @@ async function request(path, { method = 'GET', body, accessToken } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.message || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const err = new Error(data?.message || `Request failed (${res.status})`);
+    // Attach structured payload so the UI can intercept verification gates
+    // without crashing — catch this in components and check err.requiresFullVerification.
+    err.requiresFullVerification = data?.requiresFullVerification ?? false;
+    err.verificationStatus = data?.verificationStatus ?? null;
+    err.statusCode = res.status;
+    throw err;
+  }
   return data;
 }
+
 
 async function requestMultipart(path, { method = 'POST', body, accessToken } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -45,17 +54,21 @@ async function requestBlob(path, { method = 'GET', accessToken } = {}) {
 
 export const api = {
   // ── Auth ─────────────────────────────────────────────────────────────────
-  registerRequestOtp: (phone) => request('/auth/register/request-otp', { method: 'POST', body: { phone } }),
-  registerVerifyOtp: (phone, otp) => request('/auth/register/verify-otp', { method: 'POST', body: { phone, otp } }),
-  registerComplete: (phone, password, fullName, role, termsVersionHash = 'tc_v2026_08_12', privacyVersionHash = 'pp_v2026_08_12') =>
-    request('/auth/register/complete', { method: 'POST', body: { phone, password, fullName, role, termsVersionHash, privacyVersionHash } }),
+  registerRequestOtp: (identifier) => request('/auth/register/request-otp', { method: 'POST', body: { identifier } }),
+  registerVerifyOtp: (identifier, otp) => request('/auth/register/verify-otp', { method: 'POST', body: { identifier, otp } }),
+  registerComplete: (identifier, password, fullName, role, termsVersionHash = 'tc_v2026_08_12', privacyVersionHash = 'pp_v2026_08_12') =>
+    request('/auth/register/complete', { method: 'POST', body: { identifier, password, fullName, role, termsVersionHash, privacyVersionHash } }),
   loginPassword: (identifier, password) => request('/auth/login/password', { method: 'POST', body: { identifier, password } }),
   loginOtpRequest: (identifier) => request('/auth/login/otp/request', { method: 'POST', body: { identifier } }),
   loginOtpVerify: (identifier, otp) => request('/auth/login/otp/verify', { method: 'POST', body: { identifier, otp } }),
   forgotPasswordRequest: (identifier) => request('/auth/forgot-password/request', { method: 'POST', body: { identifier } }),
   forgotPasswordReset: (identifier, otp, newPassword) => request('/auth/forgot-password/reset', { method: 'POST', body: { identifier, otp, newPassword } }),
+  // Post-login: add + verify email
   requestEmailVerification: (email, accessToken) => request('/auth/email/request', { method: 'POST', body: { email }, accessToken }),
   verifyEmail: (otp, accessToken) => request('/auth/email/verify', { method: 'POST', body: { otp }, accessToken }),
+  // Post-login: add + verify phone
+  requestPhoneVerification: (phone, accessToken) => request('/auth/phone/request', { method: 'POST', body: { phone }, accessToken }),
+  verifyPhone: (otp, accessToken) => request('/auth/phone/verify', { method: 'POST', body: { otp }, accessToken }),
   setRole: (role, accessToken) => request('/auth/role', { method: 'POST', body: { role }, accessToken }),
   refresh: () => request('/auth/refresh', { method: 'POST' }),
   me: (accessToken) => request('/auth/me', { accessToken }),

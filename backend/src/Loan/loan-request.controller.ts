@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { LoanRequestsService } from './loan-requests.service';
 import { CreateLoanRequestDto, SearchLoanRequestsDto, SendOfferDto } from './dto/loan-request.dto';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
+import { FullyVerifiedGuard } from '../auth/guards/fully-verified.guard';
 import { OptionalJwtAccessGuard } from '../auth/guards/optional-jwt-access.guard';
 
 @Controller('loan-requests')
@@ -46,7 +47,8 @@ export class LoanRequestsController {
     return this.loanService.getById(id, requesterId);
   }
 
-  @UseGuards(JwtAccessGuard)
+  // FullyVerifiedGuard: both channels verified before creating a loan request
+  @UseGuards(JwtAccessGuard, FullyVerifiedGuard)
   @Post()
   create(@Req() req: Request, @Body() dto: CreateLoanRequestDto) {
     const borrowerId = (req.user as any).sub;
@@ -77,7 +79,8 @@ export class LoanRequestsController {
   }
 
   // ── Borrower: accept an offer on one of their own requests ───────────────
-  @UseGuards(JwtAccessGuard)
+  // FullyVerifiedGuard: both channels verified before accepting an offer
+  @UseGuards(JwtAccessGuard, FullyVerifiedGuard)
   @Patch(':id/offers/:offerId/accept')
   acceptOffer(
     @Req() req: Request,
@@ -113,7 +116,8 @@ export class LoanRequestsController {
   }
 
   // ── Lender: send offer ───────────────────────────────────────────────────
-  @UseGuards(JwtAccessGuard)
+  // FullyVerifiedGuard: both channels verified before sending an offer
+  @UseGuards(JwtAccessGuard, FullyVerifiedGuard)
   @Post('offer')
   sendOffer(@Req() req: Request, @Body() dto: SendOfferDto) {
     const lenderId = (req.user as any).sub;

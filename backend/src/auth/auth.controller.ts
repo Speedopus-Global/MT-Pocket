@@ -11,6 +11,8 @@ import { ForgotPasswordRequestDto } from './dto/forgot.password.request.dto';
 import { ForgotPasswordResetDto } from './dto/forgot.password.reset.dto';
 import { RequestEmailDto } from './dto/request.email.dto';
 import { VerifyEmailDto } from './dto/verify.email.dto';
+import { RequestPhoneDto } from './dto/request.phone.dto';
+import { VerifyPhoneDto } from './dto/verify.phone.dto';
 import { SetRoleDto } from './dto/set.role.dto';
 import { JwtAccessGuard } from './guards/jwt-access.guard';
 import { JwtRefreshGuard } from './guards/jwt.refresh-guard';
@@ -32,12 +34,12 @@ export class AuthController {
 
   @Post('register/request-otp')
   registerRequestOtp(@Body() dto: RequestOtpDto) {
-    return this.authService.requestRegisterOtp(dto.phone);
+    return this.authService.requestRegisterOtp(dto.identifier);
   }
 
   @Post('register/verify-otp')
   registerVerifyOtp(@Body() dto: VerifyOtpDto) {
-    return this.authService.verifyRegisterOtp(dto.phone, dto.otp);
+    return this.authService.verifyRegisterOtp(dto.identifier, dto.otp);
   }
 
   @Post('register/complete')
@@ -48,7 +50,7 @@ export class AuthController {
   ) {
     const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || req.ip || '127.0.0.1';
     const { accessToken, refreshToken, refreshTokenMaxAgeMs, user } = await this.authService.completeRegistration(
-      dto.phone,
+      dto.identifier,
       dto.password,
       dto.fullName,
       dto.role,
@@ -103,7 +105,7 @@ export class AuthController {
     return this.authService.resetPassword(dto.identifier, dto.otp, dto.newPassword);
   }
 
-  // ── EMAIL VERIFICATION ENDPOINTS ────────────────────────────────────
+  // ── EMAIL VERIFICATION ENDPOINTS (post-login add/verify email) ───────
 
   @UseGuards(JwtAccessGuard)
   @Post('email/request')
@@ -117,6 +119,22 @@ export class AuthController {
   verifyEmail(@Req() req: Request, @Body() dto: VerifyEmailDto) {
     const { sub } = req.user as { sub: string };
     return this.authService.verifyEmail(sub, dto.otp);
+  }
+
+  // ── PHONE VERIFICATION ENDPOINTS (post-login add/verify phone) ────────
+
+  @UseGuards(JwtAccessGuard)
+  @Post('phone/request')
+  requestPhoneVerification(@Req() req: Request, @Body() dto: RequestPhoneDto) {
+    const { sub } = req.user as { sub: string };
+    return this.authService.requestPhoneVerification(sub, dto.phone);
+  }
+
+  @UseGuards(JwtAccessGuard)
+  @Post('phone/verify')
+  verifyPhone(@Req() req: Request, @Body() dto: VerifyPhoneDto) {
+    const { sub } = req.user as { sub: string };
+    return this.authService.verifyPhone(sub, dto.otp);
   }
 
   // ── SESSION MANAGEMENT ──────────────────────────────────────────────

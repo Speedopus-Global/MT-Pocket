@@ -614,7 +614,7 @@ function VerifQueueTab({ accessToken }) {
                           <input
                             autoFocus type="text" value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="e.g. Document is blurry or does not match profile name"
+                            placeholder="Enter rejection reason shown to user…"
                             className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary h-8"
                           />
                         </div>
@@ -645,7 +645,7 @@ function VerifQueueTab({ accessToken }) {
                           <input
                             autoFocus type="text" value={reuploadReason}
                             onChange={(e) => setReuploadReason(e.target.value)}
-                            placeholder="e.g. Photo corners are cut off — please upload full page"
+                            placeholder="Enter reupload instructions shown to user…"
                             className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary h-8"
                           />
                         </div>

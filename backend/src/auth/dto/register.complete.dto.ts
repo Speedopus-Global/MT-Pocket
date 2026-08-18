@@ -1,8 +1,9 @@
-import { IsPhoneNumber, IsString, IsNotEmpty, MinLength, IsIn, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, IsIn, IsOptional } from 'class-validator';
 
 export class RegisterCompleteDto {
-  @IsPhoneNumber(undefined, { message: 'Enter a valid phone number, including country code' })
-  phone: string;
+  @IsString()
+  @IsNotEmpty({ message: 'Enter your email address or phone number' })
+  identifier: string;
 
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })

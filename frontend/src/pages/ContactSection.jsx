@@ -248,7 +248,7 @@ export default function ContactSection() {
                     type="text"
                     value={formData.fullName}
                     onChange={handleChange}
-                    placeholder="e.g. Rahul Sharma"
+                    placeholder="Enter your full name"
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -268,7 +268,7 @@ export default function ContactSection() {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="support@mtpocket.com"
+                    placeholder="Enter your email address"
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -287,7 +287,7 @@ export default function ContactSection() {
                     type="text"
                     value={formData.company}
                     onChange={handleChange}
-                    placeholder="MT Pocket Labs LLC"
+                    placeholder="Enter your company or organization (optional)"
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -307,10 +307,11 @@ export default function ContactSection() {
                     required
                     value={formData.message}
                     onChange={handleChange}
-                    placeholder="Type your message here..."
+                    placeholder="Enter your message or inquiry here…"
                     className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-2xs transition-all duration-200 focus:border-primary focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
+
 
                 {/* Status messages */}
                 <AnimatePresence>

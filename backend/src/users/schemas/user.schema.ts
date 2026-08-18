@@ -9,15 +9,18 @@ export type UserDocument = HydratedDocument<User>;
 export class User {
   @Prop({
     type: String,
-    required: true,
+    required: false, // optional — user may register with email instead
     unique: true,
+    sparse: true,    // allows multiple null values in the index
     index: true,
   })
-  phone: string;
+  phone: string | null;
 
   @Prop({
     type: String,
     default: null,
+    unique: true,
+    sparse: true, // unique-sparse: two users can't share an email, but many can have null
   })
   email: string | null;
 
@@ -26,6 +29,12 @@ export class User {
     default: false,
   })
   emailVerified: boolean;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  phoneVerified: boolean;
 
   @Prop({
     type: String,
@@ -147,23 +156,28 @@ export class User {
   })
   emailOtpAttempts: number;
 
-  @Prop({
-    type: String,
-    default: null,
-  })
+  @Prop({ type: String, default: null })
   passwordResetOtpHash: string | null;
 
-  @Prop({
-    type: Date,
-    default: null,
-  })
+  @Prop({ type: Date, default: null })
   passwordResetOtpExpiresAt: Date | null;
 
-  @Prop({
-    type: Number,
-    default: 0,
-  })
+  @Prop({ type: Number, default: 0 })
   passwordResetOtpAttempts: number;
+
+  // ─────────────────────────────────────────────────────────────
+  // Phone OTP — dedicated to the "add phone post-login" flow.
+  // Never shared with register/login OTP fields (otpHash etc.).
+  // ─────────────────────────────────────────────────────────────
+
+  @Prop({ type: String, default: null })
+  phoneOtpHash: string | null;
+
+  @Prop({ type: Date, default: null })
+  phoneOtpExpiresAt: Date | null;
+
+  @Prop({ type: Number, default: 0 })
+  phoneOtpAttempts: number;
 
   // ─────────────────────────────────────────────────────────────
   // Profile
@@ -289,3 +303,12 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.index({ location: '2dsphere' });
+
+// Safety-net: at least one of phone or email must be present.
+// The real user-facing error is thrown by the service layer before
+// we ever reach save(); this is the last line of defence.
+UserSchema.pre('validate', function () {
+  if (!this.phone && !this.email) {
+    throw new Error('A user must have at least one of phone or email');
+  }
+});

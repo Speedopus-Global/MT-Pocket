@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import LoginPromptModal from '../components/ui/LoginPromptModal';
 import InfoBanner from '../components/ui/InfoBanner';
+import { VerificationBanner, useVerificationBanner } from '../components/VerificationBanner';
 import logo from '@/assets/logo.png';
 import { CanvasText } from '@/components/ui/canvas-text';
 import { UserAvatarMarquee } from '@/components/ui/user-avatar-marquee';
@@ -943,6 +944,7 @@ function OfferForm({ loan, accessToken, onSent }) {
   const [offeredRate, setOfferedRate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const { showVerificationBanner, verificationBannerProps } = useVerificationBanner();
 
   const submit = async (e) => {
     e.preventDefault();
@@ -959,6 +961,10 @@ function OfferForm({ loan, accessToken, onSent }) {
       );
       onSent(loan._id);
     } catch (err) {
+      if (err.requiresFullVerification) {
+        showVerificationBanner(err.verificationStatus);
+        return;
+      }
       setError(err.message || 'Could not send offer — please try again');
     } finally {
       setSubmitting(false);
@@ -966,7 +972,9 @@ function OfferForm({ loan, accessToken, onSent }) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <>
+      <VerificationBanner {...verificationBannerProps} />
+      <form onSubmit={submit} className="flex flex-col gap-4">
       {/* 🔵 Step 6 Disclaimer — one-time lender alert */}
       <InfoBanner variant="info" dismissible={true} storageKey="mt_lender_disclaimer_seen">
         You're responsible for verifying repayment terms directly with the borrower.
@@ -987,7 +995,7 @@ function OfferForm({ loan, accessToken, onSent }) {
           step="0.1"
           value={offeredRate}
           onChange={(e) => setOfferedRate(e.target.value)}
-          placeholder="e.g. 10.5"
+          placeholder="Enter proposed interest rate %"
           className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium focus:outline-none focus:border-primary shadow-xs"
         />
       </div>
@@ -1000,7 +1008,7 @@ function OfferForm({ loan, accessToken, onSent }) {
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Specify repayment terms or questions..."
+          placeholder="Enter repayment terms or message to borrower…"
           maxLength={1000}
           className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium resize-none focus:outline-none focus:border-primary shadow-xs leading-relaxed"
         />
@@ -1021,6 +1029,7 @@ function OfferForm({ loan, accessToken, onSent }) {
         {submitting ? 'Submitting...' : 'Confirm & Send Offer'}
       </button>
     </form>
+    </>
   );
 }
 
@@ -1141,7 +1150,7 @@ function SafetyForm({ loan, accessToken, onDone }) {
               rows={3}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              placeholder="Describe the issue in detail..."
+              placeholder="Enter details about this issue or report…"
               className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium resize-none focus:outline-none focus:border-primary shadow-xs leading-relaxed"
             />
           </div>
@@ -1403,7 +1412,7 @@ function MarketplaceProfileModal({ userId, onClose, accessToken }) {
                           <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Details</label>
                           <textarea
                             rows={2}
-                            placeholder="Add details about the infraction…"
+                            placeholder="Enter details about this violation…"
                             value={reportDetails}
                             onChange={(e) => setReportDetails(e.target.value)}
                             className="w-full rounded-lg border border-border bg-background p-2 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary cursor-text"

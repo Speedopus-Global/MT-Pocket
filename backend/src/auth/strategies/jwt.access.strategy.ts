@@ -5,14 +5,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../../users/schemas/user.schema';
 
-export type AccessTokenPayload = { sub: string; phone: string; role: string };
+export type AccessTokenPayload = { sub: string; phone?: string | null; role: string; systemRole?: string };
 
 // Shape of req.user after this strategy runs — note this is now the LIVE
 // DB record's relevant fields, not whatever was baked into the token at
 // sign-time. Downstream guards (RequireAdmin, etc.) should read from here.
 export type AuthenticatedUser = {
   sub: string;
-  phone: string;
+  phone: string | null;
   role: string;
   systemRole: 'user' | 'reviewer' | 'super_admin';
   accountStatus: 'active' | 'suspended' | 'banned';

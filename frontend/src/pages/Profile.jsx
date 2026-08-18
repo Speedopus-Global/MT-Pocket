@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { VerificationBanner, useVerificationBanner } from '../components/VerificationBanner';
 import {
   Loader2,
   ShieldCheck,
@@ -697,6 +698,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState('');
+  const { showVerificationBanner, verificationBannerProps } = useVerificationBanner();
 
   useEffect(() => {
     if (loan) {
@@ -741,6 +743,10 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
       }
       onCreated(result);
     } catch (err) {
+      if (err.requiresFullVerification) {
+        showVerificationBanner(err.verificationStatus);
+        return;
+      }
       setError(err.message || 'Submission failed — please try again');
     } finally {
       setSubmitting(false);
@@ -759,7 +765,9 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
   const labelCls = "text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block";
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
+    <>
+      <VerificationBanner {...verificationBannerProps} />
+      <form onSubmit={submit} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
       {/* 🔵 Step 5 Disclaimer — one-time borrower alert */}
       <InfoBanner variant="info" dismissible={true} storageKey="mt_borrower_disclaimer_seen">
         MT Pocket never handles your money — all payment happens directly between you and the lender.
@@ -773,7 +781,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
           min="1"
           value={form.amount}
           onChange={(e) => set('amount', e.target.value)}
-          placeholder="e.g. 50000"
+          placeholder="Enter loan amount in ₹"
           className={inputCls}
         />
       </div>
@@ -811,7 +819,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
           rows={3}
           value={form.description}
           onChange={(e) => set('description', e.target.value)}
-          placeholder="Briefly describe your need…"
+          placeholder="Enter description and purpose of loan…"
           maxLength={2000}
           className={`${inputCls} resize-none`}
         />
@@ -829,7 +837,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
             step="0.1"
             value={form.interestRateHint}
             onChange={(e) => set('interestRateHint', e.target.value)}
-            placeholder="e.g. 12"
+            placeholder="Enter proposed rate %"
             className={inputCls}
           />
         </div>
@@ -840,7 +848,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
             min="1"
             value={form.durationDays}
             onChange={(e) => set('durationDays', e.target.value)}
-            placeholder="e.g. 30"
+            placeholder="Enter duration in days"
             className={inputCls}
           />
         </div>
@@ -854,7 +862,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
             type="text"
             value={form.city}
             onChange={(e) => set('city', e.target.value)}
-            placeholder="e.g. Mumbai"
+            placeholder="Enter your city"
             className={inputCls}
           />
         </div>
@@ -864,11 +872,12 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
             type="text"
             value={form.state}
             onChange={(e) => set('state', e.target.value)}
-            placeholder="e.g. Maharashtra"
+            placeholder="Enter your state"
             className={inputCls}
           />
         </div>
       </div>
+
 
       {error && (
         <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-xl px-3 py-2">
@@ -895,5 +904,6 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel }) {
         </button>
       </div>
     </form>
+    </>
   );
 }

@@ -28,13 +28,23 @@ export class AuthService {
 
   // ── REGISTRATION FLOW ───────────────────────────────────────────────
 
-  async requestRegisterOtp(phone: string) {
-    const existing = await this.usersService.findByPhone(phone);
+  async requestRegisterOtp(identifier: string) {
+    const isEmail = identifier.includes('@');
+
+    // Reject if already fully registered via this identifier
+    const existing = isEmail
+      ? await this.usersService.findByEmail(identifier)
+      : await this.usersService.findByPhone(identifier);
+
     if (existing && existing.passwordHash !== null) {
-      throw new BadRequestException('This phone number is already registered. Please log in.');
+      throw new BadRequestException(
+        isEmail
+          ? 'This email is already registered. Please log in.'
+          : 'This phone number is already registered. Please log in.',
+      );
     }
 
-    const user = await this.usersService.findOrCreateByPhone(phone);
+    const user = await this.usersService.findOrCreateByIdentifier(identifier);
     const otp = generateOtp();
 
     await this.usersService.updateById(user._id.toString(), {
@@ -43,14 +53,22 @@ export class AuthService {
       otpAttempts: 0,
     });
 
-    await this.smsService.send(phone, `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`);
+    if (isEmail) {
+      await this.emailService.sendVerificationCode(identifier, otp);
+    } else {
+      await this.smsService.send(
+        identifier,
+        `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`,
+      );
+    }
+
     return { message: 'OTP sent' };
   }
 
-  async verifyRegisterOtp(phone: string, otp: string) {
-    const user = await this.usersService.findByPhone(phone);
+  async verifyRegisterOtp(identifier: string, otp: string) {
+    const user = await this.usersService.findByIdentifier(identifier);
     if (!user || !user.otpHash || !user.otpExpiresAt) {
-      throw new BadRequestException('No OTP requested for this number');
+      throw new BadRequestException('No OTP requested for this identifier');
     }
 
     if (user.otpExpiresAt.getTime() < Date.now()) {
@@ -68,24 +86,32 @@ export class AuthService {
       throw new BadRequestException(`Incorrect code — ${Math.max(attemptsLeft, 0)} attempts left`);
     }
 
-    // OTP correct — clear it and return status. User is verified but password isn't set yet.
+    const isEmail = identifier.includes('@');
+
+    // OTP correct — clear it and mark that channel verified
     await this.usersService.updateById(user._id.toString(), {
       otpHash: null,
       otpExpiresAt: null,
       otpAttempts: 0,
+      ...(isEmail ? { emailVerified: true } : { phoneVerified: true }),
     });
 
-    return { verified: true, message: 'Phone verified. Complete registration.' };
+    return {
+      verified: true,
+      message: isEmail
+        ? 'Email verified. Complete registration.'
+        : 'Phone verified. Complete registration.',
+    };
   }
 
   async completeRegistration(
-    phone: string,
+    identifier: string,
     password: string,
     fullName: string,
     role: 'borrower' | 'lender' | 'both',
     consentData?: { ip?: string; termsVersionHash?: string; privacyVersionHash?: string },
   ) {
-    const user = await this.usersService.findByPhone(phone);
+    const user = await this.usersService.findByIdentifier(identifier);
     if (!user) {
       throw new BadRequestException('Verification required first');
     }
@@ -150,6 +176,9 @@ export class AuthService {
       }
       await this.emailService.sendVerificationCode(user.email, otp);
     } else {
+      if (!user.phone) {
+        throw new BadRequestException('Phone number missing on user profile');
+      }
       await this.smsService.send(user.phone, `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`);
     }
 
@@ -211,6 +240,9 @@ export class AuthService {
       }
       await this.emailService.sendPasswordResetCode(user.email, otp);
     } else {
+      if (!user.phone) {
+        throw new BadRequestException('No phone number registered');
+      }
       await this.smsService.send(user.phone, `Your MT Pocket password reset code is ${otp}. It expires in 5 minutes.`);
     }
 
@@ -306,6 +338,65 @@ export class AuthService {
     return { emailVerified: true, email: updated?.email };
   }
 
+  // ── PHONE VERIFICATION FLOW (post-login, mirrors email flow) ────────
+
+  async requestPhoneVerification(userId: string, phone: string) {
+    // Reject if a different verified user already owns this phone
+    const existing = await this.usersService.findByPhone(phone);
+    if (existing && existing._id.toString() !== userId && existing.phoneVerified) {
+      throw new BadRequestException('Phone number is already registered by another verified user');
+    }
+
+    const otp = generateOtp();
+    const expiry = otpExpiryDate();
+    const hash = await hashOtp(otp);
+
+    await this.usersService.updateById(userId, {
+      phone,
+      phoneOtpHash: hash,
+      phoneOtpExpiresAt: expiry,
+      phoneOtpAttempts: 0,
+    });
+
+    await this.smsService.send(
+      phone,
+      `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`,
+    );
+    return { message: 'Verification code sent to your phone' };
+  }
+
+  async verifyPhone(userId: string, otp: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user || !user.phoneOtpHash || !user.phoneOtpExpiresAt) {
+      throw new BadRequestException('No phone verification requested');
+    }
+
+    if (user.phoneOtpExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Verification code has expired');
+    }
+
+    if (user.phoneOtpAttempts >= OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException('Too many verification attempts');
+    }
+
+    const isValid = await compareOtp(otp, user.phoneOtpHash);
+    if (!isValid) {
+      await this.usersService.updateById(userId, {
+        phoneOtpAttempts: user.phoneOtpAttempts + 1,
+      });
+      throw new BadRequestException('Incorrect code');
+    }
+
+    const updated = await this.usersService.updateById(userId, {
+      phoneVerified: true,
+      phoneOtpHash: null,
+      phoneOtpExpiresAt: null,
+      phoneOtpAttempts: 0,
+    });
+
+    return { phoneVerified: true, phone: updated?.phone };
+  }
+
   // ── ROLE & TOKENS ───────────────────────────────────────────────────
 
   async setRole(userId: string, role: 'borrower' | 'lender' | 'both') {
@@ -366,11 +457,19 @@ export class AuthService {
   // (/auth/me), so the two endpoints can never drift out of sync with
   // each other the way a second hand-copied field list would.
   private toPublicUser(user: UserDocument) {
+    const fullyVerified =
+      !!user.phone &&
+      !!user.email &&
+      !!user.phoneVerified &&
+      !!user.emailVerified;
+
     return {
       id: user._id.toString(),
       phone: user.phone,
       email: user.email,
       emailVerified: user.emailVerified,
+      phoneVerified: user.phoneVerified,
+      fullyVerified,
       role: user.role,
       systemRole: user.systemRole,
       fullName: user.fullName,

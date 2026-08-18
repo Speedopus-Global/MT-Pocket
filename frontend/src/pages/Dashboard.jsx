@@ -7,6 +7,7 @@ import MessageButton from '../components/ui/MessageButton';
 import NotificationDrawer from '../components/notifications/NotificationDrawer';
 import OfferAcceptDialog from '../components/ui/OfferAcceptDialog';
 import InfoBanner from '../components/ui/InfoBanner';
+import { VerificationBanner, useVerificationBanner } from '../components/VerificationBanner';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -114,11 +115,17 @@ export default function Dashboard() {
     (loan.offers || []).map((o) => ({ ...o, loanRequest: loan }))
   );
 
+  const { showVerificationBanner, verificationBannerProps } = useVerificationBanner();
+
   const acceptOffer = async (loanRequestId, offerId) => {
     try {
       const updated = await api.acceptOffer(loanRequestId, offerId, accessToken);
       setMyLoans((prev) => prev.map((l) => (l._id === updated._id ? updated : l)));
     } catch (err) {
+      if (err.requiresFullVerification) {
+        showVerificationBanner(err.verificationStatus);
+        return;
+      }
       console.error('Failed to accept offer:', err.message);
     }
   };
@@ -140,6 +147,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex-1 flex flex-col space-y-6 w-full min-h-full">
+      <VerificationBanner {...verificationBannerProps} />
       {/* ── TOP EXECUTIVE HEADER ────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-5">
         <div>
@@ -780,7 +788,7 @@ function ProfilePreviewModal({ context, onClose, accessToken }) {
                           <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Details</label>
                           <textarea
                             rows={2}
-                            placeholder="Add details about the infraction…"
+                            placeholder="Enter details about this violation…"
                             value={reportDetails}
                             onChange={(e) => setReportDetails(e.target.value)}
                             className="w-full rounded-lg border border-border bg-background p-2 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary cursor-text"

@@ -82,6 +82,7 @@ export default function Settings() {
 
   const [fullName, setFullName]   = useState('');
   const [email, setEmail]         = useState('');
+  const [phone, setPhone]         = useState('');
   const [address, setAddress]     = useState('');
   const [latitude, setLatitude]   = useState('');
   const [longitude, setLongitude] = useState('');
@@ -95,6 +96,10 @@ export default function Settings() {
   const [emailStep, setEmailStep]       = useState('idle');
   const [emailOtp, setEmailOtp]         = useState('');
   const [emailVerifying, setEmailVerifying] = useState(false);
+
+  const [phoneStep, setPhoneStep]       = useState('idle');
+  const [phoneOtp, setPhoneOtp]         = useState('');
+  const [phoneVerifying, setPhoneVerifying] = useState(false);
 
   // KYC Status live states
   const [kycStatus, setKycStatus]         = useState(null);
@@ -134,6 +139,7 @@ export default function Settings() {
     if (!user || hasHydrated.current) return;
     setFullName(user.fullName || '');
     setEmail(user.email || '');
+    setPhone(user.phone || '');
     setAddress(user.address || '');
     setLatitude(user.location?.coordinates?.[1] ?? '');
     setLongitude(user.location?.coordinates?.[0] ?? '');
@@ -190,6 +196,7 @@ export default function Settings() {
         {
           fullName,
           email,
+          phone,
           address,
           ...(latitude && longitude
             ? { latitude: parseFloat(latitude), longitude: parseFloat(longitude) }
@@ -201,11 +208,14 @@ export default function Settings() {
         fullName: updated.fullName,
         email: updated.email,
         emailVerified: updated.emailVerified,
+        phone: updated.phone,
+        phoneVerified: updated.phoneVerified,
         address: updated.address,
         location: updated.location,
       });
       setSuccess('Profile updated successfully!');
       if (email !== user.email) setEmailStep('idle');
+      if (phone !== user.phone) setPhoneStep('idle');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -239,12 +249,14 @@ export default function Settings() {
   };
 
   const handleRequestEmailVerification = async () => {
-    if (!email) { setError('Please add an email address first.'); return; }
+    const targetEmail = user?.email || email;
+    if (!targetEmail) { setError('Please add an email address first.'); return; }
     setError('');
     setEmailVerifying(true);
     try {
-      await api.requestEmailVerification(email, accessToken);
+      await api.requestEmailVerification(targetEmail, accessToken);
       setEmailStep('otp');
+      setSuccess('Verification code sent to your email!');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -266,6 +278,39 @@ export default function Settings() {
       setError(err.message);
     } finally {
       setEmailVerifying(false);
+    }
+  };
+
+  const handleRequestPhoneVerification = async () => {
+    const targetPhone = user?.phone || phone;
+    if (!targetPhone) { setError('Please add a phone number first.'); return; }
+    setError('');
+    setPhoneVerifying(true);
+    try {
+      await api.requestPhoneVerification(targetPhone, accessToken);
+      setPhoneStep('otp');
+      setSuccess('Verification code sent to your phone!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPhoneVerifying(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setPhoneVerifying(true);
+    try {
+      const result = await api.verifyPhone(phoneOtp, accessToken);
+      updateUser({ phoneVerified: result.phoneVerified, phone: result.phone });
+      setSuccess('Phone number verified successfully!');
+      setPhoneStep('idle');
+      setPhoneOtp('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPhoneVerifying(false);
     }
   };
 
@@ -312,6 +357,7 @@ export default function Settings() {
               user={user}
               fullName={fullName} setFullName={setFullName}
               email={email} setEmail={setEmail}
+              phone={phone} setPhone={setPhone}
               address={address} setAddress={setAddress}
               isSaving={isSaving} error={error} success={success}
               isDetecting={isDetecting} gpsDetected={gpsDetected}
@@ -323,6 +369,11 @@ export default function Settings() {
               handleRequestEmailVerification={handleRequestEmailVerification}
               handleVerifyEmailOtp={handleVerifyEmailOtp}
               setEmailStep={setEmailStep}
+              phoneStep={phoneStep} phoneOtp={phoneOtp} setPhoneOtp={setPhoneOtp}
+              phoneVerifying={phoneVerifying}
+              handleRequestPhoneVerification={handleRequestPhoneVerification}
+              handleVerifyPhoneOtp={handleVerifyPhoneOtp}
+              setPhoneStep={setPhoneStep}
               isApproved={isApproved} isPending={isPending}
               badgeLabel={badgeLabel} badgeColor={badgeColor}
               onOpenKyc={() => setPage('kyc')}
@@ -400,11 +451,13 @@ export default function Settings() {
 /* hands off to its own page.                                         */
 /* ------------------------------------------------------------------ */
 function GeneralSettingsPage({
-  user, fullName, setFullName, email, setEmail, address, setAddress,
+  user, fullName, setFullName, email, setEmail, phone, setPhone, address, setAddress,
   isSaving, error, success, isDetecting, gpsDetected,
   handleDetectLocation, handleSaveProfile, handleAvatarChange,
   emailStep, emailOtp, setEmailOtp, emailVerifying,
   handleRequestEmailVerification, handleVerifyEmailOtp, setEmailStep,
+  phoneStep, phoneOtp, setPhoneOtp, phoneVerifying,
+  handleRequestPhoneVerification, handleVerifyPhoneOtp, setPhoneStep,
   isApproved, isPending, badgeLabel, badgeColor, onOpenKyc,
 }) {
   return (
@@ -415,7 +468,7 @@ function GeneralSettingsPage({
           Account Settings
         </h1>
         <p className="text-muted-foreground text-sm font-medium">
-          Manage your personal details and account security.
+          Manage your personal details, verified contact channels and account security.
         </p>
       </motion.div>
 
@@ -469,14 +522,24 @@ function GeneralSettingsPage({
             )}
           </motion.div>
 
-          {/* Trust badges checklist — Identity row now links out to its own page */}
+          {/* Trust badges checklist */}
           <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-6 shadow-md">
             <h3 className="font-extrabold text-muted-foreground text-xs tracking-wider uppercase mb-5">
               Trust Checklist Badges
             </h3>
             <ul className="space-y-1">
-              <BadgeRow icon={Smartphone} label="Phone Number" verified={true} />
-              <BadgeRow icon={Mail} label="Email Address" verified={user.emailVerified} pendingLabel="Unverified" />
+              <BadgeRow
+                icon={Smartphone}
+                label="Phone Number"
+                verified={Boolean(user.phone && user.phoneVerified)}
+                pendingLabel={!user.phone ? 'Not Added' : 'Unverified'}
+              />
+              <BadgeRow
+                icon={Mail}
+                label="Email Address"
+                verified={Boolean(user.email && user.emailVerified)}
+                pendingLabel={!user.email ? 'Not Added' : 'Unverified'}
+              />
               <BadgeRowLink
                 icon={Fingerprint}
                 label="Identity Verification"
@@ -509,7 +572,7 @@ function GeneralSettingsPage({
           </motion.div>
         </div>
 
-        {/* Right Side: core details form & email OTP verification only */}
+        {/* Right Side: core details form & channel OTP verifications */}
         <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
             {error && (
@@ -541,44 +604,83 @@ function GeneralSettingsPage({
           {/* Core Profile Edit Settings Form */}
           <motion.div variants={itemVariants} className="rounded-2xl border border-border bg-card p-8 shadow-md">
             <h3 className="font-extrabold text-xl text-foreground tracking-tight mb-2">Core Profile Details</h3>
-            <p className="text-sm text-muted-foreground mb-6">Modify your registration details, GPS location and email addresses.</p>
+            <p className="text-sm text-muted-foreground mb-6">Manage your contact credentials and location. Verification of both phone and email unlocks full platform capabilities.</p>
 
             <Separator className="mb-6" />
 
             <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="fullName" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</label>
+                <input
+                  id="fullName"
+                  type="text"
+                  required
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {/* Email Address */}
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="fullName" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    required
-                    placeholder="Vijay Kumar"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="email" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="email" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
+                    {user.email && user.emailVerified ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+                        <CheckCircle2 size={12} /> Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600">
+                        <AlertCircle size={12} /> Unverified
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       id="email"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="Enter your email address"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`${inputClass} ${user.emailVerified ? 'pr-28' : ''}`}
+                      className={inputClass}
                     />
-                    {user.emailVerified && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full pointer-events-none">
-                        <CheckCircle2 size={12} /> Verified
-                      </span>
-                    )}
                   </div>
                   {email && email !== user.email && (
                     <InfoBanner variant="info" dismissible={false} className="mt-2 !py-2 !px-3 !text-xs">
-                      We'll need to verify your new email before it shows as verified again.
+                      We'll need to verify your new email before it shows as verified.
+                    </InfoBanner>
+                  )}
+                </div>
+
+                {/* Phone Number */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="phone" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Mobile Number</label>
+                    {user.phone && user.phoneVerified ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+                        <CheckCircle2 size={12} /> Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600">
+                        <AlertCircle size={12} /> Unverified
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter your mobile number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  {phone && phone !== user.phone && (
+                    <InfoBanner variant="info" dismissible={false} className="mt-2 !py-2 !px-3 !text-xs">
+                      We'll need to verify your new phone number before it shows as verified.
                     </InfoBanner>
                   )}
                 </div>
@@ -595,7 +697,7 @@ function GeneralSettingsPage({
                     <input
                       id="address"
                       type="text"
-                      placeholder="Vijayawada, Andhra Pradesh, India"
+                      placeholder="Enter your full address or use GPS detection"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       className={`${inputClass} pl-11 ${gpsDetected ? 'pr-28' : ''}`}
@@ -636,23 +738,6 @@ function GeneralSettingsPage({
                 </div>
               </div>
 
-              {/* Phone (read-only) */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Verified Mobile Number</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
-                    value={user.phone}
-                    className="w-full rounded-xl border border-border bg-muted/40 px-4 py-3 text-base text-muted-foreground cursor-not-allowed pr-32"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full">
-                    <CheckCircle2 size={12} /> Verified
-                  </span>
-                </div>
-              </div>
-
               <div className="pt-2">
                 <button
                   type="submit"
@@ -665,6 +750,67 @@ function GeneralSettingsPage({
               </div>
             </form>
           </motion.div>
+
+          {/* Phone verification card — shown only after user saves a phone number to their account */}
+          {user.phone && !user.phoneVerified && (
+            <motion.div
+              variants={itemVariants}
+              className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] p-8 shadow-md"
+            >
+              <h3 className="font-extrabold text-foreground text-xl flex items-center gap-2 mb-2">
+                <AlertCircle className="text-amber-600 shrink-0" size={22} />
+                Phone Verification Required
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Please verify your mobile number <strong>{user.phone}</strong> to secure your account and unlock loan requests and offers.
+              </p>
+
+              {phoneStep === 'idle' ? (
+                <button
+                  onClick={handleRequestPhoneVerification}
+                  disabled={phoneVerifying}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white font-bold px-5 py-3.5 text-sm hover:bg-amber-700 transition-colors disabled:opacity-60 cursor-pointer shadow-xs"
+                >
+                  {phoneVerifying && <Loader2 size={14} className="animate-spin" />}
+                  Send Phone Verification OTP
+                </button>
+              ) : (
+                <form onSubmit={handleVerifyPhoneOtp} className="flex flex-col sm:flex-row gap-4 items-end">
+                  <div className="flex flex-col gap-2 flex-1">
+                    <label htmlFor="phone-otp-settings" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Enter 6-Digit SMS OTP Code
+                    </label>
+                    <input
+                      id="phone-otp-settings"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      required
+                      placeholder="Enter 6-digit SMS OTP"
+                      value={phoneOtp}
+                      onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-xl tracking-[0.3em] text-foreground placeholder:tracking-normal placeholder:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={phoneVerifying}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold px-6 py-3.5 text-sm hover:bg-primary/95 transition-colors disabled:opacity-60 h-[48px] cursor-pointer"
+                  >
+                    {phoneVerifying && <Loader2 size={14} className="animate-spin" />}
+                    Confirm Phone Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhoneStep('idle')}
+                    className="text-sm text-muted-foreground hover:text-foreground font-semibold h-[48px] px-3 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          )}
 
           {/* Email verification card */}
           {user.email && !user.emailVerified && (
@@ -684,16 +830,16 @@ function GeneralSettingsPage({
                 <button
                   onClick={handleRequestEmailVerification}
                   disabled={emailVerifying}
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white font-bold px-5 py-3.5 text-sm hover:bg-amber-700 transition-colors disabled:opacity-60 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white font-bold px-5 py-3.5 text-sm hover:bg-amber-700 transition-colors disabled:opacity-60 cursor-pointer shadow-xs"
                 >
                   {emailVerifying && <Loader2 size={14} className="animate-spin" />}
-                  Send Verification OTP
+                  Send Email Verification OTP
                 </button>
               ) : (
                 <form onSubmit={handleVerifyEmailOtp} className="flex flex-col sm:flex-row gap-4 items-end">
                   <div className="flex flex-col gap-2 flex-1">
                     <label htmlFor="email-otp-settings" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Enter 6-Digit OTP Code
+                      Enter 6-Digit Email OTP Code
                     </label>
                     <input
                       id="email-otp-settings"
@@ -701,10 +847,10 @@ function GeneralSettingsPage({
                       inputMode="numeric"
                       maxLength={6}
                       required
-                      placeholder="123456"
+                      placeholder="Enter 6-digit Email OTP"
                       value={emailOtp}
                       onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-xl tracking-[0.3em] text-foreground placeholder:tracking-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-xl tracking-[0.3em] text-foreground placeholder:tracking-normal placeholder:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
                   <button
@@ -712,8 +858,9 @@ function GeneralSettingsPage({
                     disabled={emailVerifying}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold px-6 py-3.5 text-sm hover:bg-primary/95 transition-colors disabled:opacity-60 h-[48px] cursor-pointer"
                   >
+
                     {emailVerifying && <Loader2 size={14} className="animate-spin" />}
-                    Confirm Code
+                    Confirm Email Code
                   </button>
                   <button
                     type="button"

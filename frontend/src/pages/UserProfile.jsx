@@ -305,7 +305,7 @@ function ProfileSafetyForm({ userId, userName, accessToken, onDone }) {
               rows={3}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              placeholder="What happened?"
+              placeholder="Enter details about this report…"
               maxLength={1000}
               className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
             />
