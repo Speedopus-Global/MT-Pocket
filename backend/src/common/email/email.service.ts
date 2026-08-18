@@ -46,13 +46,14 @@ export class EmailService {
     await this.sendMail(email, subject, html);
   }
 
-  public async sendMail(to: string, subject: string, html: string): Promise<void> {
+  public async sendMail(to: string, subject: string, html: string, replyTo?: string): Promise<void> {
     const provider = process.env.EMAIL_PROVIDER || 'stub';
     const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@mtpocket.com';
     const apiKey = process.env.RESEND_API_KEY;
 
     if (provider === 'stub' || process.env.NODE_ENV === 'test') {
-      this.logger.warn(`[EMAIL STUB] to ${to}: [${subject}]`);
+      this.logger.warn(`[EMAIL STUB] from: ${from} | replyTo: ${replyTo || supportEmail} | to ${to}: [${subject}]`);
       this.logger.log(`[EMAIL STUB BODY] ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}`);
       return;
     }
@@ -73,6 +74,7 @@ export class EmailService {
         body: JSON.stringify({
           from,
           to,
+          reply_to: replyTo || supportEmail,
           subject,
           html,
         }),
