@@ -13,6 +13,8 @@ import type { Request } from 'express';
 import { SupportService } from './support.service';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 
+import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
+
 @Controller('support')
 export class SupportController {
   constructor(private readonly supportService: SupportService) {}
@@ -20,29 +22,21 @@ export class SupportController {
   // POST /support/tickets — create a support ticket (open to all / optionally authed)
   @Post('tickets')
   createTicket(
-    @Body()
-    body: {
-      userId?: string;
-      senderEmail: string;
-      senderName?: string;
-      category: string;
-      subject?: string;
-      message: string;
-    },
+    @Body() dto: CreateSupportTicketDto,
     @Req() req: Request,
   ) {
     const user = req.user as any;
-    const userId = body.userId || user?.sub || user?.id;
-    const senderEmail = body.senderEmail || user?.email;
-    const senderName = body.senderName || user?.fullName;
+    const userId = dto.userId || user?.sub || user?.id;
+    const senderEmail = dto.senderEmail || user?.email;
+    const senderName = dto.senderName || user?.fullName;
 
     return this.supportService.createTicket({
       userId,
       senderEmail,
       senderName,
-      category: body.category,
-      subject: body.subject,
-      message: body.message,
+      category: dto.category || 'General Inquiry',
+      subject: dto.subject,
+      message: dto.message,
     });
   }
 
