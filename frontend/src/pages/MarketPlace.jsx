@@ -16,7 +16,7 @@ import {
   AutocompleteInput,
   AutocompleteItem,
   AutocompleteList,
-} from '@/components/ui/autocomplete';
+} from '@/components/ui/AutoComplete';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
