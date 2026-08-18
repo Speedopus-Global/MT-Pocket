@@ -341,8 +341,9 @@ export class AuthService {
   // ── PHONE VERIFICATION FLOW (post-login, mirrors email flow) ────────
 
   async requestPhoneVerification(userId: string, phone: string) {
+    const cleanPhone = phone.trim();
     // Reject if a different verified user already owns this phone
-    const existing = await this.usersService.findByPhone(phone);
+    const existing = await this.usersService.findByPhone(cleanPhone);
     if (existing && existing._id.toString() !== userId && existing.phoneVerified) {
       throw new BadRequestException('Phone number is already registered by another verified user');
     }
@@ -352,20 +353,21 @@ export class AuthService {
     const hash = await hashOtp(otp);
 
     await this.usersService.updateById(userId, {
-      phone,
+      phone: cleanPhone,
       phoneOtpHash: hash,
       phoneOtpExpiresAt: expiry,
       phoneOtpAttempts: 0,
     });
 
     await this.smsService.send(
-      phone,
+      cleanPhone,
       `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`,
     );
     return { message: 'Verification code sent to your phone' };
   }
 
   async verifyPhone(userId: string, otp: string) {
+    const cleanOtp = otp.trim();
     const user = await this.usersService.findById(userId);
     if (!user || !user.phoneOtpHash || !user.phoneOtpExpiresAt) {
       throw new BadRequestException('No phone verification requested');
@@ -379,7 +381,7 @@ export class AuthService {
       throw new BadRequestException('Too many verification attempts');
     }
 
-    const isValid = await compareOtp(otp, user.phoneOtpHash);
+    const isValid = await compareOtp(cleanOtp, user.phoneOtpHash);
     if (!isValid) {
       await this.usersService.updateById(userId, {
         phoneOtpAttempts: user.phoneOtpAttempts + 1,

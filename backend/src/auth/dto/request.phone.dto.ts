@@ -1,6 +1,9 @@
-import { IsPhoneNumber } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class RequestPhoneDto {
-  @IsPhoneNumber(undefined, { message: 'Enter a valid phone number, including country code' })
+  @IsString()
+  @IsNotEmpty({ message: 'Enter a valid phone number' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   phone: string;
 }

@@ -647,7 +647,7 @@ function GeneralSettingsPage({
                       className={inputClass}
                     />
                   </div>
-                  {email && email !== user.email && (
+                  {email && email.trim() !== (user?.email || '').trim() && (
                     <InfoBanner variant="info" dismissible={false} className="mt-2 !py-2 !px-3 !text-xs">
                       We'll need to verify your new email before it shows as verified.
                     </InfoBanner>
@@ -678,7 +678,7 @@ function GeneralSettingsPage({
                       className={inputClass}
                     />
                   </div>
-                  {phone && phone !== user.phone && (
+                  {phone && phone.trim() !== (user?.phone || '').trim() && (
                     <InfoBanner variant="info" dismissible={false} className="mt-2 !py-2 !px-3 !text-xs">
                       We'll need to verify your new phone number before it shows as verified.
                     </InfoBanner>
