@@ -305,8 +305,8 @@ export default function AdminDashboard() {
         </>
 
         {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto bg-sidebar">
-          <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-5">
+        <main className="flex-1 overflow-y-auto bg-sidebar min-w-0">
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-5">
 
             {/* Page header */}
             <div className="flex items-center gap-2.5 border-b border-border pb-3">

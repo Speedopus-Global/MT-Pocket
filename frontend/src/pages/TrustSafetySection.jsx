@@ -68,20 +68,20 @@ export default function TrustSafetySection() {
             </span>
           </div>
 
-          <h2 className="mt-8 text-6xl font-light leading-[1.02] tracking-[-0.06em] text-secondary lg:text-8xl">
+          <h2 className="mt-6 sm:mt-8 text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-light leading-[1.08] tracking-[-0.04em] text-secondary">
             Built for trust.
             <br />
             Designed for people.
           </h2>
 
-          <p className="mt-8 max-w-3xl text-lg leading-9 text-secondary/80 lg:text-xl">
+          <p className="mt-5 sm:mt-8 max-w-3xl text-base sm:text-lg leading-relaxed sm:leading-9 text-secondary/80 lg:text-xl">
             Every user completes identity verification before joining the marketplace.
             We surface meaningful trust signals and provide the tools you need to
             connect with confidence.
           </p>
         </motion.div>
 
-        <div className="mt-20">
+        <div className="mt-10 sm:mt-20">
           <HoverEffect items={projects} />
         </div>
       </div>

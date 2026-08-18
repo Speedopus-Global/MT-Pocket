@@ -173,7 +173,7 @@ export default function Profile() {
 
   return (
     <motion.div
-      className="flex-1 flex flex-col min-h-full w-full px-4 sm:px-6"
+      className="flex-1 flex flex-col min-h-full w-full px-3 sm:px-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -181,7 +181,7 @@ export default function Profile() {
       {/* Top Profile Header (Instagram style) */}
       <motion.div
         variants={itemVariants}
-        className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-16 pt-6 pb-8"
+        className="flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8 md:gap-16 pt-4 sm:pt-6 pb-6 sm:pb-8"
       >
         {/* Left Side: Circular Avatar with Verified Ring */}
         <div className="relative shrink-0">
@@ -579,20 +579,20 @@ export default function Profile() {
       {/* CREATE LOAN REQUEST MODAL */}
       <AnimatePresence>
         {createModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full max-w-lg rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden flex flex-col"
+              className="w-full max-w-lg max-h-[90vh] rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-5 border-b border-border/50 bg-card">
+              <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-border/50 bg-card shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Banknote size={18} />
                   </div>
-                  <h3 className="font-extrabold text-foreground text-lg">Create Loan Request</h3>
+                  <h3 className="font-extrabold text-foreground text-base sm:text-lg">Create Loan Request</h3>
                 </div>
                 <button
                   onClick={() => setCreateModalOpen(false)}
@@ -601,7 +601,7 @@ export default function Profile() {
                   <X size={18} />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
                 <LoanRequestForm
                   accessToken={accessToken}
                   onCreated={handleLoanCreated}
@@ -616,20 +616,20 @@ export default function Profile() {
       {/* EDIT LOAN REQUEST MODAL */}
       <AnimatePresence>
         {editModalOpen && selectedLoan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full max-w-lg rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden flex flex-col"
+              className="w-full max-w-lg max-h-[90vh] rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between px-6 py-5 border-b border-border/50 bg-card">
+              <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-border/50 bg-card shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <Edit2 size={16} />
+                    <Edit2 size={18} />
                   </div>
-                  <h3 className="font-extrabold text-foreground text-lg">Edit Loan Request</h3>
+                  <h3 className="font-extrabold text-foreground text-base sm:text-lg">Edit Loan Request</h3>
                 </div>
                 <button
                   onClick={() => { setEditModalOpen(false); setSelectedLoan(null); }}
@@ -638,7 +638,7 @@ export default function Profile() {
                   <X size={18} />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
                 <LoanRequestForm
                   accessToken={accessToken}
                   loan={selectedLoan}

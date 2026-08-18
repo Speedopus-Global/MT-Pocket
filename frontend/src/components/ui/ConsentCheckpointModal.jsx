@@ -90,18 +90,18 @@ export default function ConsentCheckpointModal({
           </span>
         </label>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-2">
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="cursor-pointer"
+            className="w-full sm:w-auto cursor-pointer rounded-xl"
           >
             Cancel
           </Button>
           <Button
             onClick={handleAccept}
             disabled={!agreed}
-            className="cursor-pointer"
+            className="w-full sm:w-auto cursor-pointer rounded-xl shadow-xs"
           >
             I Agree & Continue
           </Button>

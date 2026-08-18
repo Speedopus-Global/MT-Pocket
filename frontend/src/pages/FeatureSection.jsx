@@ -98,24 +98,24 @@ function FeatureSection() {
         >
        {/* ---------- FEATURE LAYOUT ---------- */}
 <div className="relative w-full border-t border-primary bg-background">
-  <div className="grid grid-cols-12">
+  <div className="flex flex-col md:grid md:grid-cols-12">
 
     {/* LEFT */}
-    <div className="relative col-span-4 pt-12 md:pt-14 lg:pt-16 min-h-[160px] md:min-h-[190px] lg:min-h-[220px]">
-      <div className="absolute left-6 md:left-8 lg:left-10 top-40 md:top-44 lg:top-52">
+    <div className="relative md:col-span-3 lg:col-span-4 pt-6 sm:pt-8 md:pt-14 lg:pt-16 px-4 md:px-0">
+      <div className="md:absolute md:left-6 lg:left-10 md:top-40 lg:top-52 mb-2 md:mb-0">
         <feature.icon
-          size={42}
+          size={36}
           strokeWidth={1.8}
-          className="text-primary md:size-11 lg:size-12"
+          className="text-primary sm:size-10 md:size-11 lg:size-12"
         />
       </div>
     </div>
 
     {/* RIGHT */}
-    <div className="col-span-8 flex flex-col pt-12 md:pt-14 lg:pt-16 pb-8 md:pb-10 lg:pb-12 pr-4 md:pr-8 lg:pr-12">
+    <div className="md:col-span-9 lg:col-span-8 flex flex-col pt-2 md:pt-14 lg:pt-16 pb-8 md:pb-10 lg:pb-12 px-4 md:px-0 md:pr-8 lg:pr-12">
 
       {/* Title */}
-      <h3 className="max-w-4xl pt-8 md:pt-10 text-xl font-semibold leading-tight tracking-[-0.03em] text-secondary sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-[3.5rem]">
+      <h3 className="max-w-4xl pt-2 sm:pt-4 md:pt-10 text-xl font-semibold leading-tight tracking-[-0.03em] text-secondary sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-[3.5rem]">
         {feature.title}
       </h3>
 

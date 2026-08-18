@@ -91,7 +91,7 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-10">
+    <div className="max-w-lg mx-auto px-3 sm:px-4 py-6 sm:py-10">
       <Link
         to="/marketplace"
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground mb-6 transition-colors"
@@ -102,7 +102,7 @@ export default function UserProfile() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-border bg-card p-7 shadow-sm"
+        className="rounded-2xl border border-border bg-card p-5 sm:p-7 shadow-sm"
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -110,16 +110,16 @@ export default function UserProfile() {
               <img
                 src={profile.avatarUrl}
                 alt={profile.fullName || 'User avatar'}
-                className="w-16 h-16 rounded-2xl object-cover border border-border"
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-border"
               />
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
                 {(profile.fullName || '?').charAt(0).toUpperCase()}
               </div>
             )}
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-lg font-extrabold text-foreground">
+                <h1 className="text-base sm:text-lg font-extrabold text-foreground">
                   {profile.fullName || 'Unnamed user'}
                 </h1>
                 {profile.identityVerified && (
@@ -143,7 +143,7 @@ export default function UserProfile() {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-4 mt-6 pt-5 border-t border-border/60 text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-3 sm:gap-4 mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-border/60 text-xs text-muted-foreground">
           {(profile.city || profile.state) && (
             <span className="inline-flex items-center gap-1.5">
               <MapPin size={13} /> {[profile.city, profile.state].filter(Boolean).join(', ')}
@@ -171,16 +171,16 @@ export default function UserProfile() {
       </motion.div>
 
       {safetyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-background/80 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+            className="w-full max-w-md max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl overflow-y-auto"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border bg-muted/30">
               <div className="flex items-center gap-2">
                 <ShieldAlert size={18} className="text-destructive" />
-                <h3 className="font-bold text-foreground">Report or block</h3>
+                <h3 className="font-bold text-foreground text-sm sm:text-base">Report or block</h3>
               </div>
               <button
                 onClick={() => setSafetyOpen(false)}
@@ -189,7 +189,7 @@ export default function UserProfile() {
                 <X size={16} />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <ProfileSafetyForm
                 userId={id}
                 userName={profile.fullName || 'this user'}

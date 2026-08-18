@@ -297,26 +297,26 @@ export default function Marketplace() {
     <div className="min-h-screen bg-background text-foreground relative selection:bg-primary/20 selection:text-primary">
       {/* ── INTEGRATED TOP NAVBAR WITH SEARCH & FILTERS ────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-border/80 bg-card/85 backdrop-blur-xl shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 md:gap-6">
-          <div className="flex items-center gap-3 shrink-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-3 md:gap-6">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               to={user ? '/dashboard' : '/'}
-              className="p-2.5 rounded-xl border border-border/80 bg-background hover:bg-muted/60 hover:border-primary/40 transition-all cursor-pointer shadow-2xs"
+              className="p-2 sm:p-2.5 rounded-xl border border-border/80 bg-background hover:bg-muted/60 hover:border-primary/40 transition-all cursor-pointer shadow-2xs"
               title="Return"
             >
-              <ArrowLeft size={18} className="text-foreground" />
+              <ArrowLeft size={17} className="text-foreground" />
             </Link>
-            <div className="flex items-center gap-2.5">
-              <img src={logo} alt="MT Pocket Logo" className="h-8 w-auto object-contain shrink-0" />
-              <h1 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight hidden sm:block">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="MT Pocket Logo" className="h-7 sm:h-8 w-auto object-contain shrink-0" />
+              <h1 className="text-sm sm:text-lg font-extrabold text-foreground tracking-tight hidden sm:block">
                 MT Pocket
               </h1>
             </div>
           </div>
 
           {/* Embedded Search & Filter Control Bar */}
-          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-2xl flex items-center gap-2">
-            <div className="flex-1">
+          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-2xl flex items-center gap-1.5 sm:gap-2">
+            <div className="flex-1 min-w-0">
               <Autocomplete
                 value={keyword}
                 onValueChange={(val) => setKeyword(val)}
@@ -324,10 +324,10 @@ export default function Marketplace() {
                 itemToStringValue={(item) => item.value}
               >
                 <AutocompleteInput
-                  placeholder="Search opportunities by purpose, city, state..."
+                  placeholder="Search by purpose, city, state..."
                   showClear
                   size="lg"
-                  className="bg-background border-border/80 focus:border-primary text-xs sm:text-sm rounded-xl h-11 shadow-2xs"
+                  className="bg-background border-border/80 focus:border-primary text-xs sm:text-sm rounded-xl h-10 sm:h-11 shadow-2xs"
                 />
                 <AutocompleteContent align="start" sideOffset={6} className="rounded-xl border-border shadow-xl">
                   <AutocompleteEmpty className="text-xs text-muted-foreground p-3">
@@ -347,7 +347,7 @@ export default function Marketplace() {
 
             <button
               type="submit"
-              className="px-4 sm:px-5 h-11 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-98"
+              className="px-3 sm:px-5 h-10 sm:h-11 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-98"
             >
               <Search size={15} />
               <span className="hidden sm:inline">Search</span>
@@ -359,7 +359,7 @@ export default function Marketplace() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="relative shrink-0 gap-2 px-3.5 h-11 rounded-xl border-border/80 bg-background hover:bg-muted/60 cursor-pointer font-semibold text-xs sm:text-sm shadow-2xs"
+                    className="relative shrink-0 gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 h-10 sm:h-11 rounded-xl border-border/80 bg-background hover:bg-muted/60 cursor-pointer font-semibold text-xs sm:text-sm shadow-2xs"
                   />
                 }
               >
@@ -372,7 +372,7 @@ export default function Marketplace() {
                 )}
               </PopoverTrigger>
 
-              <PopoverContent align="end" sideOffset={8} className="w-80 rounded-2xl border-border p-5 shadow-2xl backdrop-blur-md">
+              <PopoverContent align="end" sideOffset={8} className="w-[calc(100vw-2rem)] max-w-xs sm:w-80 rounded-2xl border-border p-4 sm:p-5 shadow-2xl backdrop-blur-md">
                 <div className="grid gap-5">
                   <div className="flex items-center justify-between pb-3 border-b border-border">
                     <span className="font-bold text-sm text-foreground">Filter Marketplace</span>
@@ -473,7 +473,7 @@ export default function Marketplace() {
             <TrendingUp size={16} /> Direct Peer-to-Peer Capital Network
           </div>
 
-          <h2 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-foreground leading-tight">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-foreground leading-tight">
             Empowering Borrowers,{' '}
             <CanvasText
               text="Rewarding Lenders"
@@ -522,7 +522,7 @@ export default function Marketplace() {
           </div>
 
           {/* Full-width Responsive Grid of Category Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 w-full">
             <button
               onClick={() => setSelectedCategories([])}
               className={`relative py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all duration-300 border cursor-pointer hover:scale-[1.02] active:scale-95 shadow-sm ${
@@ -680,14 +680,14 @@ export default function Marketplace() {
       {/* ── MODALS ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {offerLoan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+              className="w-full max-w-md max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl overflow-y-auto flex flex-col"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20 shrink-0">
                 <div className="flex items-center gap-2">
                   <Handshake size={18} className="text-primary" />
                   <h3 className="font-bold text-foreground text-sm">Send Funding Offer</h3>
@@ -699,7 +699,7 @@ export default function Marketplace() {
                   <X size={16} />
                 </button>
               </div>
-              <div className="p-5">
+              <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
                 <OfferForm
                   loan={offerLoan}
                   accessToken={accessToken}
@@ -713,14 +713,14 @@ export default function Marketplace() {
 
       <AnimatePresence>
         {safetyLoan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+              className="w-full max-w-md max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl overflow-y-auto flex flex-col"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20 shrink-0">
                 <div className="flex items-center gap-2">
                   <ShieldAlert size={18} className="text-destructive" />
                   <h3 className="font-bold text-foreground text-sm">Trust & Safety</h3>
@@ -732,7 +732,7 @@ export default function Marketplace() {
                   <X size={16} />
                 </button>
               </div>
-              <div className="p-5">
+              <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
                 <SafetyForm
                   loan={safetyLoan}
                   accessToken={accessToken}
@@ -1272,12 +1272,12 @@ function MarketplaceProfileModal({ userId, onClose, accessToken }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-background/80 backdrop-blur-xs">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-md max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
           <span className="font-bold text-foreground text-sm">Member Profile Preview</span>

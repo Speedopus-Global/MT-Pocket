@@ -36,7 +36,7 @@ export default function LoginPromptModal({ open, onClose, message }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full max-w-[380px] rounded-2xl border border-border/80 bg-card/95 p-6 shadow-2xl backdrop-blur-md transition-all cursor-default"
+            className="relative z-10 w-[calc(100vw-2rem)] max-w-[380px] rounded-2xl border border-border/80 bg-card/95 p-5 sm:p-6 shadow-2xl backdrop-blur-md transition-all cursor-default"
           >
             {/* Top Close Button */}
             <button

@@ -1,50 +1,3 @@
-/**
- * PillNav.jsx — React Bits component, integrated as-is
- * -----------------------------------------------------------------------
- * Suggested path: src/components/layout/PillNav.jsx
- *
- * Source/behavior unchanged from the original (GSAP hover-circle fill,
- * mobile menu, logo spin, absolute positioning) — only the color props
- * are rewired, from hardcoded hex to your index.css theme tokens, so
- * this follows --primary / --background / --foreground (and dark mode)
- * automatically instead of carrying its own fixed palette.
- *
- * New dependency — install before using:
- *   npm install gsap
- *
- * Usage (replaces Navbar.jsx's contents, not a slot inside it — this
- * component is self-positioned/absolute, not part of the normal
- * document flow the way the header skeleton was):
- *
- *   import PillNav from './PillNav';
- *   import logo from '/path/to/logo.svg';
- *
- *   <PillNav
- *     logo={logo}
- *     logoAlt="MT Pocket"
- *     items={[
- *       { label: 'How it works', href: '/how-it-works' },
- *       { label: 'Borrowers', href: '/borrowers' },
- *       { label: 'Lenders', href: '/lenders' },
- *       { label: 'Trust & Safety', href: '/trust' },
- *       { label: 'FAQ', href: '/faq' },
- *     ]}
- *     activeHref="/"
- *   />
- *
- * Color props now default to theme tokens (resolved via CSS var() at
- * render time, so they follow light/dark automatically):
- *   baseColor            -> var(--primary)             (pill track / logo bg)
- *   pillColor             -> var(--background)          (pill fill)
- *   pillTextColor         -> var(--foreground)           (pill label)
- *   hoveredPillTextColor  -> var(--primary-foreground)    (label on hover-fill)
- *
- * Your index.css defines tokens as raw OKLCH values assigned directly
- * to the CSS var (e.g. --primary: oklch(0.514 0.109 161.6)), not as
- * H/S/L triples — so these use var(--primary) directly, no hsl()
- * wrapper needed (unlike the old index.css convention).
- * ----------------------------------------------------------------------- */
-
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
@@ -273,9 +226,9 @@ const PillNav = ({
   };
 
   return (
-    <div className="absolute top-[1em] left-1/2 z-[1000] w-full -translate-x-1/2 md:w-auto">
+    <div className="absolute top-[0.75em] sm:top-[1em] left-1/2 z-[1000] w-full -translate-x-1/2 md:w-auto px-3 sm:px-4 md:px-0 max-w-lg md:max-w-none">
       <nav
-        className={`w-full md:w-max flex items-center justify-center md:justify-start box-border px-4 md:px-0 ${className}`}
+        className={`w-full md:w-max flex items-center justify-between md:justify-start box-border ${className}`}
         aria-label="Primary"
         style={cssVars}
       >
@@ -288,7 +241,7 @@ const PillNav = ({
             ref={el => {
               logoRef.current = el;
             }}
-            className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden"
+            className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden shrink-0 shadow-xs"
             style={{
               width: 'var(--nav-h)',
               height: 'var(--nav-h)',
@@ -305,7 +258,7 @@ const PillNav = ({
             ref={el => {
               logoRef.current = el;
             }}
-            className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden"
+            className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden shrink-0 shadow-xs"
             style={{
               width: 'var(--nav-h)',
               height: 'var(--nav-h)',
@@ -421,7 +374,7 @@ const PillNav = ({
           onClick={toggleMobileMenu}
           aria-label="Toggle menu"
           aria-expanded={isMobileMenuOpen}
-          className="md:hidden rounded-full border-0 flex flex-col items-center justify-center gap-1 cursor-pointer p-0 relative"
+          className="md:hidden rounded-full border-0 flex flex-col items-center justify-center gap-1 cursor-pointer p-0 relative shadow-xs"
           style={{
             width: 'var(--nav-h)',
             height: 'var(--nav-h)',
@@ -441,13 +394,13 @@ const PillNav = ({
 
       <div
         ref={mobileMenuRef}
-        className="md:hidden absolute top-[3em] left-4 right-4 rounded-[27px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[998] origin-top"
+        className="md:hidden absolute top-[3.2em] left-3 right-3 sm:left-4 sm:right-4 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.18)] z-[998] origin-top border border-border/40"
         style={{
           ...cssVars,
           background: 'var(--base, #f0f0f0)'
         }}
       >
-        <ul className="list-none m-0 p-[3px] flex flex-col gap-[3px]">
+        <ul className="list-none m-0 p-[4px] flex flex-col gap-[4px]">
           {items.map(item => {
             const defaultStyle = {
               background: 'var(--pill-bg, #fff)',
@@ -463,7 +416,7 @@ const PillNav = ({
             };
 
             const linkClasses =
-              'block py-3 px-4 text-[16px] font-medium rounded-[50px] transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]';
+              'block py-3 px-4 text-[15px] font-semibold rounded-[20px] transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)] text-center sm:text-left';
 
             return (
               <li key={item.href}>

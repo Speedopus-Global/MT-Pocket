@@ -125,10 +125,11 @@ export default function WhyTrust() {
     mx-auto
     max-w-7xl
     text-center
-    text-[clamp(4.5rem,9vw,8rem)]
+    text-[clamp(2.25rem,6.5vw,7rem)]
     font-medium
-    leading-[0.95]
+    leading-[1.05]
     tracking-[-0.035em]
+    px-4
 
     bg-[linear-gradient(90deg,var(--primary)_30%,var(--primary)_50%,var(--secondary)_100%,var(--primary)_100%)]
     [-webkit-background-clip:text]
@@ -146,10 +147,10 @@ export default function WhyTrust() {
 </h2>
      
  
-      {/* Grid, columns, gap-x/gap-y — unchanged. */}
-      <div className="mx-auto mt-8 grid max-w-7xl gap-y-10 gap-x-24 px-6 sm:mt-10 lg:grid-cols-[420px_minmax(0,1fr)] lg:gap-x-40 xl:mt-16 xl:grid-cols-[520px_minmax(0,1fr)] xl:gap-x-48">
+      {/* Grid, columns, gap-x/gap-y */}
+      <div className="mx-auto mt-8 grid max-w-7xl gap-y-10 gap-x-8 px-4 sm:px-6 sm:mt-10 lg:grid-cols-[420px_minmax(0,1fr)] lg:gap-x-16 xl:mt-16 xl:grid-cols-[520px_minmax(0,1fr)] xl:gap-x-24">
 
-        {/* LEFT — wheel, hover glow, hint, dots: unchanged. */}
+        {/* LEFT — wheel, hover glow, hint, dots */}
         <div
           className="relative mx-auto w-full max-w-[320px] sm:max-w-[420px] xl:max-w-[520px] lg:mx-0"
           onMouseEnter={() => setWheelHovered(true)}
@@ -162,7 +163,7 @@ export default function WhyTrust() {
             className="pointer-events-none absolute -inset-10 rounded-full bg-primary/10 blur-3xl"
           />
 
-          <div className="relative h-[420px] sm:h-[480px] lg:h-[560px]">
+          <div className="relative h-[360px] sm:h-[480px] lg:h-[560px]">
             <OptionWheel
               items={WHEEL_ITEMS}
               defaultSelected={selected}

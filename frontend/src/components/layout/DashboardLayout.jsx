@@ -59,8 +59,8 @@ export default function DashboardLayout() {
       {/* ── Sidebar Navigation ────────────────────────────────────────── */}
       <aside 
         className={`fixed inset-y-0 left-0 transform ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:sticky md:top-0 md:translate-x-0 transition-transform duration-200 ease-in-out z-50 w-60 bg-sidebar border-r border-border flex flex-col h-screen max-h-screen`}
+          isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        } md:sticky md:top-0 md:translate-x-0 md:shadow-none transition-transform duration-200 ease-in-out z-50 w-64 sm:w-72 md:w-60 max-w-[85vw] bg-sidebar border-r border-border flex flex-col h-screen max-h-screen`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-border flex items-center justify-between">
@@ -158,8 +158,8 @@ export default function DashboardLayout() {
       </aside>
 
       {/* ── Main Content Area ─────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-[1600px] mx-auto flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden min-w-0">
+        <main className="flex-1 p-3 sm:p-5 lg:p-8 w-full max-w-[1600px] mx-auto flex flex-col min-w-0">
           <Outlet />
         </main>
       </div>
@@ -168,7 +168,7 @@ export default function DashboardLayout() {
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-background/60 backdrop-blur-xs z-40 md:hidden cursor-pointer"
+          className="fixed inset-0 bg-background/70 backdrop-blur-xs z-40 md:hidden cursor-pointer"
         />
       )}
     </div>

@@ -140,17 +140,17 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:py-12 bg-background">
       <div className="w-full max-w-sm">
 
         {/* Logo and Brand Heading */}
         <div className="flex flex-col items-center mb-6">
-          <img src={logo} alt="MT Pocket Logo" className="w-16 h-16 object-contain mb-2" />
+          <img src={logo} alt="MT Pocket Logo" className="w-14 h-14 sm:w-16 sm:h-16 object-contain mb-2" />
           <span className="text-xl font-bold tracking-tight text-primary">MT Pocket</span>
         </div>
 
         {/* Card wrapper */}
-        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div className="rounded-3xl border border-border bg-card p-5 sm:p-8 shadow-xl backdrop-blur-xl">
           
           {/* Section Header */}
           <div className="flex flex-col items-center text-center mb-6">

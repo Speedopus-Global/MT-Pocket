@@ -241,7 +241,7 @@ export default function Register() {
           </div>
 
         {/* ── Interactive Progress Stepper ─────────────────────────────── */}
-        <div className="mb-6 rounded-2xl border border-border/80 bg-card/80 backdrop-blur-md p-3.5 shadow-sm">
+        <div className="mb-6 rounded-2xl border border-border/80 bg-card/80 backdrop-blur-md p-2.5 sm:p-3.5 shadow-sm">
           <div className="flex items-center justify-between relative">
             {/* Background connecting bar */}
             <div className="absolute top-1/2 left-4 right-4 -translate-y-1/2 h-[2px] bg-border z-0" />
@@ -260,7 +260,7 @@ export default function Register() {
               return (
                 <div key={s.id} className="relative z-10 flex flex-col items-center">
                   <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                    className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[11px] sm:text-xs font-bold transition-all duration-300 ${
                       isPast
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : isCurrent
@@ -268,10 +268,10 @@ export default function Register() {
                         : 'bg-muted border border-border text-muted-foreground'
                     }`}
                   >
-                    {isPast ? <CheckCircle2 size={15} strokeWidth={2.5} /> : idx + 1}
+                    {isPast ? <CheckCircle2 size={14} strokeWidth={2.5} /> : idx + 1}
                   </div>
                   <span
-                    className={`mt-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                    className={`mt-1 sm:mt-1.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-colors text-center ${
                       isCurrent ? 'text-primary' : isPast ? 'text-foreground' : 'text-muted-foreground/60'
                     }`}
                   >
@@ -284,7 +284,7 @@ export default function Register() {
         </div>
 
         {/* ── Card Body with Animated Transitions ───────────────────────── */}
-        <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl backdrop-blur-xl relative overflow-hidden">
+        <div className="rounded-3xl border border-border bg-card p-5 sm:p-8 shadow-xl backdrop-blur-xl relative overflow-hidden">
           
           {/* Step Header */}
           <div className="flex flex-col items-center text-center mb-6">
@@ -293,9 +293,9 @@ export default function Register() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.25 }}
-              className="mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm"
+              className="mb-3.5 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm"
             >
-              <currentStep.icon size={22} strokeWidth={2.2} />
+              <currentStep.icon size={20} strokeWidth={2.2} />
             </motion.div>
 
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
@@ -592,11 +592,11 @@ export default function Register() {
                   </span>
                 </label>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => setTermsModalOpen(false)}
-                    className="flex-1 py-3 rounded-xl border border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                    className="w-full sm:flex-1 py-3 rounded-xl border border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -604,7 +604,7 @@ export default function Register() {
                     type="button"
                     disabled={!consentChecked || isSubmitting}
                     onClick={handleConfirmRegistration}
-                    className="flex-[2] py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md shadow-primary/20"
+                    className="w-full sm:flex-[2] py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md shadow-primary/20"
                   >
                     {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                     <span>{isSubmitting ? 'Creating Account...' : 'Accept & Complete Registration'}</span>

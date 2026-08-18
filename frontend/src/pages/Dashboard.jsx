@@ -266,12 +266,12 @@ export default function Dashboard() {
           </div>
 
           {/* 3-way toggle pill */}
-          <div className="flex rounded-xl border border-border/80 p-1 bg-muted/40 self-start sm:self-auto">
+          <div className="flex rounded-xl border border-border/80 p-1 bg-muted/40 w-full sm:w-auto overflow-x-auto">
             {OFFER_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setOffersTab(tab.value)}
-                className={`relative px-4 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                className={`relative flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap ${
                   offersTab === tab.value ? 'text-primary-foreground bg-primary shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >

@@ -98,11 +98,11 @@ export default function FAQSection() {
             </span>
           </div>
 
-          <h2 className="max-w-full whitespace-nowrap text-5xl font-light tracking-[-0.06em] text-foreground md:text-7xl xl:text-[6rem]">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-[-0.04em] text-foreground leading-tight">
             Frequently asked questions
           </h2>
 
-          <p className="mt-8 max-w-3xl text-lg leading-8 text-muted-foreground">
+          <p className="mt-4 sm:mt-8 max-w-3xl text-base sm:text-lg leading-relaxed sm:leading-8 text-muted-foreground">
             We've compiled the most important information to help you. Can't find what you're looking for?
             <button onClick={scrollToContact} className="ml-2 font-medium text-primary hover:underline cursor-pointer">
               Contact us.
@@ -110,7 +110,7 @@ export default function FAQSection() {
           </p>
         </motion.div>
 
-        <div className="mt-20 divide-y divide-border border-y border-border">
+        <div className="mt-10 sm:mt-20 divide-y divide-border border-y border-border">
           {faqs.map((item, i) => {
             const active = open === i;
 
@@ -118,16 +118,16 @@ export default function FAQSection() {
               <div key={item.q}>
                 <button
                   onClick={() => setOpen(active ? -1 : i)}
-                  className="flex w-full cursor-pointer items-start justify-between py-6 text-left transition-colors"
+                  className="flex w-full cursor-pointer items-start justify-between py-5 sm:py-6 text-left transition-colors"
                 >
-                  <div className="ml-6 grid w-full grid-cols-[110px_1fr] items-start gap-x-10 lg:ml-8 lg:grid-cols-[130px_1fr] lg:gap-x-12">
+                  <div className="ml-2 sm:ml-6 grid w-full grid-cols-[50px_1fr] sm:grid-cols-[100px_1fr] lg:grid-cols-[130px_1fr] items-start gap-x-4 sm:gap-x-8 lg:gap-x-12">
 
-                    <span className="select-none text-6xl font-thin tracking-[-0.08em] text-primary lg:text-7xl">
+                    <span className="select-none text-3xl sm:text-5xl lg:text-7xl font-thin tracking-[-0.08em] text-primary">
                       {String(i + 1).padStart(2, "0").split("").join(" ")}
                     </span>
 
                     <h3
-                      className={`pr-10 text-xl font-medium leading-8 transition-colors duration-300 md:text-[1.35rem] ${
+                      className={`pr-4 sm:pr-10 text-base sm:text-xl font-medium leading-relaxed sm:leading-8 transition-colors duration-300 md:text-[1.35rem] ${
                         active ? "text-primary" : "text-foreground"
                       }`}
                     >
@@ -145,9 +145,9 @@ export default function FAQSection() {
                       duration: 0.45,
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="mr-4 mt-1 flex h-12 w-12 shrink-0 items-center justify-center"
+                    className="mr-2 sm:mr-4 mt-0.5 sm:mt-1 flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center"
                   >
-                    <Plus className="h-6 w-6 text-primary" strokeWidth={2} />
+                    <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" strokeWidth={2} />
                   </motion.div>
                 </button>
 
@@ -160,11 +160,11 @@ export default function FAQSection() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="ml-6 grid grid-cols-[110px_1fr] gap-x-10 pb-6 lg:ml-8 lg:grid-cols-[130px_1fr] lg:gap-x-12">
+                      <div className="ml-2 sm:ml-6 grid grid-cols-[50px_1fr] sm:grid-cols-[100px_1fr] lg:grid-cols-[130px_1fr] gap-x-4 sm:gap-x-8 lg:gap-x-12 pb-5 sm:pb-6">
 
                         <div />
 
-                        <p className="max-w-5xl pr-12 text-base leading-7 text-muted-foreground">
+                        <p className="max-w-5xl pr-4 sm:pr-12 text-xs sm:text-base leading-relaxed sm:leading-7 text-muted-foreground">
                           {item.a}
                         </p>
 

@@ -60,7 +60,7 @@ export default function OfferAcceptDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md" showCloseButton={false}>
         <DialogHeader>
           <div className="flex items-center gap-2.5 mb-1">
             <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${cfg.iconBg}`}>
@@ -73,17 +73,17 @@ export default function OfferAcceptDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
           <Button
             variant="outline"
             onClick={onCancel}
-            className="cursor-pointer"
+            className="w-full sm:w-auto cursor-pointer rounded-xl"
           >
             Cancel
           </Button>
           <Button
             onClick={onConfirm}
-            className={`cursor-pointer ${cfg.confirmClass}`}
+            className={`w-full sm:w-auto cursor-pointer rounded-xl shadow-xs ${cfg.confirmClass}`}
           >
             {cfg.confirmLabel}
           </Button>

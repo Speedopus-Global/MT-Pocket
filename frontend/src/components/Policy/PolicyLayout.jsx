@@ -17,7 +17,7 @@ export default function PolicyLayout({ children }) {
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary">
       {/* Back Button */}
-      <div className="sticky top-0 z-40 flex items-center border-b border-border/60 bg-background/90 backdrop-blur-sm px-6 sm:px-10 lg:px-12 h-14">
+      <div className="sticky top-0 z-40 flex items-center border-b border-border/60 bg-background/90 backdrop-blur-sm px-4 sm:px-10 lg:px-12 h-14">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -28,7 +28,7 @@ export default function PolicyLayout({ children }) {
         </button>
       </div>
 
-      <div className="mx-auto max-w-6xl px-6 sm:px-10 lg:px-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-10 lg:px-12">
         {children}
       </div>
 
@@ -38,7 +38,7 @@ export default function PolicyLayout({ children }) {
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           title="Scroll to top"
-          className="fixed bottom-8 right-8 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary shadow-lg hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 cursor-pointer active:scale-95"
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-border bg-card text-primary shadow-lg hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 cursor-pointer active:scale-95"
         >
           <ArrowUp className="h-4 w-4" />
         </button>

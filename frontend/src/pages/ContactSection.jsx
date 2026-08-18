@@ -164,28 +164,28 @@ export default function ContactSection() {
   };
 
   return (
-    <section className="relative px-4 py-20 md:py-28 overflow-hidden bg-background font-sans border-t border-border/40">
+    <section className="relative px-3 sm:px-4 py-14 sm:py-20 md:py-28 overflow-hidden bg-background font-sans border-t border-border/40">
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         viewport={{ once: true }}
-        className="relative mx-auto max-w-7xl rounded-[32px] md:rounded-[40px] border border-border bg-card p-6 sm:p-10 lg:p-14 shadow-sm"
+        className="relative mx-auto max-w-7xl rounded-3xl md:rounded-[40px] border border-border bg-card p-5 sm:p-10 lg:p-14 shadow-sm"
       >
 
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14 items-center">
+        <div className="grid grid-cols-1 gap-8 sm:gap-12 lg:grid-cols-12 lg:gap-14 items-center">
           {/* ── LEFT COLUMN: Text Info & Dotted World Map with Pin ── */}
           <div className="flex flex-col justify-between h-full lg:col-span-6 xl:col-span-7">
             <div>
               {/* Mail Icon Badge */}
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-primary">
+              <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-primary">
                 <Mail className="h-3.5 w-3.5" />
                 <span>Get in touch</span>
               </div>
 
               {/* Title */}
-              <h2 className="text-4xl font-extrabold tracking-[-0.035em] text-foreground sm:text-5xl lg:text-[4.5rem] leading-[1.05]">
+              <h2 className="text-3xl font-extrabold tracking-[-0.035em] text-foreground sm:text-5xl lg:text-[4.5rem] leading-[1.05]">
                 Let's Talk
               </h2>
 

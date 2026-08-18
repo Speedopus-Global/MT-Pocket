@@ -78,20 +78,20 @@ export default function HowItWorksV3() {
   const steps = PATHS[active].steps;
 
   return (
-    <section className="relative overflow-hidden bg-primary py-28">
+    <section className="relative overflow-hidden bg-primary py-16 sm:py-28">
       <div className="absolute inset-0 opacity-20">
         <div className="absolute left-[-10%] top-0 h-[420px] w-[420px] rounded-full bg-secondary blur-[140px]" />
         <div className="absolute right-[-10%] bottom-0 h-[360px] w-[360px] rounded-full bg-white/10 blur-[140px]" />
         <div className="absolute inset-0 opacity-[0.035] mix-blend-soft-light bg-[radial-gradient(circle_at_center,rgba(255,255,255,.12)_0.7px,transparent_0.8px)] bg-[length:18px_18px]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6">
-        <h2 className="mb-16 text-center text-[clamp(3rem,6vw,5.5rem)] font-medium tracking-[-.04em] leading-none bg-gradient-to-r from-primary-foreground via-secondary to-primary-foreground bg-clip-text text-transparent">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <h2 className="mb-10 sm:mb-16 text-center text-[clamp(2rem,5vw,5rem)] font-medium tracking-[-.04em] leading-tight bg-gradient-to-r from-primary-foreground via-secondary to-primary-foreground bg-clip-text text-transparent">
           Two sides, two simple paths
         </h2>
 
-        <div className="mb-20 flex justify-center">
-          <div className="relative inline-flex rounded-full bg-primary-foreground p-1 border-2 border-primary">
+        <div className="mb-12 sm:mb-20 flex justify-center px-2">
+          <div className="relative inline-flex rounded-full bg-primary-foreground p-1 border-2 border-primary max-w-full">
             <div
               className="absolute inset-y-1 rounded-full bg-primary"
               style={{
@@ -104,7 +104,7 @@ export default function HowItWorksV3() {
               <button
                 key={k}
                 onClick={() => setActive(k)}
-                className={`relative z-10 min-w-[180px] cursor-pointer rounded-full px-8 py-3 text-sm font-medium transition-all duration-300 hover:scale-[1.03] ${
+                className={`relative z-10 min-w-[120px] xs:min-w-[140px] sm:min-w-[180px] cursor-pointer rounded-full px-4 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-300 hover:scale-[1.03] ${
                   active === k ? "text-primary-foreground" : "text-primary"
                 }`}
               >
@@ -120,26 +120,26 @@ export default function HowItWorksV3() {
           </div>
 
           {/* Desktop cards: hidden on small, visible on lg+ */}
-          <div className="hidden lg:grid gap-10 md:gap-12 lg:grid-cols-3">
+          <div className="hidden lg:grid gap-8 xl:gap-12 lg:grid-cols-3">
             {steps.map((s, i) => (
               <Card key={s.title} step={s} index={i} />
             ))}
           </div>
 
           {/* Mobile timeline: visible on small, hidden on lg+ */}
-          <div className="mt-12 flex flex-col gap-8 lg:hidden">
+          <div className="mt-8 sm:mt-12 flex flex-col gap-6 sm:gap-8 lg:hidden max-w-xl mx-auto">
             {steps.map((s, i) => (
-              <div key={i} className="flex gap-5">
+              <div key={i} className="flex gap-4 sm:gap-5">
                 <div className="flex flex-col items-center">
-                  <div className="h-4 w-4 rounded-full bg-secondary ring-4 ring-secondary/20" />
+                  <div className="h-4 w-4 rounded-full bg-secondary ring-4 ring-secondary/20 shrink-0" />
                   {i < steps.length - 1 && (
-                    <div className="mt-2 w-px bg-gradient-to-b from-secondary via-white/40 to-transparent" />
+                    <div className="mt-2 w-px flex-1 bg-gradient-to-b from-secondary via-white/40 to-transparent" />
                   )}
                 </div>
 
-                <div>
-                  <h4 className="font-semibold text-primary-foreground">{s.title}</h4>
-                  <p className="mt-2 text-primary-foreground/80">{s.description}</p>
+                <div className="pb-4">
+                  <h4 className="font-semibold text-primary-foreground text-base sm:text-lg">{s.title}</h4>
+                  <p className="mt-1.5 sm:mt-2 text-primary-foreground/80 text-xs sm:text-sm leading-relaxed">{s.description}</p>
                 </div>
               </div>
             ))}

@@ -141,12 +141,12 @@ export const Testimonials = ({
 
       {/* was: h-full ... overflow-hidden — overflow-hidden was clipping any
                 card whose y-offset (like Kavya's -80) pushed it past the box edge */}
-            <div className="relative flex min-h-[90vh] w-full items-center justify-center overflow-visible pt-16 sm:pt-20 lg:pt-24">
-            <motion.div
-                ref={ref}
-                onClick={() => setActive(null)}
-                className="relative mx-auto flex h-[70vh] w-full max-w-6xl items-center justify-center [--height:300px] [--width:220px] lg:[--height:440px] lg:[--width:320px]"
-            >
+      <div className="relative flex min-h-[520px] sm:min-h-[650px] lg:min-h-[80vh] w-full items-center justify-center overflow-hidden pt-8 sm:pt-16 lg:pt-20">
+        <motion.div
+            ref={ref}
+            onClick={() => setActive(null)}
+            className="relative mx-auto flex h-[480px] sm:h-[60vh] w-full max-w-6xl items-center justify-center [--height:260px] [--width:190px] xs:[--height:290px] xs:[--width:210px] lg:[--height:440px] lg:[--width:320px]"
+        >
           {cards.map((card, index) => {
             const offsetX = (index - middle) * spacing;
             return (

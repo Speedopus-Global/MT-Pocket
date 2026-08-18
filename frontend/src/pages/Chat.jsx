@@ -504,7 +504,7 @@ export default function Chat({ initialConversationId = null }) {
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] max-h-[900px] w-full flex rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
+    <div className="h-[calc(100dvh-5.5rem)] sm:h-[calc(100vh-7rem)] max-h-[900px] w-full flex rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
       {/* ── Hidden File Inputs ───────────────────────────────────────── */}
       <input
         type="file"
@@ -899,29 +899,29 @@ export default function Chat({ initialConversationId = null }) {
             )}
 
             {/* Bottom Composer (Shrink-0, stays firmly pinned at bottom) */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-border/70 bg-card shrink-0">
-              <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 border-t border-border/70 bg-card shrink-0">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <button
                   type="button"
                   disabled={uploadingMedia}
                   onClick={() => imageInputRef.current?.click()}
-                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer shrink-0"
                   title="Send Photo"
                 >
-                  <ImageIcon size={20} />
+                  <ImageIcon size={18} className="sm:w-5 sm:h-5" />
                 </button>
                 <button
                   type="button"
                   disabled={uploadingMedia}
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+                  className="p-1.5 sm:p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer shrink-0"
                   title="Send Document"
                 >
-                  <Paperclip size={20} />
+                  <Paperclip size={18} className="sm:w-5 sm:h-5" />
                 </button>
               </div>
 
-              <div className="flex-1 relative">
+              <div className="flex-1 min-w-0 relative">
                 <Input
                   value={draft}
                   onChange={handleDraftChange}
@@ -931,8 +931,8 @@ export default function Chat({ initialConversationId = null }) {
                       send();
                     }
                   }}
-                  placeholder={editingMessage ? 'Edit your message…' : 'Type a message…'}
-                  className="w-full rounded-xl bg-background border-border/80 text-sm py-5 px-4 focus:ring-primary"
+                  placeholder={editingMessage ? 'Edit message…' : 'Type a message…'}
+                  className="w-full rounded-xl bg-background border-border/80 text-xs sm:text-sm py-2 sm:py-5 px-3 sm:px-4 focus:ring-primary h-9 sm:h-11"
                 />
               </div>
 
@@ -940,12 +940,12 @@ export default function Chat({ initialConversationId = null }) {
                 onClick={send}
                 disabled={(!draft.trim() && !uploadingMedia) || sending}
                 size="icon"
-                className="w-10 h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/95 cursor-pointer shrink-0 shadow-xs"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/95 cursor-pointer shrink-0 shadow-xs"
               >
                 {sending || uploadingMedia ? (
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin sm:w-[18px] sm:h-[18px]" />
                 ) : (
-                  <Send size={18} />
+                  <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
                 )}
               </Button>
             </div>
