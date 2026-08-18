@@ -1,24 +1,27 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Home, ShoppingBag, HelpCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, ArrowLeft, Home, Compass, HelpCircle } from 'lucide-react';
 import MtPocketLogo from '../components/ui/MtPocketLogo';
 
 export default function NotFound() {
   const navigate = useNavigate();
   const leftEyeRef = useRef(null);
   const rightEyeRef = useRef(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const [leftPupil, setLeftPupil] = useState({ x: 0, y: -12 });
-  const [rightPupil, setRightPupil] = useState({ x: 0, y: -12 });
+  // Default resting position looking up and slightly to the right (like in the picture)
+  const [leftPupil, setLeftPupil] = useState({ x: 8, y: -16 });
+  const [rightPupil, setRightPupil] = useState({ x: 8, y: -16 });
   const [isBlinking, setIsBlinking] = useState(false);
 
-  // Mouse move listener to track pupils
+  // Mouse move listener to track pupils dynamically
   useEffect(() => {
     const handleMouseMove = (e) => {
       const { clientX, clientY } = e;
 
       const calcPupilOffset = (eyeEl) => {
-        if (!eyeEl) return { x: 0, y: -10 };
+        if (!eyeEl) return { x: 8, y: -16 };
         const rect = eyeEl.getBoundingClientRect();
         const eyeCenterX = rect.left + rect.width / 2;
         const eyeCenterY = rect.top + rect.height / 2;
@@ -26,7 +29,7 @@ export default function NotFound() {
         const deltaX = clientX - eyeCenterX;
         const deltaY = clientY - eyeCenterY;
         const angle = Math.atan2(deltaY, deltaX);
-        const distance = Math.min(22, Math.hypot(deltaX, deltaY) / 10);
+        const distance = Math.min(26, Math.hypot(deltaX, deltaY) / 8);
 
         return {
           x: Math.cos(angle) * distance,
@@ -46,73 +49,129 @@ export default function NotFound() {
   useEffect(() => {
     const interval = setInterval(() => {
       setIsBlinking(true);
-      setTimeout(() => setIsBlinking(false), 180);
-    }, 4500);
+      setTimeout(() => setIsBlinking(false), 160);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between selection:bg-primary/20 selection:text-primary font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between selection:bg-primary/20 selection:text-primary font-['Plus_Jakarta_Sans',sans-serif]">
       
       {/* ── Top Header ──────────────────────────────────────────────── */}
-      <header className="px-6 sm:px-12 py-6 flex items-center justify-between border-b border-border/40">
-        <Link to="/" className="flex items-center gap-2.5 group cursor-pointer">
+      <motion.header
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-7xl mx-auto px-6 sm:px-12 pt-8 sm:pt-12 flex items-center justify-between"
+      >
+        <Link to="/" className="flex items-center gap-3 cursor-pointer group">
           <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
             <MtPocketLogo className="w-5 h-5" />
           </div>
-          <span className="font-black tracking-tight text-foreground text-lg">MT Pocket</span>
+          <span className="font-extrabold tracking-[-0.04em] text-foreground text-xl sm:text-2xl">
+            MT Pocket
+          </span>
         </Link>
 
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-colors cursor-pointer"
-        >
-          <ArrowLeft size={14} />
-          <span>Go Back</span>
-        </button>
-      </header>
+        {/* Minimalist Menu Button */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-10 h-10 rounded-xl border border-border/80 bg-card hover:bg-muted text-foreground flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
 
-      {/* ── Main Content Area ────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center max-w-4xl mx-auto w-full">
-        
-        {/* Headline Quote */}
-        <div className="space-y-3 max-w-2xl">
-          <span className="inline-block text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-            Error 404
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
-            Looks like this pocket is truly empty.
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-lg mx-auto">
-            We searched high and low, checked every seam, but the page you’re looking for doesn’t exist or has moved.
-          </p>
+          {/* Quick Menu Dropdown */}
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-12 w-48 rounded-xl border border-border bg-card shadow-lg p-2 z-50 space-y-1"
+              >
+                <Link
+                  to="/"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <Home size={14} />
+                  <span>Home</span>
+                </Link>
+                <Link
+                  to="/marketplace"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <Compass size={14} />
+                  <span>Marketplace</span>
+                </Link>
+                <Link
+                  to="/support"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <HelpCircle size={14} />
+                  <span>Help & Support</span>
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+      </motion.header>
 
-        {/* ── Interactive Looking Eyes ───────────────────────────────── */}
-        <div className="my-10 sm:my-14 flex items-center justify-center gap-6 sm:gap-10 select-none">
-          
+      {/* ── Main Canvas ─────────────────────────────────────────────── */}
+      <main className="w-full max-w-7xl mx-auto px-6 sm:px-12 flex-1 flex flex-col justify-center py-10">
+        
+        {/* Left-Aligned Headline Quote matching reference */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          className="max-w-xl text-left"
+        >
+          <h1 className="text-2xl sm:text-4xl md:text-[42px] font-medium tracking-[-0.03em] text-foreground leading-[1.25]">
+            Uh oh, the page you’re looking for can’t be found.
+          </h1>
+        </motion.div>
+
+        {/* ── Centered Big Expressive Eyes ───────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
+          className="my-16 sm:my-24 flex items-center justify-center gap-6 sm:gap-10 select-none cursor-pointer self-center"
+          onClick={() => {
+            setIsBlinking(true);
+            setTimeout(() => setIsBlinking(false), 200);
+          }}
+          title="Click to blink!"
+        >
           {/* Left Eye */}
           <div className="flex flex-col items-center gap-3">
-            {/* Eyebrow */}
-            <div className="w-16 sm:w-20 h-4 border-t-[5px] border-foreground rounded-[50%/12px_12px_0_0] transform -rotate-6 transition-transform duration-200" />
+            {/* Curved Eyebrow */}
+            <div className="w-20 sm:w-28 h-5 border-t-[6px] sm:border-t-[7px] border-foreground rounded-[50%/16px_16px_0_0] transform -rotate-6 transition-transform duration-200" />
             
             {/* Eye Sclera */}
             <div
               ref={leftEyeRef}
-              className={`relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-[5px] border-foreground bg-card shadow-inner flex items-center justify-center transition-all duration-150 ${
-                isBlinking ? 'scale-y-[0.05] border-t-[8px]' : 'scale-y-100'
+              className={`relative w-28 h-28 sm:w-40 sm:h-40 rounded-full border-[6px] sm:border-[8px] border-foreground bg-card shadow-inner flex items-center justify-center transition-all duration-150 ${
+                isBlinking ? 'scale-y-[0.04] border-t-[10px]' : 'scale-y-100'
               }`}
             >
               {/* Pupil */}
               {!isBlinking && (
                 <div
-                  className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-foreground transition-transform duration-75 ease-out flex items-start justify-end p-1.5"
+                  className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-foreground transition-transform duration-75 ease-out flex items-start justify-end p-1 sm:p-1.5 shadow-sm"
                   style={{
                     transform: `translate(${leftPupil.x}px, ${leftPupil.y}px)`,
                   }}
                 >
                   {/* Catchlight */}
-                  <div className="w-2.5 h-2.5 rounded-full bg-card" />
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-card" />
                 </div>
               )}
             </div>
@@ -120,63 +179,66 @@ export default function NotFound() {
 
           {/* Right Eye */}
           <div className="flex flex-col items-center gap-3">
-            {/* Eyebrow */}
-            <div className="w-16 sm:w-20 h-4 border-t-[5px] border-foreground rounded-[50%/12px_12px_0_0] transform rotate-6 transition-transform duration-200" />
+            {/* Curved Eyebrow */}
+            <div className="w-20 sm:w-28 h-5 border-t-[6px] sm:border-t-[7px] border-foreground rounded-[50%/16px_16px_0_0] transform rotate-6 transition-transform duration-200" />
             
             {/* Eye Sclera */}
             <div
               ref={rightEyeRef}
-              className={`relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-[5px] border-foreground bg-card shadow-inner flex items-center justify-center transition-all duration-150 ${
-                isBlinking ? 'scale-y-[0.05] border-t-[8px]' : 'scale-y-100'
+              className={`relative w-28 h-28 sm:w-40 sm:h-40 rounded-full border-[6px] sm:border-[8px] border-foreground bg-card shadow-inner flex items-center justify-center transition-all duration-150 ${
+                isBlinking ? 'scale-y-[0.04] border-t-[10px]' : 'scale-y-100'
               }`}
             >
               {/* Pupil */}
               {!isBlinking && (
                 <div
-                  className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-foreground transition-transform duration-75 ease-out flex items-start justify-end p-1.5"
+                  className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-foreground transition-transform duration-75 ease-out flex items-start justify-end p-1 sm:p-1.5 shadow-sm"
                   style={{
                     transform: `translate(${rightPupil.x}px, ${rightPupil.y}px)`,
                   }}
                 >
                   {/* Catchlight */}
-                  <div className="w-2.5 h-2.5 rounded-full bg-card" />
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-card" />
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* ── Action Buttons ─────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-bold hover:bg-primary/95 shadow-md shadow-primary/20 transition-all cursor-pointer"
+        {/* Minimal Bottom Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-muted-foreground"
+        >
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer underline underline-offset-4"
           >
-            <Home size={16} />
-            <span>Return Home</span>
-          </Link>
-
+            <ArrowLeft size={13} />
+            <span>Go back to previous page</span>
+          </button>
+          <span>·</span>
           <Link
             to="/marketplace"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground hover:bg-muted text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+            className="hover:text-primary transition-colors cursor-pointer underline underline-offset-4"
           >
-            <ShoppingBag size={16} />
-            <span>Explore Marketplace</span>
+            Explore marketplace
           </Link>
-
+          <span>·</span>
           <Link
-            to="/support"
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            to="/"
+            className="hover:text-primary transition-colors cursor-pointer underline underline-offset-4"
           >
-            <HelpCircle size={16} />
-            <span>Help Center</span>
+            Return to homepage
           </Link>
-        </div>
+        </motion.div>
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="px-6 py-4 text-center text-xs text-muted-foreground border-t border-border/40">
-        <p>© {new Date().getFullYear()} MT Pocket. All rights reserved.</p>
+      {/* ── Minimal Footer ──────────────────────────────────────────── */}
+      <footer className="w-full max-w-7xl mx-auto px-6 sm:px-12 py-6 text-xs text-muted-foreground/60">
+        <p>© {new Date().getFullYear()} MT Pocket</p>
       </footer>
     </div>
   );
