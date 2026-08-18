@@ -208,33 +208,29 @@ export default function WhyTrust() {
           </div>
         </div>
 
-        {/* RIGHT — content typography/spacing refined; section number
-            removed; icon container softened; motion tuned to be calmer. */}
-        <div className="flex min-h-[280px] items-center lg:min-h-[520px]">
+        {/* RIGHT — Large animated description, no card border */}
+        <div className="flex min-h-[260px] items-center lg:min-h-[460px] px-2 sm:px-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={selected}
-              initial={{ opacity: 0, x: isMobile ? 0 : 16, y: isMobile ? 10 : 0 }}
-              animate={{ opacity: 1, x: 0, y: 0 }}
-              exit={{ opacity: 0, x: isMobile ? 0 : -16, y: isMobile ? -10 : 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto max-w-[700px] text-center lg:mx-0 lg:text-left"
+              initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -18, filter: "blur(6px)" }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-[680px] mx-auto lg:mx-0 text-center lg:text-left"
             >
-              <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6 lg:items-center lg:justify-start">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/5 text-primary sm:h-14 sm:w-14 xl:h-16 xl:w-16"
-                >
-                  <Icon className="h-6 w-6 sm:h-7 sm:w-7 xl:h-8 xl:w-8" strokeWidth={1.75} />
-                </motion.div>
-                <h3 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl xl:text-5xl">
-                  {current.title}
-                </h3>
+              {/* Small icon + pillar label */}
+              <div className="mb-5 flex items-center justify-center lg:justify-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+                  <Icon className="h-4.5 w-4.5" strokeWidth={2} />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-primary/80">
+                  0{selected + 1} of {data.length}
+                </span>
               </div>
 
-              <p className="mt-8 text-base font-normal leading-7 text-muted-foreground sm:mt-10 sm:text-lg sm:leading-8 lg:text-lg lg:leading-9 xl:text-xl xl:leading-10">
+              {/* Large editorial description text */}
+              <p className="text-xl sm:text-2xl lg:text-[1.7rem] xl:text-[1.9rem] font-medium leading-[1.55] sm:leading-[1.55] lg:leading-[1.6] text-foreground tracking-tight">
                 {current.description}
               </p>
             </motion.div>

@@ -59,6 +59,11 @@ const faqs = [
 export default function FAQSection() {
   const [open, setOpen] = useState(0);
 
+  const scrollToContact = () => {
+    const el = document.getElementById("contact");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <section className="bg-background py-32">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-10">
@@ -99,7 +104,7 @@ export default function FAQSection() {
 
           <p className="mt-8 max-w-3xl text-lg leading-8 text-muted-foreground">
             We've compiled the most important information to help you. Can't find what you're looking for?
-            <button className="ml-2 font-medium text-primary hover:underline">
+            <button onClick={scrollToContact} className="ml-2 font-medium text-primary hover:underline cursor-pointer">
               Contact us.
             </button>
           </p>

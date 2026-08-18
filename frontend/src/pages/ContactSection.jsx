@@ -164,33 +164,29 @@ export default function ContactSection() {
   };
 
   return (
-    <section className="relative px-4 py-20 md:py-28 overflow-hidden bg-background">
-      {/* Ambient background lighting */}
-      <div className="pointer-events-none absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-primary/10 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 right-1/4 h-96 w-96 rounded-full bg-accent/10 blur-[120px]" />
+    <section className="relative px-4 py-20 md:py-28 overflow-hidden bg-background font-sans border-t border-border/40">
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         viewport={{ once: true }}
-        className="relative mx-auto max-w-7xl rounded-[32px] md:rounded-[40px] border border-border bg-card p-6 sm:p-10 lg:p-14 shadow-2xl backdrop-blur-2xl"
+        className="relative mx-auto max-w-7xl rounded-[32px] md:rounded-[40px] border border-border bg-card p-6 sm:p-10 lg:p-14 shadow-sm"
       >
-        {/* Subtle decorative inner border highlight */}
-        <div className="pointer-events-none absolute inset-0 rounded-[32px] md:rounded-[40px] border border-primary/10" />
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14 items-center">
           {/* ── LEFT COLUMN: Text Info & Dotted World Map with Pin ── */}
           <div className="flex flex-col justify-between h-full lg:col-span-6 xl:col-span-7">
             <div>
               {/* Mail Icon Badge */}
-              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/10 backdrop-blur-md">
-                <Mail className="h-5 w-5" />
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-primary">
+                <Mail className="h-3.5 w-3.5" />
+                <span>Get in touch</span>
               </div>
 
               {/* Title */}
-              <h2 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Contact us
+              <h2 className="text-4xl font-extrabold tracking-[-0.035em] text-foreground sm:text-5xl lg:text-[4.5rem] leading-[1.05]">
+                Let's Talk
               </h2>
 
               {/* Subheading */}
