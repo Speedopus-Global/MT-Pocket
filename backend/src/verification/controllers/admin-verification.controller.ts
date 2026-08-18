@@ -70,6 +70,32 @@ export class AdminVerificationController {
     return new StreamableFile(buffer);
   }
 
+  // GET /admin/verification/:id/selfie — stream the selfie image bytes
+  @Get(':id/selfie')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('kyc:view_document')
+  async getSelfie(
+    @Param('id') id: string,
+    @Query('download') download: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const admin = req.user as any;
+    const action = download === '1' ? 'downloaded' : 'viewed';
+    const { buffer, contentType, filename } = await this.verificationService.getSelfieFile(
+      id, admin.sub, admin.systemRole, action, auditCtx(req),
+    );
+
+    res.set({
+      'Content-Type': contentType,
+      'Content-Disposition': `${action === 'downloaded' ? 'attachment' : 'inline'}; filename="${filename}"`,
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+    });
+
+    return new StreamableFile(buffer);
+  }
+
   // POST /admin/verification/:id/approve
   @Post(':id/approve')
   @UseGuards(PermissionGuard)

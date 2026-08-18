@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
   User as UserIcon, 
@@ -13,20 +12,18 @@ import {
   X, 
   ArrowLeft
 } from 'lucide-react';
-import logo from '../../assets/image.png';
+import MtPocketLogo from '../ui/MtPocketLogo';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState(null);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  // Messages is live now — chat is built (Chat.jsx + backend).
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/dashboard/profile', label: 'Profile', icon: UserIcon },
@@ -38,159 +35,140 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-sidebar flex flex-col md:flex-row text-foreground font-sans">
       
-      {/* Mobile Header Bar */}
-      <header className="md:hidden flex items-center justify-between px-6 py-4 bg-card/85 backdrop-blur-md border-b border-border/60 z-20">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full border border-green-500 overflow-hidden bg-green-500 flex items-center justify-center shadow-sm">
-            <img
-              src={logo}
-              alt="MT Pocket"
-              className="w-6 h-6 object-contain"
-            />
+      {/* ── Mobile Header Bar ─────────────────────────────────────────── */}
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-sidebar/95 backdrop-blur-md border-b border-border">
+        <Link to="/" className="flex items-center gap-2.5 cursor-pointer">
+          <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-2xs shrink-0">
+            <MtPocketLogo className="w-5 h-5" />
           </div>
-          <span className="font-extrabold tracking-tight text-primary text-base">MT Pocket</span>
+          <div>
+            <span className="font-extrabold tracking-tight text-primary text-sm leading-none block">MT Pocket</span>
+            <span className="text-[10px] text-muted-foreground leading-none">Member Portal</span>
+          </div>
         </Link>
+
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-1.5 rounded-xl border border-border/80 text-foreground hover:bg-muted/80 transition-colors"
+          className="p-2 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors cursor-pointer"
+          aria-label="Toggle Navigation"
         >
-          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
       </header>
 
-      {/* Sidebar Navigation */}
+      {/* ── Sidebar Navigation ────────────────────────────────────────── */}
       <aside 
         className={`fixed inset-y-0 left-0 transform ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:sticky md:top-0 md:translate-x-0 transition-transform duration-300 ease-in-out z-30 w-64 bg-sidebar/95 backdrop-blur-lg border-r border-border/60 flex flex-col h-screen max-h-screen`}
+        } md:sticky md:top-0 md:translate-x-0 transition-transform duration-200 ease-in-out z-50 w-60 bg-sidebar border-r border-border flex flex-col h-screen max-h-screen`}
       >
         {/* Sidebar Header */}
-        <div className="p-6 border-b border-border/55 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/20 transition-transform duration-300 hover:scale-105">
-          <img src={logo} alt="MT Pocket" className="w-7 h-7 object-contain" />
-        </div>
-          <div>
-            <h1 className="font-extrabold tracking-tight text-primary text-lg leading-none">MT Pocket</h1>
-          </div>
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2.5 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-2xs shrink-0">
+              <MtPocketLogo className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="font-extrabold tracking-tight text-primary text-sm leading-none">MT Pocket</h1>
+              <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Member Portal</p>
+            </div>
+          </Link>
+
+          {/* Close button for mobile inside drawer */}
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {/* User Mini Profile Panel */}
         {user && (
-          <div className="p-5 border-b border-border/55 bg-[#FDF6ED]/15 flex items-center gap-3">
-            <div className="relative">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="Avatar" className="w-11 h-11 rounded-full object-cover border-2 border-primary/20 shadow-sm" />
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg border border-primary/20">
-                  {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
-                </div>
-              )}
-              <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card shadow-sm animate-pulse" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold truncate text-foreground leading-tight">{user.fullName || 'User Profile'}</p>
-              <p className="text-[10px] text-primary font-semibold uppercase tracking-wider mt-0.5">{user.role}</p>
+          <div className="p-3 border-b border-border">
+            <div className="rounded-lg bg-card border border-border/80 p-2.5 flex items-center gap-2.5">
+              <div className="relative shrink-0">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-md object-cover border border-border" />
+                ) : (
+                  <div className="w-8 h-8 rounded-md bg-primary/10 text-primary font-bold text-xs flex items-center justify-center border border-primary/20">
+                    {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                  </div>
+                )}
+                <span className="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-card" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold truncate text-foreground leading-tight">{user.fullName || 'User Profile'}</p>
+                <p className="text-[9px] text-primary font-bold uppercase tracking-wider mt-0.5">{user.role || 'Member'}</p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Navigation Items with Sliding Indicator */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto relative">
-          {navItems.map((item, idx) => (
+        {/* Navigation Items */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 mb-2">
+            Main Menu
+          </p>
+
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/dashboard'}
               onClick={() => setIsSidebarOpen(false)}
-              onMouseEnter={() => setHoveredIndex(idx)}
-              onMouseLeave={() => setHoveredIndex(null)}
-              className="relative flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-200 z-10 group"
+              className={({ isActive }) =>
+                `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
+                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                }`
+              }
             >
-              {({ isActive }) => {
-                const isSelected = isActive;
-                const isHovered = hoveredIndex === idx;
-
-                return (
-                  <>
-                    {/* Sliding Highlight Pill */}
-                    <AnimatePresence>
-                      {isSelected && (
-                        <motion.div
-                          layoutId="active-indicator"
-                          className="absolute inset-0 bg-primary rounded-xl z-[-1] shadow-md shadow-primary/15"
-                          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                        />
-                      )}
-                      {!isSelected && isHovered && (
-                        <motion.div
-                          layoutId="hover-indicator"
-                          className="absolute inset-0 bg-muted/60 rounded-xl z-[-2]"
-                          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                        />
-                      )}
-                    </AnimatePresence>
-
-                    <div className="flex items-center gap-3">
-                      <item.icon 
-                        size={18} 
-                        className={`transition-colors duration-200 ${
-                          isSelected 
-                            ? 'text-primary-foreground' 
-                            : 'text-muted-foreground group-hover:text-foreground'
-                        }`} 
-                      />
-                      <span className={isSelected ? 'text-primary-foreground font-semibold' : 'text-muted-foreground group-hover:text-foreground'}>
-                        {item.label}
-                      </span>
-                    </div>
-
-                    {item.badge && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold tracking-wider transition-colors duration-200 ${
-                        isSelected 
-                          ? 'bg-primary-foreground/20 text-primary-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                );
-              }}
+              {({ isActive }) => (
+                <>
+                  <item.icon 
+                    size={16} 
+                    className={`shrink-0 transition-colors ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} 
+                  />
+                  <span className="truncate">{item.label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
         {/* Sidebar Footer Operations */}
-        <div className="p-4 border-t border-border/55 mt-auto space-y-1.5">
+        <div className="p-3 border-t border-border space-y-1">
           <Link 
             to="/marketplace" 
-            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
           >
-            <ArrowLeft size={18} />
-            <span>Go to Marketplace</span>
+            <ArrowLeft size={15} />
+            <span>Marketplace</span>
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
           >
-            <LogOut size={18} />
+            <LogOut size={15} />
             <span>Log out</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* ── Main Content Area ─────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-[1600px] mx-auto flex flex-col min-w-0">
           <Outlet />
         </main>
       </div>
 
-      {/* Background Overlay for mobile sidebar */}
+      {/* ── Background Overlay for mobile sidebar ─────────────────────── */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-20 md:hidden"
+          className="fixed inset-0 bg-background/60 backdrop-blur-xs z-40 md:hidden cursor-pointer"
         />
       )}
     </div>

@@ -89,6 +89,42 @@ export class VerificationDocument {
   })
   resourceType: 'image' | 'raw' | 'video';
 
+  // ── Selfie (liveness / face-match reference) ────────────────────────────
+  // Captured alongside the ID document so a reviewer can compare the live
+  // selfie against the photo on the document. Same access rules as the
+  // document itself: NEVER expose selfiePublicId/selfieSecureUrl to the
+  // browser directly — stream through the audit-logged signed URL flow.
+  // hasSelfie is a denormalized flag so list/queue views can tell whether a
+  // selfie exists without selecting (and thus leaking) the storage refs.
+  @Prop({ type: Boolean, default: false, index: true })
+  hasSelfie: boolean;
+
+  @Prop({ type: String, default: null })
+  selfiePublicId: string | null;
+
+  @Prop({ type: String, default: null })
+  selfieAssetId: string | null;
+
+  @Prop({ type: Number, default: null })
+  selfieCloudinaryVersion: number | null;
+
+  // Stored for audit/reference only, same caveat as secureUrl above — it
+  // will 403 if accessed directly.
+  @Prop({ type: String, default: null })
+  selfieSecureUrl: string | null;
+
+  @Prop({ type: Number, default: null })
+  selfieFileSize: number | null;
+
+  @Prop({ type: Number, default: null })
+  selfieImageWidth: number | null;
+
+  @Prop({ type: Number, default: null })
+  selfieImageHeight: number | null;
+
+  @Prop({ type: Date, default: null })
+  selfieUploadedAt: Date | null;
+
   // ── File metadata ────────────────────────────────────────────────────────
   @Prop({ type: String, required: true })
   originalFilename: string;

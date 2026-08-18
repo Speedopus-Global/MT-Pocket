@@ -16,6 +16,19 @@ export interface DocumentUploadResult {
   imageHeight: number | null;
 }
 
+// Selfie is always an image (never a PDF like the ID document can be), so
+// there's no resourceType/fileHash — duplicate detection doesn't apply to
+// selfies the way it does to ID docs.
+export interface SelfieUploadResult {
+  publicId: string;
+  assetId: string;
+  secureUrl: string;
+  cloudinaryVersion: number;
+  fileSize: number;
+  imageWidth: number | null;
+  imageHeight: number | null;
+}
+
 @Injectable()
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
@@ -125,6 +138,48 @@ export class CloudinaryService {
       fileSize: result.bytes,
       fileHash,
       blurScore,
+      imageWidth: result.width ?? null,
+      imageHeight: result.height ?? null,
+    };
+  }
+
+  // ── KYC Selfie ──────────────────────────────────────────────────────────
+  // Same treatment as uploadDocument: private "authenticated" asset, never
+  // exposed to the client directly — always fetched through the backend's
+  // signed URL + audit-logged stream, same as the ID document itself.
+  async uploadSelfie(
+    buffer: Buffer,
+    mimeType: string,
+    userId: string,
+    version: number,
+  ): Promise<SelfieUploadResult> {
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `mtpocket/selfies/${userId}`,
+          public_id: `selfie_v${version}_${Date.now()}`,
+          resource_type: 'image',
+          type: 'authenticated',
+          image_metadata: true,
+        },
+        (err, res) => {
+          if (err || !res) return reject(err ?? new Error('Selfie upload failed'));
+          resolve(res);
+        },
+      );
+      streamifier.createReadStream(buffer).pipe(uploadStream);
+    });
+
+    this.logger.log(
+      `Selfie uploaded for user ${userId} v${version}: ${result.public_id} (${result.bytes} bytes)`,
+    );
+
+    return {
+      publicId: result.public_id,
+      assetId: result.asset_id,
+      secureUrl: result.secure_url,
+      cloudinaryVersion: result.version,
+      fileSize: result.bytes,
       imageWidth: result.width ?? null,
       imageHeight: result.height ?? null,
     };

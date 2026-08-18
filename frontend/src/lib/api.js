@@ -68,10 +68,11 @@ export const api = {
   getPublicProfile: (id, accessToken) => request(`/users/${id}/public`, { accessToken }),
  
   // ── Verification (user-facing) ────────────────────────────────────────────
-  // POST /verification/document — new versioned KYC upload
-  uploadVerificationDocument: ({ file, documentType }, accessToken) => {
+  // POST /verification/document — new versioned KYC upload (document + selfie)
+  uploadVerificationDocument: ({ file, selfie, documentType }, accessToken) => {
     const form = new FormData();
     form.append('file', file);
+    form.append('selfie', selfie);
     form.append('documentType', documentType);
     return requestMultipart('/verification/document', { method: 'POST', body: form, accessToken });
   },
@@ -90,6 +91,9 @@ export const api = {
   // GET /admin/verification/:id/file — streams blob; pass download=1 to force attachment
   adminVerifFile: (docId, accessToken, download = false) =>
     requestBlob(`/admin/verification/${docId}/file${download ? '?download=1' : ''}`, { accessToken }),
+  // GET /admin/verification/:id/selfie — streams the user's selfie photo
+  adminVerifSelfie: (docId, accessToken, download = false) =>
+    requestBlob(`/admin/verification/${docId}/selfie${download ? '?download=1' : ''}`, { accessToken }),
   // POST /admin/verification/:id/approve
   adminVerifApprove: (docId, accessToken) =>
     request(`/admin/verification/${docId}/approve`, { method: 'POST', accessToken }),
@@ -232,6 +236,3 @@ export const api = {
   updateSupportTicketStatus: (id, status, adminNotes, accessToken) =>
     request(`/support/admin/tickets/${id}/status`, { method: 'PATCH', body: { status, adminNotes }, accessToken }),
 };
-
-
- 

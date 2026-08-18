@@ -25,6 +25,8 @@ import {
   Car,
   Check,
   FileCheck,
+  RotateCcw,
+  Video,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 import InfoBanner from '../components/ui/InfoBanner';
@@ -962,7 +964,17 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
   const [error,        setError]        = useState('');
   const [dragOver,     setDragOver]     = useState(false);
 
-  const fileInputRef = useRef(null);
+  // ── Selfie capture state ────────────────────────────────────────────────
+  const [selfieFile,    setSelfieFile]    = useState(null);
+  const [selfiePreview, setSelfiePreview] = useState(null);
+  const [cameraOn,      setCameraOn]      = useState(false);
+  const [cameraError,   setCameraError]   = useState('');
+
+  const fileInputRef   = useRef(null);
+  const selfieInputRef = useRef(null);
+  const videoRef        = useRef(null);
+  const canvasRef       = useRef(null);
+  const streamRef        = useRef(null);
 
   const handleFileChange = (newFile) => {
     if (!newFile) return;
@@ -982,10 +994,11 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
   const submit = async (e) => {
     e.preventDefault();
     if (!file) { setError('Please select or drop a document file to upload'); return; }
+    if (!selfieFile) { setError('Please take or upload a selfie to continue'); return; }
     setSubmitting(true);
     setError('');
     try {
-      const result = await api.uploadVerificationDocument({ file, documentType }, accessToken);
+      const result = await api.uploadVerificationDocument({ file, selfie: selfieFile, documentType }, accessToken);
       onSubmitted(result);
     } catch (err) {
       setError(err.message || 'Upload failed — please check file size and format');
@@ -1007,6 +1020,90 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
     setPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // ── Selfie: live camera capture ─────────────────────────────────────────
+  const [videoReady, setVideoReady] = useState(false);
+
+  const startCamera = async () => {
+    setCameraError('');
+    setVideoReady(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCameraOn(true); // triggers the effect below, which attaches the stream once <video> is mounted
+    } catch (err) {
+      setCameraError('Could not access camera. You can upload a selfie photo instead.');
+    }
+  };
+
+  // Runs AFTER the <video> element has committed to the DOM (unlike a
+  // setTimeout(0) right after setCameraOn, which can fire before the
+  // element exists and silently leave srcObject unset).
+  useEffect(() => {
+    if (cameraOn && streamRef.current && videoRef.current) {
+      const video = videoRef.current;
+      video.srcObject = streamRef.current;
+      video.play?.().catch(() => {});
+    }
+  }, [cameraOn]);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCameraOn(false);
+    setVideoReady(false);
+  };
+
+  const captureSelfie = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    // videoWidth/videoHeight are 0 until the stream's first frame has
+    // actually loaded — capturing before that gives a 0×0 canvas and
+    // toBlob() silently returns null. Guard against it explicitly.
+    if (!video.videoWidth || !video.videoHeight) {
+      setCameraError('Camera is still starting up — give it a second and try again.');
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        setCameraError('Could not capture the photo — please try again.');
+        return;
+      }
+      const selfie = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setSelfieFile(selfie);
+      setSelfiePreview(URL.createObjectURL(selfie));
+      stopCamera();
+    }, 'image/jpeg', 0.92);
+  };
+
+  const handleSelfieFileChange = (newFile) => {
+    if (!newFile) return;
+    if (newFile.size > 5 * 1024 * 1024) {
+      setError('Selfie exceeds 5MB limit. Please select another photo.');
+      return;
+    }
+    setError('');
+    setSelfieFile(newFile);
+    setSelfiePreview(URL.createObjectURL(newFile));
+  };
+
+  const retakeSelfie = () => {
+    setSelfieFile(null);
+    setSelfiePreview(null);
+    if (selfieInputRef.current) selfieInputRef.current.value = '';
+  };
+
+  // Stop the camera if the form unmounts (e.g. modal closed) while it's on
+  useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
@@ -1099,6 +1196,98 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
         </div>
       </div>
 
+      {/* 3. Selfie Capture (Square with live camera preview) */}
+      <div>
+        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+          3. Take a Selfie
+        </label>
+
+        <input
+          ref={selfieInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="user"
+          onChange={(e) => handleSelfieFileChange(e.target.files?.[0] ?? null)}
+          className="hidden"
+        />
+        <canvas ref={canvasRef} className="hidden" />
+
+        {selfieFile ? (
+          <div className="flex items-center gap-3 p-2 bg-card rounded-md border border-border/80 text-left">
+            <img src={selfiePreview} alt="Selfie preview" className="w-12 h-12 object-cover rounded-full border border-border shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">{selfieFile.name}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{(selfieFile.size / (1024 * 1024)).toFixed(2)} MB • Ready</p>
+            </div>
+            <button
+              type="button"
+              onClick={retakeSelfie}
+              className="inline-flex items-center gap-1 p-1.5 px-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-[11px] font-semibold"
+              title="Retake selfie"
+            >
+              <RotateCcw size={13} /> Retake
+            </button>
+          </div>
+        ) : cameraOn ? (
+          <div className="rounded-lg border border-border/80 bg-background/40 p-3 flex flex-col items-center gap-3">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              onLoadedMetadata={() => setVideoReady(true)}
+              className="w-full max-w-[280px] aspect-square object-cover rounded-full border border-border scale-x-[-1] bg-muted"
+            />
+            {!videoReady && (
+              <p className="text-[11px] text-muted-foreground -mt-1">Starting camera…</p>
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={captureSelfie}
+                disabled={!videoReady}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {videoReady ? <Camera size={13} /> : <Loader2 size={13} className="animate-spin" />}
+                Capture
+              </button>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-md border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border-2 border-dashed border-border/80 bg-background/40 p-6 text-center">
+            <Camera size={32} className="mx-auto mb-2 text-muted-foreground" />
+            <p className="text-xs font-bold text-foreground mb-1">Take a live selfie for face match</p>
+            <p className="text-[11px] text-muted-foreground mb-3">Look straight at the camera in good lighting</p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={startCamera}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+              >
+                <Video size={13} /> Use Camera
+              </button>
+              <button
+                type="button"
+                onClick={() => selfieInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-md border border-border/80 bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+              >
+                <UploadCloud size={13} /> Upload Photo
+              </button>
+            </div>
+            {cameraError && (
+              <p className="text-[11px] text-destructive mt-2">{cameraError}</p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Verification Guidelines Box */}
       <div className="rounded-lg bg-muted/30 border border-border/60 p-3 text-[11px] text-muted-foreground space-y-1">
         <p className="font-bold text-foreground">Document Requirements:</p>
@@ -1107,6 +1296,8 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
           <li>All 4 corners visible</li>
           <li>No glare or blur</li>
           <li>Full name must match</li>
+          <li>Selfie face clearly visible</li>
+          <li>Matches document photo</li>
         </ul>
       </div>
 
@@ -1129,7 +1320,7 @@ function IdentityUploadForm({ accessToken, onSubmitted, onCancel }) {
         </button>
         <button
           type="submit"
-          disabled={submitting || !file}
+          disabled={submitting || !file || !selfieFile}
           className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
         >
           {submitting ? <Loader2 size={13} className="animate-spin" /> : <FileCheck size={13} />}

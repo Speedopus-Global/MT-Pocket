@@ -11,7 +11,7 @@ import {
   IdDocumentType,
 } from '../schemas/verification-document.schema';
 import { User, UserDocument } from '../../users/schemas/user.schema';
-import { CloudinaryService } from '../../cloudinary/cloudinary.service';
+import { CloudinaryService, SelfieUploadResult } from '../../cloudinary/cloudinary.service';
 import { DocumentAuditService, AuditContext } from './document-audit.service';
 import { ActorRole } from '../schemas/document-audit.schema';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -49,6 +49,7 @@ export class VerificationService {
     file: Express.Multer.File,
     documentType: IdDocumentType,
     ctx: AuditContext,
+    selfieFile?: Express.Multer.File,
   ) {
     const user = await this.userModel.findById(userId).lean();
     if (!user) throw new NotFoundException('User not found');
@@ -80,6 +81,19 @@ export class VerificationService {
       userId,
       nextVersion,
     );
+
+    // ── Upload selfie (if provided) ─────────────────────────────────────
+    // Optional at the service layer — VerificationController enforces
+    // whether it's actually required on the request.
+    let selfieUpload: SelfieUploadResult | null = null;
+    if (selfieFile) {
+      selfieUpload = await this.cloudinaryService.uploadSelfie(
+        selfieFile.buffer,
+        selfieFile.mimetype,
+        userId,
+        nextVersion,
+      );
+    }
 
     // ── Duplicate detection ─────────────────────────────────────────────
     const duplicate = await this.verificationModel
@@ -131,6 +145,15 @@ export class VerificationService {
       isCurrent: true,
       uploadedAt: new Date(),
       uploadedBy: new Types.ObjectId(userId),
+      hasSelfie: !!selfieUpload,
+      selfiePublicId: selfieUpload?.publicId ?? null,
+      selfieAssetId: selfieUpload?.assetId ?? null,
+      selfieCloudinaryVersion: selfieUpload?.cloudinaryVersion ?? null,
+      selfieSecureUrl: selfieUpload?.secureUrl ?? null,
+      selfieFileSize: selfieUpload?.fileSize ?? null,
+      selfieImageWidth: selfieUpload?.imageWidth ?? null,
+      selfieImageHeight: selfieUpload?.imageHeight ?? null,
+      selfieUploadedAt: selfieUpload ? new Date() : null,
       metadata: {
         qualityFlagged,
         isBlurry,
@@ -154,6 +177,13 @@ export class VerificationService {
       verificationId, userId, 'upload', userId, 'user',
       { ...ctx, metadata: { version: nextVersion, documentType, fileSize: upload.fileSize } },
     );
+
+    if (selfieUpload) {
+      await this.auditService.log(
+        verificationId, userId, 'selfie_upload', userId, 'user',
+        { ...ctx, metadata: { version: nextVersion, fileSize: selfieUpload.fileSize } },
+      );
+    }
 
     if (isDuplicate) {
       await this.auditService.log(
@@ -214,6 +244,7 @@ export class VerificationService {
       version: nextVersion,
       status: 'pending',
       qualityFlagged,
+      hasSelfie: !!selfieUpload,
     };
   }
 
@@ -473,6 +504,57 @@ export class VerificationService {
     };
   }
 
+  // ── STREAM SELFIE (admin view/download) ─────────────────────────────────
+  async getSelfieFile(
+    verificationId: string,
+    adminId: string,
+    adminRole: ActorRole,
+    action: 'viewed' | 'downloaded',
+    ctx: AuditContext,
+  ): Promise<{ buffer: Buffer; contentType: string; filename: string }> {
+    const doc = await this.verificationModel
+      .findById(verificationId)
+      .select('selfiePublicId hasSelfie documentType userId selfieCloudinaryVersion')
+      .lean();
+
+    if (!doc) throw new NotFoundException('Verification document not found');
+    if (!doc.hasSelfie || !doc.selfiePublicId) {
+      throw new NotFoundException('No selfie was submitted with this document');
+    }
+
+    const fetchUrl = this.cloudinaryService.getSignedFetchUrl(doc.selfiePublicId, 'image');
+
+    // 'selfie_view' / 'selfie_download' match the AuditAction enum
+    await this.auditService.log(
+      verificationId, doc.userId.toString(),
+      action === 'downloaded' ? 'selfie_download' : 'selfie_view',
+      adminId, adminRole,
+      { ...ctx, metadata: { publicId: doc.selfiePublicId } },
+    );
+
+    // Every signed URL generation is auditable, same as the document flow
+    await this.auditService.log(
+      verificationId, doc.userId.toString(), 'signed_url',
+      adminId, adminRole,
+      { metadata: { purpose: action, target: 'selfie' } },
+    );
+
+    const response = await fetch(fetchUrl);
+    if (!response.ok) {
+      throw new BadRequestException('Could not retrieve selfie from storage');
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const ext = contentType.split('/')[1] || 'jpg';
+
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      contentType,
+      filename: `selfie-${doc.documentType}-${doc.userId}-v${doc.selfieCloudinaryVersion}.${ext}`,
+    };
+  }
+
   // ── QUEUE ───────────────────────────────────────────────────────────────
   async getPendingQueue(status: DocStatus = 'pending', page = 1, limit = 20) {
     const query = { status, isCurrent: true };
@@ -483,7 +565,8 @@ export class VerificationService {
         .sort({ uploadedAt: 1 }) // FIFO — oldest first
         .skip((page - 1) * limit)
         .limit(limit)
-        .select('-secureUrl -publicId') // never expose these in list views
+        // never expose storage refs in list views — hasSelfie stays (it's a flag, not a ref)
+        .select('-secureUrl -publicId -selfieSecureUrl -selfiePublicId -selfieAssetId')
         .lean(),
       this.verificationModel.countDocuments(query),
     ]);
@@ -495,7 +578,7 @@ export class VerificationService {
   async getMyStatus(userId: string) {
     const doc = await this.verificationModel
       .findOne({ userId: new Types.ObjectId(userId), isCurrent: true })
-      .select('status version documentType uploadedAt rejectionReason reuploadReason metadata')
+      .select('status version documentType uploadedAt rejectionReason reuploadReason metadata hasSelfie')
       .lean();
     return doc ?? { status: 'none' };
   }
@@ -504,7 +587,8 @@ export class VerificationService {
   async getVersionHistory(userId: string) {
     return this.verificationModel
       .find({ userId: new Types.ObjectId(userId) })
-      .select('-secureUrl -publicId -assetId -fileHash') // no internal storage refs
+      // no internal storage refs — hasSelfie stays, it's a flag, not a ref
+      .select('-secureUrl -publicId -assetId -fileHash -selfieSecureUrl -selfiePublicId -selfieAssetId')
       .sort({ version: -1 })
       .lean();
   }

@@ -5,7 +5,10 @@ export type DocumentAuditDocument = HydratedDocument<DocumentAudit>;
 
 export type AuditAction =
   | 'upload'              // user submitted a document
+  | 'selfie_upload'       // user submitted a selfie alongside the document
   | 'view'               // admin opened/viewed the document
+  | 'selfie_view'        // admin opened/viewed the selfie
+  | 'selfie_download'    // admin explicitly downloaded the selfie
   | 'download'           // admin explicitly downloaded the file
   | 'signed_url'         // a signed URL was generated (who, when, expires when)
   | 'review_start'       // admin claimed the document for review
@@ -41,7 +44,8 @@ export class DocumentAudit {
   @Prop({
     type: String,
     enum: [
-      'upload', 'view', 'download', 'signed_url',
+      'upload', 'selfie_upload', 'view', 'selfie_view',
+      'selfie_download', 'download', 'signed_url',
       'review_start', 'approve', 'reject', 'reupload_request',
       'archive', 'ocr_run', 'quality_check',
       'duplicate_detected', 'quality_flagged',
