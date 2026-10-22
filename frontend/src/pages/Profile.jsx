@@ -26,7 +26,9 @@ import {
   XCircle,
   HelpCircle,
   Undo,
-  Camera
+  Camera,
+  ZoomIn,
+  AlertCircle,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 import InfoBanner from '../components/ui/InfoBanner';
@@ -75,6 +77,9 @@ export default function Profile() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
+
+  // Lightbox state
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   // Error/Success state
   const [actionError, setActionError] = useState('');
@@ -405,7 +410,11 @@ export default function Profile() {
 
                         {/* Product / Collateral Photo Preview */}
                         {loan.imageUrl && (
-                          <div className="mb-4 relative rounded-xl overflow-hidden border border-border/80 h-40 w-full bg-muted/30">
+                          <div
+                            className="mb-4 relative rounded-xl overflow-hidden border border-border/80 h-40 w-full bg-muted/30 cursor-zoom-in"
+                            onClick={(e) => { e.stopPropagation(); setLightboxUrl(loan.imageUrl); }}
+                            title="Click to view full size"
+                          >
                             <img
                               src={loan.imageUrl}
                               alt="Product / Collateral"
@@ -413,6 +422,9 @@ export default function Profile() {
                             />
                             <span className="absolute bottom-2 left-2 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
                               <Camera size={11} /> Product Attached
+                            </span>
+                            <span className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-lg">
+                              <ZoomIn size={13} />
                             </span>
                           </div>
                         )}
@@ -592,6 +604,38 @@ export default function Profile() {
           </motion.div>
         )}
       </div>
+
+      {/* PHOTO LIGHTBOX */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            key="profile-lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <motion.img
+              src={lightboxUrl}
+              alt="Product / Collateral"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              className="max-w-full max-h-[88vh] rounded-2xl shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+            <p className="absolute bottom-5 text-white/60 text-xs font-semibold tracking-wider">Click anywhere to close</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* CREATE LOAN REQUEST MODAL */}
       <AnimatePresence>
@@ -823,33 +867,48 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel, userRole }) {
           MT Pocket never handles your money — all transactions occur directly between verified peers.
         </InfoBanner>
 
-        {/* 2-Way Listing Type Selector */}
+        {/* 2-Way Listing Type Selector — locked to role */}
         <div>
           <label className={labelCls}>Listing Type *</label>
-          <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 rounded-2xl border border-border/70">
-            <button
-              type="button"
-              onClick={() => set('listingType', 'borrow')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                form.listingType === 'borrow'
-                  ? 'bg-card text-emerald-600 dark:text-emerald-400 shadow-xs border border-emerald-500/30 font-extrabold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <span>Borrow Request (Need Funds)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => set('listingType', 'lend')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                form.listingType === 'lend'
-                  ? 'bg-card text-blue-600 dark:text-blue-400 shadow-xs border border-blue-500/30 font-extrabold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <span>Lender Offer (Provide Capital)</span>
-            </button>
-          </div>
+          {userRole === 'both' ? (
+            // Both roles: can choose freely
+            <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 rounded-2xl border border-border/70">
+              <button
+                type="button"
+                onClick={() => set('listingType', 'borrow')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  form.listingType === 'borrow'
+                    ? 'bg-card text-emerald-600 dark:text-emerald-400 shadow-xs border border-emerald-500/30 font-extrabold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>Borrow Request (Need Funds)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => set('listingType', 'lend')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  form.listingType === 'lend'
+                    ? 'bg-card text-blue-600 dark:text-blue-400 shadow-xs border border-blue-500/30 font-extrabold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>Lender Offer (Provide Capital)</span>
+              </button>
+            </div>
+          ) : userRole === 'lender' ? (
+            // Lender only
+            <div className="p-3 rounded-2xl border border-blue-500/30 bg-blue-500/5 text-center">
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Lender Offer (Provide Capital)</span>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Lender accounts can only post lending offers.</p>
+            </div>
+          ) : (
+            // Borrower only (default)
+            <div className="p-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 text-center">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Borrow Request (Need Funds)</span>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Borrower accounts can only post loan requests.</p>
+            </div>
+          )}
         </div>
 
         {/* Amount */}

@@ -32,6 +32,7 @@ import {
   Search,
   ExternalLink,
   Camera,
+  ZoomIn,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 
@@ -78,6 +79,9 @@ export default function Dashboard() {
 
   // Modal profile preview state
   const [previewContext, setPreviewContext] = useState(null);
+
+  // Photo lightbox
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   // Offer dialog state
   const [pendingAccept, setPendingAccept] = useState(null); // { loanRequestId, offerId }
@@ -338,7 +342,11 @@ export default function Dashboard() {
 
                         {/* Product Photo preview if attached */}
                         {o.imageUrl && (
-                          <div className="mb-3 relative rounded-lg overflow-hidden border border-border/80 h-28 w-full bg-muted/20">
+                          <div
+                            className="mb-3 relative rounded-lg overflow-hidden border border-border/80 h-28 w-full bg-muted/20 cursor-zoom-in"
+                            onClick={() => setLightboxUrl(o.imageUrl)}
+                            title="Click to view full size"
+                          >
                             <img
                               src={o.imageUrl}
                               alt="Product / Collateral"
@@ -346,6 +354,9 @@ export default function Dashboard() {
                             />
                             <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[9px] font-bold px-1.5 py-0.5 rounded border border-border/60 text-foreground flex items-center gap-1">
                               <Camera size={10} /> Product Attached
+                            </span>
+                            <span className="absolute top-1.5 right-1.5 bg-black/50 text-white p-0.5 rounded">
+                              <ZoomIn size={11} />
                             </span>
                           </div>
                         )}
@@ -450,7 +461,11 @@ export default function Dashboard() {
 
                         {/* Product Photo preview if attached */}
                         {o.loanRequest?.imageUrl && (
-                          <div className="mb-3 relative rounded-lg overflow-hidden border border-border/80 h-28 w-full bg-muted/20">
+                          <div
+                            className="mb-3 relative rounded-lg overflow-hidden border border-border/80 h-28 w-full bg-muted/20 cursor-zoom-in"
+                            onClick={() => setLightboxUrl(o.loanRequest.imageUrl)}
+                            title="Click to view full size"
+                          >
                             <img
                               src={o.loanRequest.imageUrl}
                               alt="Product / Collateral"
@@ -458,6 +473,9 @@ export default function Dashboard() {
                             />
                             <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[9px] font-bold px-1.5 py-0.5 rounded border border-border/60 text-foreground flex items-center gap-1">
                               <Camera size={10} /> Product Attached
+                            </span>
+                            <span className="absolute top-1.5 right-1.5 bg-black/50 text-white p-0.5 rounded">
+                              <ZoomIn size={11} />
                             </span>
                           </div>
                         )}
@@ -570,6 +588,38 @@ export default function Dashboard() {
         }}
         onCancel={() => setPendingReject(null)}
       />
+
+      {/* PHOTO LIGHTBOX */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            key="dashboard-lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <motion.img
+              src={lightboxUrl}
+              alt="Product / Collateral"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              className="max-w-full max-h-[88vh] rounded-2xl shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+            <p className="absolute bottom-5 text-white/60 text-xs font-semibold tracking-wider">Click anywhere to close</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

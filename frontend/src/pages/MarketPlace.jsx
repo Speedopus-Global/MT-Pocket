@@ -56,6 +56,7 @@ import {
   MessageSquare,
   Send,
   Camera,
+  ZoomIn,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
@@ -109,6 +110,9 @@ export default function Marketplace() {
 
   const [sentOfferIds, setSentOfferIds] = useState(new Set());
   const [sentOfferIdsLoading, setSentOfferIdsLoading] = useState(false);
+
+  // Lightbox for product photo zoom
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const activeFilterCount =
     selectedCategories.length +
@@ -699,6 +703,7 @@ export default function Marketplace() {
                     onMessage={() => requestMessage(loan)}
                     onSafety={() => requestSafety(loan)}
                     onProfile={() => requestProfile(loan.borrowerId?._id)}
+                    onPhotoClick={(url) => setLightboxUrl(url)}
                   />
                 </motion.div>
               ))}
@@ -826,6 +831,38 @@ export default function Marketplace() {
         )}
       </AnimatePresence>
 
+      {/* ── LIGHTBOX ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            key="marketplace-lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <motion.img
+              src={lightboxUrl}
+              alt="Product / Collateral"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              className="max-w-full max-h-[88vh] rounded-2xl shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+            <p className="absolute bottom-5 text-white/60 text-xs font-semibold tracking-wider">Click anywhere to close</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <LoginPromptModal
         open={!!loginPrompt}
         message={loginPrompt}
@@ -848,6 +885,7 @@ function LoanItem({
   onMessage,
   onSafety,
   onProfile,
+  onPhotoClick,
 }) {
   const isLenderOffer = loan.listingType === 'lend';
   const fullLocation = [loan.city, loan.state].filter(Boolean).join(', ') || 'India';
@@ -912,7 +950,11 @@ function LoanItem({
 
         {/* Product / Collateral Photo Preview */}
         {loan.imageUrl && (
-          <div className="mt-3.5 relative rounded-2xl overflow-hidden border border-border/80 h-44 w-full bg-muted/30">
+          <div
+            className="mt-3.5 relative rounded-2xl overflow-hidden border border-border/80 h-44 w-full bg-muted/30 cursor-zoom-in"
+            onClick={(e) => { e.stopPropagation(); onPhotoClick?.(loan.imageUrl); }}
+            title="Click to view full size"
+          >
             <img
               src={loan.imageUrl}
               alt="Product / Collateral"
@@ -920,6 +962,9 @@ function LoanItem({
             />
             <span className="absolute bottom-2 left-2 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
               <Camera size={11} /> Product Attached
+            </span>
+            <span className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-lg">
+              <ZoomIn size={13} />
             </span>
           </div>
         )}

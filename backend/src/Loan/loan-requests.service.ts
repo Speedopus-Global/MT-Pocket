@@ -21,7 +21,15 @@ export class LoanRequestsService {
   ) {}
 
   // ── Borrower / Lender: create a request or offer ─────────────────────────
-  async create(borrowerId: string, dto: CreateLoanRequestDto) {
+  async create(borrowerId: string, dto: CreateLoanRequestDto, userRole?: string) {
+    const effectiveListingType = dto.listingType || (userRole === 'lender' ? 'lend' : 'borrow');
+    if (userRole === 'borrower' && effectiveListingType === 'lend') {
+      throw new ForbiddenException('Borrower accounts can only post borrow requests (funds needed)');
+    }
+    if (userRole === 'lender' && effectiveListingType === 'borrow') {
+      throw new ForbiddenException('Lender accounts can only post lender offers (capital available)');
+    }
+
     let uploadedImageUrl: string | null = null;
     if (dto.imageUrl) {
       if (dto.imageUrl.startsWith('data:image/')) {
@@ -39,7 +47,7 @@ export class LoanRequestsService {
 
     const doc: Partial<LoanRequest> = {
       borrowerId:        new Types.ObjectId(borrowerId),
-      listingType:       (dto.listingType as any) ?? 'borrow',
+      listingType:       (effectiveListingType as any) ?? 'borrow',
       amount:            dto.amount,
       category:          dto.category as any,
       description:       dto.description,
@@ -67,13 +75,21 @@ export class LoanRequestsService {
   }
 
   // ── Borrower / Lender: edit own listing ──────────────────────────────────
-  async update(requestId: string, borrowerId: string, dto: Partial<CreateLoanRequestDto>) {
+  async update(requestId: string, borrowerId: string, dto: Partial<CreateLoanRequestDto>, userRole?: string) {
     const req = await this.loanModel.findById(requestId);
     if (!req) throw new NotFoundException('Loan request not found');
     if (req.borrowerId.toString() !== borrowerId) throw new ForbiddenException('Not your request');
     if (req.status !== 'open') throw new BadRequestException('Only open requests can be edited');
 
-    if (dto.listingType) req.listingType = dto.listingType as any;
+    if (dto.listingType) {
+      if (userRole === 'borrower' && dto.listingType === 'lend') {
+        throw new ForbiddenException('Borrowers cannot switch listings to lender offers');
+      }
+      if (userRole === 'lender' && dto.listingType === 'borrow') {
+        throw new ForbiddenException('Lenders cannot switch listings to borrow requests');
+      }
+      req.listingType = dto.listingType as any;
+    }
     if (dto.amount)      req.amount      = dto.amount;
     if (dto.category)    req.category    = dto.category as any;
     if (dto.description) req.description = dto.description;
@@ -127,7 +143,11 @@ export class LoanRequestsService {
   }
 
   // ── Lender: send offer on a request ──────────────────────────────────────
-  async sendOffer(lenderId: string, dto: SendOfferDto) {
+  async sendOffer(lenderId: string, dto: SendOfferDto, userRole?: string) {
+    if (userRole === 'borrower') {
+      throw new ForbiddenException('Borrower accounts cannot send loan offers. Only lender accounts can offer capital.');
+    }
+
     const req = await this.loanModel.findById(dto.loanRequestId);
     if (!req) throw new NotFoundException('Loan request not found');
     if (req.status !== 'open') throw new BadRequestException('This request is no longer open');

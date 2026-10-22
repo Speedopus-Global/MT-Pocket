@@ -52,7 +52,8 @@ export class LoanRequestsController {
   @Post()
   create(@Req() req: Request, @Body() dto: CreateLoanRequestDto) {
     const borrowerId = (req.user as any).sub;
-    return this.loanService.create(borrowerId, dto);
+    const userRole = (req.user as any).role;
+    return this.loanService.create(borrowerId, dto, userRole);
   }
 
   @UseGuards(JwtAccessGuard)
@@ -63,7 +64,8 @@ export class LoanRequestsController {
     @Body() dto: CreateLoanRequestDto,
   ) {
     const borrowerId = (req.user as any).sub;
-    return this.loanService.update(id, borrowerId, dto);
+    const userRole = (req.user as any).role;
+    return this.loanService.update(id, borrowerId, dto, userRole);
   }
 
   @UseGuards(JwtAccessGuard)
@@ -121,6 +123,7 @@ export class LoanRequestsController {
   @Post('offer')
   sendOffer(@Req() req: Request, @Body() dto: SendOfferDto) {
     const lenderId = (req.user as any).sub;
-    return this.loanService.sendOffer(lenderId, dto);
+    const userRole = (req.user as any).role;
+    return this.loanService.sendOffer(lenderId, dto, userRole);
   }
 }
