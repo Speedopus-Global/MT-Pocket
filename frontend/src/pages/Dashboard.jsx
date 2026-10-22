@@ -30,7 +30,8 @@ import {
   HelpCircle,
   CheckCircle,
   Search,
-  ExternalLink
+  ExternalLink,
+  Camera,
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 
@@ -335,6 +336,20 @@ export default function Dashboard() {
                           </span>
                         </div>
 
+                        {/* Product Photo preview if attached */}
+                        {o.imageUrl && (
+                          <div className="mb-3 relative rounded-lg overflow-hidden border border-border/80 h-28 w-full bg-muted/20">
+                            <img
+                              src={o.imageUrl}
+                              alt="Product / Collateral"
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[9px] font-bold px-1.5 py-0.5 rounded border border-border/60 text-foreground flex items-center gap-1">
+                              <Camera size={10} /> Product Attached
+                            </span>
+                          </div>
+                        )}
+
                         {/* Middle body */}
                         <div className="space-y-1 text-xs font-medium bg-card p-3 rounded-lg border border-border/50 mb-3">
                           <div className="flex justify-between">
@@ -432,6 +447,20 @@ export default function Dashboard() {
                             {o.loanRequest.status}
                           </span>
                         </div>
+
+                        {/* Product Photo preview if attached */}
+                        {o.loanRequest?.imageUrl && (
+                          <div className="mb-3 relative rounded-lg overflow-hidden border border-border/80 h-28 w-full bg-muted/20">
+                            <img
+                              src={o.loanRequest.imageUrl}
+                              alt="Product / Collateral"
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[9px] font-bold px-1.5 py-0.5 rounded border border-border/60 text-foreground flex items-center gap-1">
+                              <Camera size={10} /> Product Attached
+                            </span>
+                          </div>
+                        )}
 
                         {/* Details */}
                         <div className="space-y-1 text-xs font-medium bg-card p-3 rounded-lg border border-border/50 mb-3">

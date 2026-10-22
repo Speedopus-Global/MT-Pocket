@@ -29,6 +29,7 @@ export default function Navbar() {
         logo={logo}
         logoAlt="MT Pocket"
         items={NAV_ITEMS}
+        logoHref={user ? '/dashboard' : '/'}
         activeHref={`${location.pathname}${location.hash}`}
       />
     </>

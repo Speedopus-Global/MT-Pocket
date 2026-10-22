@@ -4,6 +4,7 @@ import Layout from './components/layout/layout.jsx';
 import DashboardLayout from './components/layout/DashboardLayout.jsx';
 import RequireAuth from './components/guards/RequireAuth.jsx';
 import RequireAdmin from './components/guards/RequireAdmin.jsx';
+import ScrollToTop from './components/ScrollToTop.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -30,6 +31,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <div className="fixed bottom-4 right-4 z-[1001]">
           <ThemeToggle />
         </div>

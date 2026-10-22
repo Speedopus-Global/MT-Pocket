@@ -31,6 +31,10 @@ export class CreateLoanRequestDto {
   description: string;
 
   @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)

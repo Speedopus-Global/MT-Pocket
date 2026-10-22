@@ -35,6 +35,9 @@ export class LoanRequest {
   @Prop({ type: String, required: true, maxlength: 2000 })
   description: string;
 
+  @Prop({ type: String, default: null })
+  imageUrl: string | null; // Attached photo of product or collateral
+
   @Prop({ type: Number, default: null })
   interestRateHint: number | null; // borrower's suggested rate; never enforced
 

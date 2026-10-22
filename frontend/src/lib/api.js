@@ -23,7 +23,6 @@ async function request(path, { method = 'GET', body, accessToken } = {}) {
   return data;
 }
 
-
 async function requestMultipart(path, { method = 'POST', body, accessToken } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -258,3 +257,5 @@ export const api = {
   updateSupportTicketStatus: (id, status, adminNotes, accessToken) =>
     request(`/support/admin/tickets/${id}/status`, { method: 'PATCH', body: { status, adminNotes }, accessToken }),
 };
+
+

@@ -55,6 +55,7 @@ import {
   Shield,
   MessageSquare,
   Send,
+  Camera,
 } from 'lucide-react';
 
 const LOAN_CATEGORIES = [
@@ -909,6 +910,20 @@ function LoanItem({
           </p>
         </div>
 
+        {/* Product / Collateral Photo Preview */}
+        {loan.imageUrl && (
+          <div className="mt-3.5 relative rounded-2xl overflow-hidden border border-border/80 h-44 w-full bg-muted/30">
+            <img
+              src={loan.imageUrl}
+              alt="Product / Collateral"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <span className="absolute bottom-2 left-2 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
+              <Camera size={11} /> Product Attached
+            </span>
+          </div>
+        )}
+
         {/* Borrower / Lender Profile Information Bar */}
         {loan.borrowerId?._id && (
           <button
@@ -1108,6 +1123,20 @@ function OfferForm({ loan, accessToken, onSent }) {
         <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground leading-relaxed">
           Offering capital funding on a <strong className="text-foreground font-bold">₹{Number(loan.amount).toLocaleString('en-IN')}</strong> loan request.
         </div>
+
+        {/* Product preview in offer form */}
+        {loan.imageUrl && (
+          <div className="relative rounded-xl overflow-hidden border border-border/70 h-32 w-full bg-muted/20">
+            <img
+              src={loan.imageUrl}
+              alt="Product / Collateral"
+              className="w-full h-full object-cover"
+            />
+            <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
+              <Camera size={11} /> Attached Product
+            </span>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-foreground block">
@@ -1628,6 +1657,20 @@ function InquiryModal({ loan, accessToken, onClose, onSent }) {
             </div>
             <p className="text-muted-foreground text-[11px] line-clamp-1">{loan.description || loan.category}</p>
           </div>
+
+          {/* Product preview in inquiry modal */}
+          {loan.imageUrl && (
+            <div className="relative rounded-xl overflow-hidden border border-border/70 h-28 w-full bg-muted/20">
+              <img
+                src={loan.imageUrl}
+                alt="Product / Collateral"
+                className="w-full h-full object-cover"
+              />
+              <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
+                <Camera size={11} /> Attached Product
+              </span>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-foreground block">

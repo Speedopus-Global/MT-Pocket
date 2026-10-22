@@ -7,6 +7,7 @@ const PillNav = ({
   logoAlt = 'Logo',
   items,
   activeHref,
+  logoHref,
   className = '',
   ease = 'power3.easeOut',
   baseColor = 'var(--primary)',
@@ -232,9 +233,9 @@ const PillNav = ({
         aria-label="Primary"
         style={cssVars}
       >
-        {isRouterLink(items?.[0]?.href) ? (
+        {isRouterLink(logoHref || items?.[0]?.href) ? (
           <Link
-            to={items[0].href}
+            to={logoHref || items[0].href}
             aria-label="Home"
             onMouseEnter={handleLogoEnter}
             role="menuitem"
@@ -252,7 +253,7 @@ const PillNav = ({
           </Link>
         ) : (
           <a
-            href={items?.[0]?.href || '#'}
+            href={logoHref || items?.[0]?.href || '#'}
             aria-label="Home"
             onMouseEnter={handleLogoEnter}
             ref={el => {

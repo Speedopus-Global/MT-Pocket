@@ -1,29 +1,49 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { LoanRequest, LoanRequestDocument } from './schemas/loan-request.schema';
 import { CreateLoanRequestDto, SearchLoanRequestsDto, SendOfferDto } from './dto/loan-request.dto';
 import { BlocksService } from '../Block/Block.service';
 import { NotificationsService } from '../notifications/notifications.service'; // adjust to your actual path
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 const DEFAULT_RADIUS_KM = 25;
 
 @Injectable()
 export class LoanRequestsService {
+  private readonly logger = new Logger(LoanRequestsService.name);
+
   constructor(
     @InjectModel(LoanRequest.name) private loanModel: Model<LoanRequestDocument>,
     private readonly blocksService: BlocksService,
     private readonly notificationsService: NotificationsService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   // ── Borrower / Lender: create a request or offer ─────────────────────────
   async create(borrowerId: string, dto: CreateLoanRequestDto) {
+    let uploadedImageUrl: string | null = null;
+    if (dto.imageUrl) {
+      if (dto.imageUrl.startsWith('data:image/')) {
+        try {
+          const res = await this.cloudinaryService.uploadProductPhoto(dto.imageUrl);
+          uploadedImageUrl = res.secure_url;
+        } catch (e) {
+          this.logger.error('Failed to upload product photo to Cloudinary, falling back to raw payload', e);
+          uploadedImageUrl = dto.imageUrl;
+        }
+      } else {
+        uploadedImageUrl = dto.imageUrl;
+      }
+    }
+
     const doc: Partial<LoanRequest> = {
       borrowerId:        new Types.ObjectId(borrowerId),
       listingType:       (dto.listingType as any) ?? 'borrow',
       amount:            dto.amount,
       category:          dto.category as any,
       description:       dto.description,
+      imageUrl:          uploadedImageUrl,
       interestRateHint:  dto.interestRateHint ?? null,
       durationDays:      dto.durationDays     ?? null,
       city:              dto.city             ?? null,
@@ -61,6 +81,19 @@ export class LoanRequestsService {
     if (dto.state)       req.state       = dto.state;
     if (dto.interestRateHint !== undefined) req.interestRateHint = dto.interestRateHint;
     if (dto.durationDays     !== undefined) req.durationDays     = dto.durationDays;
+    if (dto.imageUrl !== undefined) {
+      if (dto.imageUrl && dto.imageUrl.startsWith('data:image/')) {
+        try {
+          const res = await this.cloudinaryService.uploadProductPhoto(dto.imageUrl);
+          req.imageUrl = res.secure_url;
+        } catch (e) {
+          this.logger.error('Failed to upload product photo to Cloudinary, falling back', e);
+          req.imageUrl = dto.imageUrl;
+        }
+      } else {
+        req.imageUrl = dto.imageUrl || null;
+      }
+    }
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       req.location = { type: 'Point', coordinates: [dto.longitude!, dto.latitude!] };
     }
@@ -253,6 +286,7 @@ export class LoanRequestsService {
           amount:            req.amount,
           category:          req.category,
           description:       req.description,
+          imageUrl:          req.imageUrl,
           borrower:          req.borrowerId,
         })),
     );

@@ -2,8 +2,10 @@
 
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Footer() {
+  const { user } = useAuth();
   const year = new Date().getFullYear();
 
   return (
@@ -11,7 +13,7 @@ export default function Footer() {
       <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
         <div className="grid gap-8 sm:gap-10 lg:gap-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <div className="sm:col-span-2">
-            <Link to="/" className="group inline-block hover-line text-primary pb-1">
+            <Link to={user ? "/dashboard" : "/"} className="group inline-block hover-line text-primary pb-1">
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                 MT POCKET
               </h2>

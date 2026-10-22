@@ -37,7 +37,7 @@ export default function DashboardLayout() {
       
       {/* ── Mobile Header Bar ─────────────────────────────────────────── */}
       <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-sidebar/95 backdrop-blur-md border-b border-border">
-        <Link to="/" className="flex items-center gap-2.5 cursor-pointer">
+        <Link to="/dashboard" className="flex items-center gap-2.5 cursor-pointer">
           <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-2xs shrink-0">
             <MtPocketLogo className="w-5 h-5" />
           </div>
@@ -64,7 +64,7 @@ export default function DashboardLayout() {
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 cursor-pointer">
+          <Link to="/dashboard" className="flex items-center gap-2.5 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-2xs shrink-0">
               <MtPocketLogo className="w-5 h-5" />
             </div>

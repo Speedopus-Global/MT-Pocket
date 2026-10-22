@@ -6,6 +6,7 @@ import { LoanRequestsService } from './loan-requests.service';
 import { LoanRequestsController } from './loan-request.controller';
 import { BlocksModule } from 'src/Block/block.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { FullyVerifiedGuard } from '../auth/guards/fully-verified.guard';
 
 @Module({
@@ -16,6 +17,7 @@ import { FullyVerifiedGuard } from '../auth/guards/fully-verified.guard';
     ]),
     BlocksModule,
     NotificationsModule,
+    CloudinaryModule,
   ],
   controllers: [LoanRequestsController],
   providers:   [LoanRequestsService, FullyVerifiedGuard],

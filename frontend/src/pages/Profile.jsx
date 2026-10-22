@@ -25,7 +25,8 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
-  Undo
+  Undo,
+  Camera
 } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 import InfoBanner from '../components/ui/InfoBanner';
@@ -402,6 +403,20 @@ export default function Profile() {
                           {loan.description}
                         </p>
 
+                        {/* Product / Collateral Photo Preview */}
+                        {loan.imageUrl && (
+                          <div className="mb-4 relative rounded-xl overflow-hidden border border-border/80 h-40 w-full bg-muted/30">
+                            <img
+                              src={loan.imageUrl}
+                              alt="Product / Collateral"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <span className="absolute bottom-2 left-2 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
+                              <Camera size={11} /> Product Attached
+                            </span>
+                          </div>
+                        )}
+
                         <Separator className="my-4" />
 
                         {/* Details row */}
@@ -703,6 +718,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel, userRole }) {
     amount: loan?.amount || '',
     category: loan?.category || 'personal',
     description: loan?.description || '',
+    imageUrl: loan?.imageUrl || '',
     interestRateHint: loan?.interestRateHint || '',
     durationDays: loan?.durationDays || '',
     city: loan?.city || '',
@@ -719,6 +735,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel, userRole }) {
         amount: loan.amount || '',
         category: loan.category || 'personal',
         description: loan.description || '',
+        imageUrl: loan.imageUrl || '',
         interestRateHint: loan.interestRateHint || '',
         durationDays: loan.durationDays || '',
         city: loan.city || '',
@@ -728,6 +745,24 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel, userRole }) {
   }, [loan, userRole]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Product photo must be under 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      set('imageUrl', reader.result);
+      setError('');
+    };
+    reader.onerror = () => {
+      setError('Failed to read image file');
+    };
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -743,6 +778,7 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel, userRole }) {
         amount: Number(form.amount),
         category: form.category,
         description: form.description.trim(),
+        imageUrl: form.imageUrl || undefined,
         interestRateHint: form.interestRateHint ? Number(form.interestRateHint) : undefined,
         durationDays: form.durationDays ? Number(form.durationDays) : undefined,
         city: form.city.trim() || undefined,
@@ -870,6 +906,58 @@ function LoanRequestForm({ accessToken, loan, onCreated, onCancel, userRole }) {
             className={`${inputCls} resize-none`}
           />
           <p className="text-[10px] text-muted-foreground mt-1 text-right">{form.description.length}/2000</p>
+        </div>
+
+        {/* Product / Collateral Photo Upload */}
+        <div>
+          <label className={labelCls}>Product / Collateral Photo (Optional)</label>
+          {form.imageUrl ? (
+            <div className="relative rounded-2xl overflow-hidden border border-border/80 bg-muted/20 p-2.5">
+              <div className="relative h-44 sm:h-52 w-full rounded-xl overflow-hidden bg-background flex items-center justify-center border border-border/50">
+                <img
+                  src={form.imageUrl}
+                  alt="Product preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => set('imageUrl', '')}
+                  className="absolute top-2.5 right-2.5 p-2 rounded-full bg-destructive/90 text-white hover:bg-destructive shadow-lg transition-transform hover:scale-105 cursor-pointer"
+                  title="Remove photo"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between mt-2 px-1 text-xs">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <CheckCircle size={13} /> Photo ready to upload
+                </span>
+                <label className="text-primary hover:underline font-bold cursor-pointer">
+                  Change photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-border/80 hover:border-primary/50 hover:bg-primary/[0.02] rounded-2xl p-5 sm:p-6 transition-all cursor-pointer group">
+              <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Camera size={22} />
+              </div>
+              <span className="text-xs sm:text-sm font-bold text-foreground">Attach Product / Collateral Photo</span>
+              <span className="text-[11px] text-muted-foreground mt-0.5">Click or tap to upload (PNG, JPG, WEBP up to 5MB)</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+            </label>
+          )}
         </div>
 
         {/* Interest rate & duration */}

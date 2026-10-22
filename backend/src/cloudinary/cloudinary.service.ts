@@ -47,6 +47,20 @@ export class CloudinaryService {
     });
   }
 
+  // ── Product / Collateral Photo ─────────────────────────────────────────
+  uploadProductPhoto(base64: string): Promise<UploadApiResponse> {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(base64, {
+        folder: 'mtpocket/products',
+        resource_type: 'image',
+        transformation: [{ width: 1200, height: 1200, crop: 'limit', quality: 'auto' }],
+      }, (err, result) => {
+        if (err || !result) return reject(err);
+        resolve(result);
+      });
+    });
+  }
+
   // ── Chat Media Upload (Photos / Documents) ──────────────────────────
   async uploadChatMedia(
     buffer: Buffer,

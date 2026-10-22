@@ -141,13 +141,13 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:py-12 bg-background relative">
-      {/* Back to Home Button */}
-      <div className="w-full max-w-sm mb-4">
+      {/* Back to Home Button - fixed to the top-left side */}
+      <div className="fixed top-4 left-4 sm:top-6 sm:left-8 z-20">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card/80 hover:bg-card border border-border/60 hover:border-border text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 shadow-xs backdrop-blur-xs group cursor-pointer"
         >
-          <ArrowLeft size={15} className="transition-transform group-hover:-translate-x-1" />
+          <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
           <span>Back to Home</span>
         </Link>
       </div>
