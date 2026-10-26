@@ -764,6 +764,7 @@ export default function Marketplace() {
                   loan={offerLoan}
                   accessToken={accessToken}
                   onSent={onOfferSent}
+                  onPhotoClick={(url) => setLightboxUrl(url)}
                 />
               </div>
             </motion.div>
@@ -777,6 +778,7 @@ export default function Marketplace() {
             loan={inquiryLoan}
             accessToken={accessToken}
             onClose={() => setInquiryLoan(null)}
+            onPhotoClick={(url) => setLightboxUrl(url)}
             onSent={(conversationId) => {
               setInquiryLoan(null);
               navigate(`/dashboard/messages?conversationId=${conversationId}`);
@@ -1124,7 +1126,7 @@ function LoanItem({
 }
 
 // ── OFFER FORM ──────────────────────────────────────────────────────────
-function OfferForm({ loan, accessToken, onSent }) {
+function OfferForm({ loan, accessToken, onSent, onPhotoClick }) {
   const [message, setMessage] = useState('');
   const [offeredRate, setOfferedRate] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -1171,14 +1173,21 @@ function OfferForm({ loan, accessToken, onSent }) {
 
         {/* Product preview in offer form */}
         {loan.imageUrl && (
-          <div className="relative rounded-xl overflow-hidden border border-border/70 h-32 w-full bg-muted/20">
+          <div
+            className="relative rounded-xl overflow-hidden border border-border/70 h-32 w-full bg-muted/20 cursor-zoom-in group/img"
+            onClick={() => onPhotoClick?.(loan.imageUrl)}
+            title="Click to view full size"
+          >
             <img
               src={loan.imageUrl}
               alt="Product / Collateral"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
             />
             <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
               <Camera size={11} /> Attached Product
+            </span>
+            <span className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-md">
+              <ZoomIn size={12} />
             </span>
           </div>
         )}
@@ -1651,7 +1660,7 @@ function MarketplaceProfileModal({ userId, onClose, accessToken }) {
 }
 
 // ── MARKETPLACE INQUIRY MODAL ───────────────────────────────────────────
-function InquiryModal({ loan, accessToken, onClose, onSent }) {
+function InquiryModal({ loan, accessToken, onClose, onSent, onPhotoClick }) {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -1705,14 +1714,21 @@ function InquiryModal({ loan, accessToken, onClose, onSent }) {
 
           {/* Product preview in inquiry modal */}
           {loan.imageUrl && (
-            <div className="relative rounded-xl overflow-hidden border border-border/70 h-28 w-full bg-muted/20">
+            <div
+              className="relative rounded-xl overflow-hidden border border-border/70 h-28 w-full bg-muted/20 cursor-zoom-in group/img"
+              onClick={() => onPhotoClick?.(loan.imageUrl)}
+              title="Click to view full size"
+            >
               <img
                 src={loan.imageUrl}
                 alt="Product / Collateral"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
               />
               <span className="absolute bottom-1.5 left-1.5 bg-background/85 backdrop-blur-xs text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/60 text-foreground flex items-center gap-1 shadow-2xs">
                 <Camera size={11} /> Attached Product
+              </span>
+              <span className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-md">
+                <ZoomIn size={12} />
               </span>
             </div>
           )}

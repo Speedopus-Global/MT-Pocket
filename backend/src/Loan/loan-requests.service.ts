@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { LoanRequest, LoanRequestDocument } from './schemas/loan-request.schema';
@@ -10,7 +10,7 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service';
 const DEFAULT_RADIUS_KM = 25;
 
 @Injectable()
-export class LoanRequestsService {
+export class LoanRequestsService implements OnModuleInit {
   private readonly logger = new Logger(LoanRequestsService.name);
 
   constructor(
@@ -19,6 +19,21 @@ export class LoanRequestsService {
     private readonly notificationsService: NotificationsService,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
+  // ── Legacy migration: ensure all existing requests have listingType and valid nulls ──
+  async onModuleInit() {
+    try {
+      const res = await this.loanModel.updateMany(
+        { $or: [{ listingType: { $exists: false } }, { listingType: null }] },
+        { $set: { listingType: 'borrow' } },
+      );
+      if (res.modifiedCount > 0) {
+        this.logger.log(`Backfilled ${res.modifiedCount} legacy loan requests with listingType='borrow'`);
+      }
+    } catch (err) {
+      this.logger.warn('Failed to backfill legacy loan requests', err);
+    }
+  }
 
   // ── Borrower / Lender: create a request or offer ─────────────────────────
   async create(borrowerId: string, dto: CreateLoanRequestDto, userRole?: string) {
@@ -324,7 +339,17 @@ export class LoanRequestsService {
 
     const filter: Record<string, any> = { status: 'open' };
 
-    if (dto.listingType) filter.listingType = dto.listingType;
+    if (dto.listingType) {
+      if (dto.listingType === 'borrow') {
+        filter.$or = [
+          { listingType: 'borrow' },
+          { listingType: { $exists: false } },
+          { listingType: null },
+        ];
+      } else {
+        filter.listingType = dto.listingType;
+      }
+    }
     if (dto.category) filter.category = dto.category;
 
     if (requesterId) {
