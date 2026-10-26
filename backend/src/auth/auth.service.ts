@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/user.service';
-import { SmsService } from '../common/sms/sms.service';
 import { EmailService } from '../common/email/email.service';
+import { FirebaseAdminService } from '../common/firebase/firebase-admin.service';
 import {
   compareOtp,
   generateOtp,
@@ -19,28 +19,37 @@ const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
-    private smsService: SmsService,
     private emailService: EmailService,
+    private firebaseAdmin: FirebaseAdminService,
     private jwtService: JwtService,
   ) {}
 
   // ── REGISTRATION FLOW ───────────────────────────────────────────────
 
+  /**
+   * Request registration OTP — EMAIL ONLY.
+   * Phone registration now uses Firebase client-side OTP; see
+   * `registerWithFirebasePhone()` below.
+   */
   async requestRegisterOtp(identifier: string) {
     const isEmail = identifier.includes('@');
 
+    if (!isEmail) {
+      throw new BadRequestException(
+        'Phone registration uses Firebase. Use the phone registration endpoint instead.',
+      );
+    }
+
     // Reject if already fully registered via this identifier
-    const existing = isEmail
-      ? await this.usersService.findByEmail(identifier)
-      : await this.usersService.findByPhone(identifier);
+    const existing = await this.usersService.findByEmail(identifier);
 
     if (existing && existing.passwordHash !== null) {
       throw new BadRequestException(
-        isEmail
-          ? 'This email is already registered. Please log in.'
-          : 'This phone number is already registered. Please log in.',
+        'This email is already registered. Please log in.',
       );
     }
 
@@ -53,16 +62,46 @@ export class AuthService {
       otpAttempts: 0,
     });
 
-    if (isEmail) {
-      await this.emailService.sendVerificationCode(identifier, otp);
-    } else {
-      await this.smsService.send(
-        identifier,
-        `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`,
+    await this.emailService.sendVerificationCode(identifier, otp);
+
+    return { message: 'OTP sent' };
+  }
+
+  /**
+   * Firebase phone registration — the frontend handles OTP via Firebase,
+   * then sends the Firebase ID token here. We extract the verified phone
+   * number from the token and create/find the user.
+   */
+  async registerWithFirebasePhone(firebaseIdToken: string) {
+    const decoded = await this.firebaseAdmin.verifyIdToken(firebaseIdToken);
+    const phone = decoded.phone_number;
+    if (!phone) {
+      throw new BadRequestException('Firebase token does not contain a phone number');
+    }
+
+    // Reject if already fully registered
+    const existing = await this.usersService.findByPhone(phone);
+    if (existing && existing.passwordHash !== null) {
+      throw new BadRequestException(
+        'This phone number is already registered. Please log in.',
       );
     }
 
-    return { message: 'OTP sent' };
+    const user = await this.usersService.findOrCreateByIdentifier(phone);
+
+    // Mark phone as verified (Firebase already verified it)
+    await this.usersService.updateById(user._id.toString(), {
+      phoneVerified: true,
+      otpHash: null,
+      otpExpiresAt: null,
+      otpAttempts: 0,
+    });
+
+    return {
+      verified: true,
+      identifier: phone,
+      message: 'Phone verified via Firebase. Complete registration.',
+    };
   }
 
   async verifyRegisterOtp(identifier: string, otp: string) {
@@ -153,7 +192,20 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * Request login OTP — EMAIL ONLY.
+   * Phone login OTP is handled by Firebase client-side; see
+   * `loginWithFirebasePhone()` below.
+   */
   async requestLoginOtp(identifier: string) {
+    const isEmail = identifier.includes('@');
+
+    if (!isEmail) {
+      throw new BadRequestException(
+        'Phone login uses Firebase. Use the Firebase phone login endpoint instead.',
+      );
+    }
+
     const user = await this.usersService.findByIdentifier(identifier);
     if (!user || !user.passwordHash) {
       throw new BadRequestException('Account not registered. Please sign up first.');
@@ -169,20 +221,33 @@ export class AuthService {
       otpAttempts: 0,
     });
 
-    const isEmail = identifier.includes('@');
-    if (isEmail) {
-      if (!user.email) {
-        throw new BadRequestException('Email field missing on user profile');
-      }
-      await this.emailService.sendVerificationCode(user.email, otp);
-    } else {
-      if (!user.phone) {
-        throw new BadRequestException('Phone number missing on user profile');
-      }
-      await this.smsService.send(user.phone, `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`);
+    if (!user.email) {
+      throw new BadRequestException('Email field missing on user profile');
     }
+    await this.emailService.sendVerificationCode(user.email, otp);
 
     return { message: 'OTP sent' };
+  }
+
+  /**
+   * Firebase phone login — the frontend verifies the OTP via Firebase,
+   * then sends the ID token here. We find the user by phone and issue
+   * our own JWT tokens.
+   */
+  async loginWithFirebasePhone(firebaseIdToken: string) {
+    const decoded = await this.firebaseAdmin.verifyIdToken(firebaseIdToken);
+    const phone = decoded.phone_number;
+    if (!phone) {
+      throw new BadRequestException('Firebase token does not contain a phone number');
+    }
+
+    const user = await this.usersService.findByPhone(phone);
+    if (!user || !user.passwordHash) {
+      throw new BadRequestException('Account not registered. Please sign up first.');
+    }
+
+    this.logger.log(`Firebase phone login: ${phone}`);
+    return this.issueTokens(user);
   }
 
   async verifyLoginOtp(identifier: string, otp: string) {
@@ -217,7 +282,20 @@ export class AuthService {
 
   // ── FORGOT PASSWORD FLOW ───────────────────────────────────────────
 
+  /**
+   * Forgot password OTP — EMAIL ONLY.
+   * For phone users who forgot their password, they use Firebase phone
+   * auth to prove identity, then call resetPasswordWithFirebasePhone().
+   */
   async requestForgotPasswordOtp(identifier: string) {
+    const isEmail = identifier.includes('@');
+
+    if (!isEmail) {
+      throw new BadRequestException(
+        'Phone password reset uses Firebase. Use the Firebase phone reset endpoint instead.',
+      );
+    }
+
     const user = await this.usersService.findByIdentifier(identifier);
     if (!user || !user.passwordHash) {
       throw new BadRequestException('Account not registered');
@@ -233,20 +311,39 @@ export class AuthService {
       passwordResetOtpAttempts: 0,
     });
 
-    const isEmail = identifier.includes('@');
-    if (isEmail) {
-      if (!user.email) {
-        throw new BadRequestException('No email registered');
-      }
-      await this.emailService.sendPasswordResetCode(user.email, otp);
-    } else {
-      if (!user.phone) {
-        throw new BadRequestException('No phone number registered');
-      }
-      await this.smsService.send(user.phone, `Your MT Pocket password reset code is ${otp}. It expires in 5 minutes.`);
+    if (!user.email) {
+      throw new BadRequestException('No email registered');
     }
+    await this.emailService.sendPasswordResetCode(user.email, otp);
 
     return { message: 'Password reset OTP sent' };
+  }
+
+  /**
+   * Firebase phone password reset — the frontend verifies the phone via
+   * Firebase OTP, then sends the ID token + new password here.
+   */
+  async resetPasswordWithFirebasePhone(firebaseIdToken: string, newPassword: string) {
+    const decoded = await this.firebaseAdmin.verifyIdToken(firebaseIdToken);
+    const phone = decoded.phone_number;
+    if (!phone) {
+      throw new BadRequestException('Firebase token does not contain a phone number');
+    }
+
+    const user = await this.usersService.findByPhone(phone);
+    if (!user || !user.passwordHash) {
+      throw new BadRequestException('Account not registered');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updateById(user._id.toString(), {
+      passwordHash,
+      passwordResetOtpHash: null,
+      passwordResetOtpExpiresAt: null,
+      passwordResetOtpAttempts: 0,
+    });
+
+    return { message: 'Password reset successful' };
   }
 
   async resetPassword(identifier: string, otp: string, password: string) {
@@ -338,32 +435,35 @@ export class AuthService {
     return { emailVerified: true, email: updated?.email };
   }
 
-  // ── PHONE VERIFICATION FLOW (post-login, mirrors email flow) ────────
+  // ── PHONE VERIFICATION FLOW (post-login, uses Firebase) ──────────────
 
-  async requestPhoneVerification(userId: string, phone: string) {
-    const cleanPhone = phone.trim();
+  /**
+   * Post-login phone verification via Firebase.
+   * The frontend handles the Firebase OTP flow, then sends the ID token
+   * here. We extract the verified phone and mark it on the user.
+   */
+  async verifyPhoneWithFirebase(userId: string, firebaseIdToken: string) {
+    const decoded = await this.firebaseAdmin.verifyIdToken(firebaseIdToken);
+    const phone = decoded.phone_number;
+    if (!phone) {
+      throw new BadRequestException('Firebase token does not contain a phone number');
+    }
+
     // Reject if a different verified user already owns this phone
-    const existing = await this.usersService.findByPhone(cleanPhone);
+    const existing = await this.usersService.findByPhone(phone);
     if (existing && existing._id.toString() !== userId && existing.phoneVerified) {
       throw new BadRequestException('Phone number is already registered by another verified user');
     }
 
-    const otp = generateOtp();
-    const expiry = otpExpiryDate();
-    const hash = await hashOtp(otp);
-
-    await this.usersService.updateById(userId, {
-      phone: cleanPhone,
-      phoneOtpHash: hash,
-      phoneOtpExpiresAt: expiry,
+    const updated = await this.usersService.updateById(userId, {
+      phone,
+      phoneVerified: true,
+      phoneOtpHash: null,
+      phoneOtpExpiresAt: null,
       phoneOtpAttempts: 0,
     });
 
-    await this.smsService.send(
-      cleanPhone,
-      `Your MT Pocket verification code is ${otp}. It expires in 5 minutes.`,
-    );
-    return { message: 'Verification code sent to your phone' };
+    return { phoneVerified: true, phone: updated?.phone };
   }
 
   async verifyPhone(userId: string, otp: string) {

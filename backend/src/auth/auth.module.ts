@@ -7,7 +7,7 @@ import { AuthController } from './auth.controller';
 import { JwtAccessStrategy } from './strategies/jwt.access.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt.refresh.strategy';
 import { UsersModule } from '../users/user.module';
-import { SmsService } from '../common/sms/sms.service';
+import { FirebaseAdminService } from '../common/firebase/firebase-admin.service';
 import { EmailService } from '../common/email/email.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
 
@@ -22,6 +22,6 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, SmsService, EmailService, JwtAccessStrategy, JwtRefreshStrategy],
+  providers: [AuthService, FirebaseAdminService, EmailService, JwtAccessStrategy, JwtRefreshStrategy],
 })
 export class AuthModule {}

@@ -11,8 +11,7 @@ import { ForgotPasswordRequestDto } from './dto/forgot.password.request.dto';
 import { ForgotPasswordResetDto } from './dto/forgot.password.reset.dto';
 import { RequestEmailDto } from './dto/request.email.dto';
 import { VerifyEmailDto } from './dto/verify.email.dto';
-import { RequestPhoneDto } from './dto/request.phone.dto';
-import { VerifyPhoneDto } from './dto/verify.phone.dto';
+import { FirebasePhoneTokenDto } from './dto/firebase.phone.token.dto';
 import { SetRoleDto } from './dto/set.role.dto';
 import { JwtAccessGuard } from './guards/jwt-access.guard';
 import { JwtRefreshGuard } from './guards/jwt.refresh-guard';
@@ -35,6 +34,12 @@ export class AuthController {
   @Post('register/request-otp')
   registerRequestOtp(@Body() dto: RequestOtpDto) {
     return this.authService.requestRegisterOtp(dto.identifier);
+  }
+
+  /** Firebase phone registration — frontend verified OTP, sends ID token */
+  @Post('register/firebase-phone')
+  registerWithFirebasePhone(@Body() dto: FirebasePhoneTokenDto) {
+    return this.authService.registerWithFirebasePhone(dto.firebaseIdToken);
   }
 
   @Post('register/verify-otp')
@@ -93,6 +98,16 @@ export class AuthController {
     return { accessToken, user };
   }
 
+  /** Firebase phone login — frontend verified OTP, sends ID token */
+  @Post('login/firebase-phone')
+  async loginWithFirebasePhone(@Body() dto: FirebasePhoneTokenDto, @Res({ passthrough: true }) res: Response) {
+    const { accessToken, refreshToken, refreshTokenMaxAgeMs, user } = await this.authService.loginWithFirebasePhone(
+      dto.firebaseIdToken,
+    );
+    res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions, maxAge: refreshTokenMaxAgeMs });
+    return { accessToken, user };
+  }
+
   // ── FORGOT PASSWORD ENDPOINTS ────────────────────────────────────────
 
   @Post('forgot-password/request')
@@ -103,6 +118,12 @@ export class AuthController {
   @Post('forgot-password/reset')
   forgotPasswordReset(@Body() dto: ForgotPasswordResetDto) {
     return this.authService.resetPassword(dto.identifier, dto.otp, dto.newPassword);
+  }
+
+  /** Firebase phone password reset — frontend verified phone, sends ID token + new password */
+  @Post('forgot-password/firebase-phone-reset')
+  forgotPasswordFirebasePhoneReset(@Body() dto: FirebasePhoneTokenDto & { newPassword: string }) {
+    return this.authService.resetPasswordWithFirebasePhone(dto.firebaseIdToken, dto.newPassword);
   }
 
   // ── EMAIL VERIFICATION ENDPOINTS (post-login add/verify email) ───────
@@ -121,20 +142,18 @@ export class AuthController {
     return this.authService.verifyEmail(sub, dto.otp);
   }
 
-  // ── PHONE VERIFICATION ENDPOINTS (post-login add/verify phone) ────────
+  // ── PHONE VERIFICATION ENDPOINTS (post-login, Firebase) ───────────────
 
+  /**
+   * Post-login phone verification via Firebase.
+   * The frontend handles the Firebase OTP flow client-side, then sends
+   * the Firebase ID token to this endpoint.
+   */
   @UseGuards(JwtAccessGuard)
-  @Post('phone/request')
-  requestPhoneVerification(@Req() req: Request, @Body() dto: RequestPhoneDto) {
+  @Post('phone/verify-firebase')
+  verifyPhoneWithFirebase(@Req() req: Request, @Body() dto: FirebasePhoneTokenDto) {
     const { sub } = req.user as { sub: string };
-    return this.authService.requestPhoneVerification(sub, dto.phone);
-  }
-
-  @UseGuards(JwtAccessGuard)
-  @Post('phone/verify')
-  verifyPhone(@Req() req: Request, @Body() dto: VerifyPhoneDto) {
-    const { sub } = req.user as { sub: string };
-    return this.authService.verifyPhone(sub, dto.otp);
+    return this.authService.verifyPhoneWithFirebase(sub, dto.firebaseIdToken);
   }
 
   // ── SESSION MANAGEMENT ──────────────────────────────────────────────

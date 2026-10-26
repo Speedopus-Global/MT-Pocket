@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { sendPhoneOtp, verifyPhoneOtpAndGetToken } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail,
@@ -100,6 +101,8 @@ export default function Settings() {
   const [phoneStep, setPhoneStep]       = useState('idle');
   const [phoneOtp, setPhoneOtp]         = useState('');
   const [phoneVerifying, setPhoneVerifying] = useState(false);
+  const confirmationResultRef           = useRef(null);
+  const [firebaseVerificationId, setFirebaseVerificationId] = useState(null);
 
   // KYC Status live states
   const [kycStatus, setKycStatus]         = useState(null);
@@ -287,11 +290,18 @@ export default function Settings() {
     setError('');
     setPhoneVerifying(true);
     try {
-      await api.requestPhoneVerification(targetPhone, accessToken);
+      const confirmResult = await sendPhoneOtp(targetPhone);
+      confirmationResultRef.current = confirmResult;
+      setFirebaseVerificationId(confirmResult.verificationId);
       setPhoneStep('otp');
       setSuccess('Verification code sent to your phone!');
     } catch (err) {
-      setError(err.message);
+      const msg = err?.code === 'auth/invalid-phone-number'
+        ? 'Invalid phone number format. Please use international format (e.g. +919999999999).'
+        : err?.code === 'auth/too-many-requests'
+        ? 'Too many SMS attempts. Please try again later.'
+        : err.message || 'Failed to send verification code';
+      setError(msg);
     } finally {
       setPhoneVerifying(false);
     }
@@ -299,16 +309,30 @@ export default function Settings() {
 
   const handleVerifyPhoneOtp = async (e) => {
     e.preventDefault();
+    if (!phoneOtp || phoneOtp.length < 6) {
+      setError('Please enter the 6-digit verification code.');
+      return;
+    }
     setError('');
     setPhoneVerifying(true);
     try {
-      const result = await api.verifyPhone(phoneOtp, accessToken);
+      if (!firebaseVerificationId) {
+        throw new Error('Please request a new verification code first.');
+      }
+      const firebaseIdToken = await verifyPhoneOtpAndGetToken(
+        firebaseVerificationId,
+        phoneOtp,
+      );
+      const result = await api.verifyPhoneFirebase(firebaseIdToken, accessToken);
       updateUser({ phoneVerified: result.phoneVerified, phone: result.phone });
       setSuccess('Phone number verified successfully!');
       setPhoneStep('idle');
       setPhoneOtp('');
     } catch (err) {
-      setError(err.message);
+      const msg = err?.code === 'auth/invalid-verification-code'
+        ? 'Incorrect 6-digit verification code. Please check and try again.'
+        : err.message || 'Phone verification failed';
+      setError(msg);
     } finally {
       setPhoneVerifying(false);
     }

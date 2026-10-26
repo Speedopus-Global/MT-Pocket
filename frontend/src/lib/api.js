@@ -55,19 +55,24 @@ export const api = {
   // ── Auth ─────────────────────────────────────────────────────────────────
   registerRequestOtp: (identifier) => request('/auth/register/request-otp', { method: 'POST', body: { identifier } }),
   registerVerifyOtp: (identifier, otp) => request('/auth/register/verify-otp', { method: 'POST', body: { identifier, otp } }),
+  /** Firebase phone registration — send the Firebase ID token after client-side OTP */
+  registerFirebasePhone: (firebaseIdToken) => request('/auth/register/firebase-phone', { method: 'POST', body: { firebaseIdToken } }),
   registerComplete: (identifier, password, fullName, role, termsVersionHash = 'tc_v2026_08_12', privacyVersionHash = 'pp_v2026_08_12') =>
     request('/auth/register/complete', { method: 'POST', body: { identifier, password, fullName, role, termsVersionHash, privacyVersionHash } }),
   loginPassword: (identifier, password) => request('/auth/login/password', { method: 'POST', body: { identifier, password } }),
   loginOtpRequest: (identifier) => request('/auth/login/otp/request', { method: 'POST', body: { identifier } }),
   loginOtpVerify: (identifier, otp) => request('/auth/login/otp/verify', { method: 'POST', body: { identifier, otp } }),
+  /** Firebase phone login — send the Firebase ID token after client-side OTP */
+  loginFirebasePhone: (firebaseIdToken) => request('/auth/login/firebase-phone', { method: 'POST', body: { firebaseIdToken } }),
   forgotPasswordRequest: (identifier) => request('/auth/forgot-password/request', { method: 'POST', body: { identifier } }),
   forgotPasswordReset: (identifier, otp, newPassword) => request('/auth/forgot-password/reset', { method: 'POST', body: { identifier, otp, newPassword } }),
+  /** Firebase phone password reset — verified via Firebase, then set new password */
+  forgotPasswordFirebasePhoneReset: (firebaseIdToken, newPassword) => request('/auth/forgot-password/firebase-phone-reset', { method: 'POST', body: { firebaseIdToken, newPassword } }),
   // Post-login: add + verify email
   requestEmailVerification: (email, accessToken) => request('/auth/email/request', { method: 'POST', body: { email }, accessToken }),
   verifyEmail: (otp, accessToken) => request('/auth/email/verify', { method: 'POST', body: { otp }, accessToken }),
-  // Post-login: add + verify phone
-  requestPhoneVerification: (phone, accessToken) => request('/auth/phone/request', { method: 'POST', body: { phone }, accessToken }),
-  verifyPhone: (otp, accessToken) => request('/auth/phone/verify', { method: 'POST', body: { otp }, accessToken }),
+  // Post-login: add + verify phone (Firebase)
+  verifyPhoneFirebase: (firebaseIdToken, accessToken) => request('/auth/phone/verify-firebase', { method: 'POST', body: { firebaseIdToken }, accessToken }),
   setRole: (role, accessToken) => request('/auth/role', { method: 'POST', body: { role }, accessToken }),
   refresh: () => request('/auth/refresh', { method: 'POST' }),
   me: (accessToken) => request('/auth/me', { accessToken }),

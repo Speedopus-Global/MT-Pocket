@@ -4,7 +4,7 @@
  * Flow:  Identifier (Email/Phone) → OTP → Password → Full Name → Role & Terms Modal
  * ----------------------------------------------------------------------- */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import { api } from '../lib/api';
+import { sendPhoneOtp, verifyPhoneOtpAndGetToken } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { StickyBanner } from '../components/ui/sticky-banner';
 
@@ -104,6 +105,10 @@ export default function Register() {
   const [isSubmitting, setSubmit]   = useState(false);
   const [error, setError]           = useState('');
   
+  // Firebase phone auth state
+  const confirmationResultRef = useRef(null);
+  const [firebaseVerificationId, setFirebaseVerificationId] = useState(null);
+  
   // Terms & Conditions Modal State
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
@@ -117,7 +122,7 @@ export default function Register() {
 
   // ── Step 1: Request OTP ──────────────────────────────────────────────
   async function handleRequestOtp(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const cleanId = identifier.trim();
     if (!cleanId) {
       setError('Please enter a valid email address or phone number');
@@ -126,10 +131,25 @@ export default function Register() {
     setError('');
     setSubmit(true);
     try {
-      await api.registerRequestOtp(cleanId);
+      const isPhone = !cleanId.includes('@');
+      if (isPhone) {
+        // Firebase phone OTP — sends SMS client-side
+        const confirmResult = await sendPhoneOtp(cleanId);
+        confirmationResultRef.current = confirmResult;
+        setFirebaseVerificationId(confirmResult.verificationId);
+      } else {
+        // Email OTP — backend sends the code
+        await api.registerRequestOtp(cleanId);
+      }
       goToStep(1);
     } catch (err) {
-      setError(err.message || 'Failed to send OTP code');
+      // Firebase errors have a .code property
+      const msg = err?.code === 'auth/invalid-phone-number'
+        ? 'Invalid phone number. Use format like +919999999999'
+        : err?.code === 'auth/too-many-requests'
+        ? 'Too many attempts. Please try again later.'
+        : err.message || 'Failed to send OTP code';
+      setError(msg);
     } finally {
       setSubmit(false);
     }
@@ -145,10 +165,29 @@ export default function Register() {
     setError('');
     setSubmit(true);
     try {
-      await api.registerVerifyOtp(identifier.trim(), otp);
+      const cleanId = identifier.trim();
+      const isPhone = !cleanId.includes('@');
+      if (isPhone && firebaseVerificationId) {
+        // Firebase phone — verify OTP client-side, get ID token, send to backend
+        const firebaseIdToken = await verifyPhoneOtpAndGetToken(
+          firebaseVerificationId,
+          otp,
+        );
+        const result = await api.registerFirebasePhone(firebaseIdToken);
+        // result.identifier contains the E.164 phone from Firebase
+        // Update identifier to use the clean Firebase phone (may differ
+        // from what the user typed if they omitted +91 etc.)
+        if (result.identifier) setIdentifier(result.identifier);
+      } else {
+        // Email — backend verifies the code
+        await api.registerVerifyOtp(cleanId, otp);
+      }
       goToStep(2);
     } catch (err) {
-      setError(err.message || 'Incorrect verification code');
+      const msg = err?.code === 'auth/invalid-verification-code'
+        ? 'Incorrect verification code. Please try again.'
+        : err.message || 'Incorrect verification code';
+      setError(msg);
     } finally {
       setSubmit(false);
     }
@@ -523,6 +562,9 @@ export default function Register() {
 
         </div>
 
+        {/* Firebase invisible reCAPTCHA container */}
+        <div id="recaptcha-container" />
+
         {/* Footer Notes */}
         <p className="text-xs text-center mt-5 text-muted-foreground">
           Protected by MT Pocket's P2P Identity &amp; Verification Protocol.
@@ -625,6 +667,9 @@ export default function Register() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Firebase invisible reCAPTCHA anchor */}
+      <div id="recaptcha-container" />
     </div>
   );
 }

@@ -1,0 +1,16 @@
+# Environment variables
+.env
+*.env
+*.env.local
+
+# Firebase credentials (MUST NOT be committed)
+*firebase-service-account*.json
+*serviceAccountKey*.json
+firebase-service-account.json
+
+# Node & Build artifacts
+node_modules/
+dist/
+build/
+.temp/
+.tmp/

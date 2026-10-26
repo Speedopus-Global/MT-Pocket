@@ -3,11 +3,12 @@
  * forgot password reset wizard.
  * ----------------------------------------------------------------------- */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Loader2, ArrowLeft, KeyRound, Lock, Smartphone, AlertCircle, Ban } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
 import { api } from '../lib/api';
+import { sendPhoneOtp, verifyPhoneOtpAndGetToken } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 
 const logo = 'https://res.cloudinary.com/hyztwkou/image/upload/v1787051288/logo_pvvfwz.png';
@@ -39,6 +40,10 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError]               = useState('');
   const [success, setSuccess]           = useState('');
+
+  // Firebase phone auth state
+  const confirmationResultRef = useRef(null);
+  const [firebaseVerificationId, setFirebaseVerificationId] = useState(null);
 
   const resetAllStates = () => {
     setError('');
@@ -77,10 +82,24 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
     try {
-      await api.loginOtpRequest(identifier);
+      const isPhone = !identifier.includes('@');
+      if (isPhone) {
+        // Firebase phone OTP
+        const confirmResult = await sendPhoneOtp(identifier);
+        confirmationResultRef.current = confirmResult;
+        setFirebaseVerificationId(confirmResult.verificationId);
+      } else {
+        // Email OTP via backend
+        await api.loginOtpRequest(identifier);
+      }
       setOtpStep('verify');
     } catch (err) {
-      setError(err.message);
+      const msg = err?.code === 'auth/invalid-phone-number'
+        ? 'Invalid phone number. Use format like +919999999999'
+        : err?.code === 'auth/too-many-requests'
+        ? 'Too many attempts. Please try again later.'
+        : err.message || 'Failed to send OTP';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -92,11 +111,26 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
     try {
-      const result = await api.loginOtpVerify(identifier, otp);
+      let result;
+      const isPhone = !identifier.includes('@');
+      if (isPhone && firebaseVerificationId) {
+        // Firebase phone login
+        const firebaseIdToken = await verifyPhoneOtpAndGetToken(
+          firebaseVerificationId,
+          otp,
+        );
+        result = await api.loginFirebasePhone(firebaseIdToken);
+      } else {
+        // Email OTP login via backend
+        result = await api.loginOtpVerify(identifier, otp);
+      }
       completeLogin(result);
       redirectAfterLogin(result.user);
     } catch (err) {
-      setError(err.message);
+      const msg = err?.code === 'auth/invalid-verification-code'
+        ? 'Incorrect verification code. Please try again.'
+        : err.message || 'Verification failed';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,10 +142,21 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
     try {
-      await api.forgotPasswordRequest(identifier);
+      const isPhone = !identifier.includes('@');
+      if (isPhone) {
+        // Firebase phone OTP for password reset
+        const confirmResult = await sendPhoneOtp(identifier);
+        confirmationResultRef.current = confirmResult;
+        setFirebaseVerificationId(confirmResult.verificationId);
+      } else {
+        await api.forgotPasswordRequest(identifier);
+      }
       setForgotStep('reset');
     } catch (err) {
-      setError(err.message);
+      const msg = err?.code === 'auth/invalid-phone-number'
+        ? 'Invalid phone number. Use format like +919999999999'
+        : err.message || 'Failed to send reset code';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -127,13 +172,27 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
     try {
-      await api.forgotPasswordReset(identifier, forgotOtp, newPassword);
+      const isPhone = !identifier.includes('@');
+      if (isPhone && firebaseVerificationId) {
+        // Firebase phone: verify OTP, then reset password
+        const firebaseIdToken = await verifyPhoneOtpAndGetToken(
+          firebaseVerificationId,
+          forgotOtp,
+        );
+        await api.forgotPasswordFirebasePhoneReset(firebaseIdToken, newPassword);
+      } else {
+        // Email: use existing backend flow
+        await api.forgotPasswordReset(identifier, forgotOtp, newPassword);
+      }
       setSuccess('Password updated successfully! Please log in.');
       setIsForgot(false);
       setLoginMode('password');
       resetAllStates();
     } catch (err) {
-      setError(err.message);
+      const msg = err?.code === 'auth/invalid-verification-code'
+        ? 'Incorrect verification code. Please try again.'
+        : err.message || 'Password reset failed';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -406,6 +465,8 @@ export default function Login() {
 
         </div>
 
+        {/* Firebase invisible reCAPTCHA anchor */}
+        <div id="recaptcha-container" />
       </div>
     </div>
   );
